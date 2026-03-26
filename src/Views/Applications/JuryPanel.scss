@@ -1,0 +1,288 @@
+.jury-panel-page {
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 80px);
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .jury-executive-summary {
+    background-color: #fff;
+    border-radius: 16px;
+    border: 1px solid #eef2f6;
+    display: flex;
+    align-items: center;
+    padding: 24px 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+
+    .divider {
+      width: 1px;
+      height: 48px;
+      background-color: #e2e8f0;
+      margin: 0 32px;
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .score-block {
+      .big-value {
+        font-size: 32px;
+        font-weight: 800;
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+
+        &.green { color: #10b981; }
+        
+        span {
+          font-size: 16px;
+          color: #94a3b8;
+          font-weight: 600;
+        }
+      }
+    }
+
+    .averages-block {
+      .jury-dots {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        .dot-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          
+          .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+          }
+          .name { color: #1e293b; }
+          .score { color: #64748b; }
+        }
+      }
+
+      .criteria-stats {
+        display: flex;
+        gap: 24px;
+
+        .stat {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          .lbl { font-size: 12px; color: #64748b; }
+          .val { font-size: 16px; font-weight: 700; color: #1e293b; }
+        }
+      }
+    }
+
+    .suggested-class-badge {
+      margin-left: auto;
+      background-color: var(--primary-color);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-radius: 12px;
+
+      .icon {
+        font-size: 20px;
+      }
+      .text {
+        display: flex;
+        flex-direction: column;
+        span { font-size: 11px; opacity: 0.9; }
+        strong { font-size: 15px; font-weight: 700; }
+      }
+    }
+  }
+
+  .jury-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  /* Single Jury Rating Card */
+  .jury-rating-card {
+    background-color: #fff;
+    border-radius: 16px;
+    border: 1px solid #eef2f6;
+    padding: 24px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    .judging-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+
+      .avatar-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          font-weight: 700;
+        }
+
+        .text-info {
+          display: flex;
+          flex-direction: column;
+          .judge-name { font-size: 16px; font-weight: 700; color: #1e293b; }
+          .judge-role { font-size: 12px; color: #94a3b8; font-weight: 500; }
+        }
+      }
+
+      .overall-score {
+        padding: 6px 12px;
+        background-color: #f8fafc;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 800;
+        display: flex;
+        align-items: baseline;
+        gap: 2px;
+        
+        .max-score { font-size: 11px; font-weight: 600; opacity: 0.6; }
+      }
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .criteria-section {
+      margin-bottom: 24px;
+
+      .criteria-items {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+
+        .criteria-row {
+          .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+
+            .criteria-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+            .criteria-value { 
+              font-size: 13px; font-weight: 800; 
+              .max-val { font-size: 11px; font-weight: 600; opacity: 0.6; }
+            }
+          }
+
+          .track {
+            height: 8px;
+            background-color: #f1f5f9;
+            border-radius: 4px;
+            position: relative;
+
+            .fill {
+              height: 100%;
+              border-radius: 4px;
+              position: relative;
+
+              .thumb {
+                width: 16px;
+                height: 16px;
+                background-color: inherit;
+                border-radius: 50%;
+                position: absolute;
+                right: -8px;
+                top: 50%;
+                transform: translateY(-50%);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .personal-note-section {
+      flex: 1;
+
+      .note-content {
+        background-color: #f8fafc;
+        border: 1px solid #f1f5f9;
+        border-radius: 12px;
+        padding: 16px;
+        min-height: 100px;
+        
+        p {
+          font-size: 13px;
+          color: #475569;
+          line-height: 1.6;
+          margin: 0;
+        }
+      }
+    }
+
+    .action-footer {
+      margin-top: 24px;
+      
+      .btn-action {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &.editing {
+          background-color: transparent;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          &:hover { background-color: #f8fafc; }
+        }
+
+        &.pending {
+          background-color: var(--primary-color);
+          color: #fff;
+          &:hover { opacity: 0.9; }
+        }
+
+        &.submitted {
+          cursor: default;
+        }
+      }
+    }
+  }
+}

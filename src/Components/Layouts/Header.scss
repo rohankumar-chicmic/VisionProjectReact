@@ -1,0 +1,187 @@
+.header {
+  height: 80px;
+  background-color: #ffffff;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  font-family: var(--font-heading);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
+
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .header-back-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid #e2e8f0;
+      background-color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      transition: all 0.2s;
+      flex-shrink: 0;
+
+      &:hover {
+        background-color: white;
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    .header-title-group {
+      .header-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+      }
+
+      .header-subtitle {
+        font-size: 13px;
+        color: #64748b;
+        margin: 2px 0 0;
+      }
+    }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+
+    .search-bar {
+      width: 300px;
+      height: 40px;
+      background-color: var(--background-color);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+
+      .search-icon {
+        color: var(--text-muted);
+      }
+
+      input {
+        border: none;
+        background: none;
+        outline: none;
+        width: 100%;
+        font-size: 14px;
+        color: var(--text-primary);
+
+        &::placeholder {
+          color: var(--text-muted);
+        }
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .dynamic-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-right: 8px;
+
+
+        .header-btn {
+          height: 40px;
+          padding: 0 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.2s;
+          border: 1px solid transparent;
+
+          &.btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+
+            &:hover {
+              background-color: #1aa64b;
+            }
+          }
+
+          &.btn-outline {
+            background-color: transparent;
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+
+            &:hover {
+              background-color: var(--background-color);
+              border-color: var(--text-muted);
+            }
+          }
+
+          &.btn-danger {
+            background-color: #fee2e2;
+            color: #ab3737;
+
+            &:hover {
+              background-color: #fecaca;
+            }
+          }
+
+          svg {
+            flex-shrink: 0;
+          }
+        }
+      }
+
+      .action-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-secondary);
+        position: relative;
+        transition: all 0.2s;
+
+        &:hover {
+          background-color: var(--background-color);
+          color: var(--primary-color);
+        }
+
+        .badge {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          width: 8px;
+          height: 8px;
+          background-color: var(--danger-color);
+          border-radius: 50%;
+          border: 2px solid var(--surface-color);
+        }
+
+        &.settings-btn {
+          width: auto;
+          padding: 0 12px;
+          gap: 6px;
+          background-color: var(--background-color);
+          font-weight: 500;
+          font-size: 14px;
+        }
+      }
+    }
+  }
+}

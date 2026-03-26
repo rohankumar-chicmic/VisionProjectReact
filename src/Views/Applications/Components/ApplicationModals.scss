@@ -1,0 +1,275 @@
+.reject-modal-content {
+  .applicant-context {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background-color: #f8fafc;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    border: 1px solid #f1f5f9;
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      background-color: #00ce86;
+      color: #fff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .info {
+      h4 { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px;}
+      p { font-size: 12px; color: #64748b; }
+    }
+  }
+
+  .form-group {
+    margin-bottom: 24px;
+    
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+    }
+
+    .reason-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+
+      .pill-btn {
+        padding: 8px 16px;
+        background-color: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        transition: all 0.2s;
+
+        &:hover { background-color: #f8fafc; }
+        
+        &.active-reject {
+          background-color: #fff1f2;
+          border-color: #fda4af;
+          color: #e11d48;
+        }
+      }
+    }
+
+    textarea {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #1e293b;
+      resize: vertical;
+      &:focus { outline: none; border-color: var(--primary-color); }
+    }
+
+    .helper-text {
+      display: block;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 8px;
+    }
+  }
+}
+
+.reschedule-modal-content {
+  .current-schedule-alert {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    margin-bottom: 24px;
+
+    .icon { color: #16a34a; margin-top: 2px; }
+    .details {
+      h4 { font-size: 13px; font-weight: 700; color: #16a34a; margin-bottom: 8px; }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #16a34a;
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 4px;
+        &:last-child { margin-bottom: 0; }
+      }
+    }
+  }
+
+  .mb-1 { margin-bottom: 24px; }
+  .mb-2 { margin-bottom: 16px; }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 12px;
+  }
+
+  .calendar-widget {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    max-width: 320px;
+    margin: 0 auto;
+
+    .cal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+
+      .month-year { font-weight: 700; font-size: 14px; color: #1e293b; }
+      .arrow-btn { 
+        padding: 4px; 
+        border-radius: 6px; 
+        color: #64748b; 
+        border: 1px solid #e2e8f0;
+        &:hover { background-color: #f8fafc; }
+      }
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      text-align: center;
+
+      .day-header {
+        font-size: 12px;
+        font-weight: 700;
+        color: #94a3b8;
+        margin-bottom: 8px;
+      }
+
+      .cal-day {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: #1e293b;
+        border-radius: 50%;
+        cursor: pointer;
+        margin: auto;
+
+        &:hover:not(.selected) { background-color: #f1f5f9; }
+        &.selected {
+          background-color: var(--primary-color);
+          color: #fff;
+          font-weight: 700;
+        }
+      }
+    }
+  }
+
+  .time-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+
+    .time-pill {
+      padding: 10px 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background-color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      transition: all 0.2s;
+
+      &:hover:not(.selected) { background-color: #f8fafc; border-color: #cbd5e1; }
+      &.selected {
+        background-color: var(--primary-color);
+        color: #fff;
+        border-color: var(--primary-color);
+      }
+    }
+  }
+
+  .mt-2 { margin-top: 24px; }
+}
+
+/* Modal Shared Helper Utils */
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+
+  .checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    &.checked {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      color: #fff;
+    }
+    .hidden { display: none; }
+    .block { display: block; }
+  }
+
+  span {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 500;
+  }
+}
+
+.modal-actions-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+
+  button {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel {
+    color: #475569;
+    background: transparent;
+    &:hover { background-color: #f1f5f9; }
+  }
+
+  .btn-confirm-reject {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #ef4444;
+    color: #fff;
+    &:hover { opacity: 0.9; }
+  }
+
+  .btn-confirm-reschedule {
+    background-color: var(--primary-color);
+    color: #fff;
+    &:hover { opacity: 0.9; }
+  }
+}

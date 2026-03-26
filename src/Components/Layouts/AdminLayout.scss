@@ -1,0 +1,19 @@
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  font-family: var(--font-heading);
+
+
+  .main-content {
+    flex: 1;
+    margin-left: 260px;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--background-color);
+  }
+
+  .page-content {
+    padding: 32px;
+    flex: 1;
+  }
+}

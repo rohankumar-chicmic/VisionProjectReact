@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Check, Edit2, Send } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
@@ -16,7 +16,7 @@ interface JuryRatingCardProps {
   status: 'submitted' | 'editing' | 'pending';
 }
 
-const JuryRatingCard: React.FC<JuryRatingCardProps> = ({
+function JuryRatingCard({
   initials,
   name,
   role,
@@ -24,13 +24,19 @@ const JuryRatingCard: React.FC<JuryRatingCardProps> = ({
   highlightColor,
   criteria,
   personalNote,
-  status
-}) => {
+  status,
+}: Readonly<JuryRatingCardProps>) {
   return (
     <div className="jury-rating-card">
       <div className="judging-header">
         <div className="avatar-info">
-          <div className="avatar" style={{ color: highlightColor, backgroundColor: `${highlightColor}15` }}>
+          <div
+            className="avatar"
+            style={{
+              color: highlightColor,
+              backgroundColor: `${highlightColor}15`,
+            }}
+          >
             {initials}
           </div>
           <div className="text-info">
@@ -50,13 +56,22 @@ const JuryRatingCard: React.FC<JuryRatingCardProps> = ({
             <div key={i} className="criteria-row">
               <div className="label-row">
                 <span className="criteria-title">{c.label}</span>
-                <span className="criteria-value" style={{ color: highlightColor }}>
+                <span
+                  className="criteria-value"
+                  style={{ color: highlightColor }}
+                >
                   {c.score} <span className="max-val">/ 10</span>
                 </span>
               </div>
               <div className="track">
-                <div className="fill" style={{ width: `${c.score * 10}%`, backgroundColor: highlightColor }}>
-                  <div className="thumb"></div>
+                <div
+                  className="fill"
+                  style={{
+                    width: `${c.score * 10}%`,
+                    backgroundColor: highlightColor,
+                  }}
+                >
+                  <div className="thumb" />
                 </div>
               </div>
             </div>
@@ -73,19 +88,26 @@ const JuryRatingCard: React.FC<JuryRatingCardProps> = ({
 
       <div className="action-footer">
         {status === 'submitted' && (
-          <button className="btn-action submitted" style={{ color: highlightColor, backgroundColor: `${highlightColor}10` }}>
+          <button
+            type="button"
+            className="btn-action submitted"
+            style={{
+              color: highlightColor,
+              backgroundColor: `${highlightColor}10`,
+            }}
+          >
             <Check size={16} />
             <span>Rating Submitted</span>
           </button>
         )}
         {status === 'editing' && (
-          <button className="btn-action editing">
+          <button type="button" className="btn-action editing">
             <Edit2 size={16} />
             <span>Edit Rating</span>
           </button>
         )}
         {status === 'pending' && (
-          <button className="btn-action pending bg-primary">
+          <button type="button" className="btn-action pending bg-primary">
             <Send size={16} />
             <span>Submit My Rating</span>
           </button>
@@ -93,9 +115,9 @@ const JuryRatingCard: React.FC<JuryRatingCardProps> = ({
       </div>
     </div>
   );
-};
+}
 
-const JuryPanel: React.FC = () => {
+function JuryPanel() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -118,9 +140,10 @@ const JuryPanel: React.FC = () => {
       criteria: [
         { label: 'Business Viability', score: 8 },
         { label: 'Innovation Level', score: 9 },
-        { label: 'Team Experience', score: 7 }
+        { label: 'Team Experience', score: 7 },
       ],
-      personalNote: "Very strong pitch, team needs more industry experience. The innovation angle is compelling and I'd recommend Excellence class if team credentials are verified."
+      personalNote:
+        "Very strong pitch, team needs more industry experience. The innovation angle is compelling and I'd recommend Excellence class if team credentials are verified.",
     },
     {
       initials: 'PD',
@@ -132,9 +155,10 @@ const JuryPanel: React.FC = () => {
       criteria: [
         { label: 'Business Viability', score: 7 },
         { label: 'Innovation Level', score: 8 },
-        { label: 'Team Experience', score: 7 }
+        { label: 'Team Experience', score: 7 },
       ],
-      personalNote: "Solid concept but market validation could be stronger. The team presents well but lacks references from the sector. Worth monitoring for next cycle."
+      personalNote:
+        'Solid concept but market validation could be stronger. The team presents well but lacks references from the sector. Worth monitoring for next cycle.',
     },
     {
       initials: 'SC',
@@ -146,19 +170,24 @@ const JuryPanel: React.FC = () => {
       criteria: [
         { label: 'Business Viability', score: 8 },
         { label: 'Innovation Level', score: 7 },
-        { label: 'Team Experience', score: 9 }
+        { label: 'Team Experience', score: 9 },
       ],
-      personalNote: "Excellent team synergy. Would strongly recommend for Excellence class. The business model is scalable and the innovation approach is truly unique in the sector."
-    }
+      personalNote:
+        'Excellent team synergy. Would strongly recommend for Excellence class. The business model is scalable and the innovation approach is truly unique in the sector.',
+    },
   ];
 
   return (
     <div className="jury-panel-page">
       <HeaderActions>
-        <button className="header-btn btn-outline" onClick={() => navigate(`/applications/${id || 'APP-45230'}`)}>
+        <button
+          type="button"
+          className="header-btn btn-outline"
+          onClick={() => navigate(`/applications/${id || 'APP-45230'}`)}
+        >
           <span>Cancel</span>
         </button>
-        <button className="header-btn btn-primary">
+        <button type="button" className="header-btn btn-primary">
           <CheckCircle2 size={18} />
           <span>Finalize & Submit</span>
         </button>
@@ -179,8 +208,13 @@ const JuryPanel: React.FC = () => {
           <div className="jury-dots">
             {judgesData.map((j, i) => (
               <div key={i} className="dot-item">
-                <div className="dot" style={{ backgroundColor: j.highlightColor }}></div>
-                <span className="name">{j.name.split(' ')[0]} {j.initials.charAt(1)}.</span>
+                <div
+                  className="dot"
+                  style={{ backgroundColor: j.highlightColor }}
+                />
+                <span className="name">
+                  {j.name.split(' ')[0]} {j.initials.charAt(1)}.
+                </span>
                 <span className="score">{j.overallScore.toFixed(1)}</span>
               </div>
             ))}
@@ -223,6 +257,6 @@ const JuryPanel: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default JuryPanel;

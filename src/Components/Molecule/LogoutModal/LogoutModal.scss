@@ -1,0 +1,50 @@
+.logout-modal-content {
+  padding: 10px 0;
+
+  p {
+    color: #4b5563;
+    font-size: 1rem;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+
+    button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .cancel-btn {
+      background-color: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+
+      &:hover:not(:disabled) {
+        background-color: #e5e7eb;
+      }
+    }
+
+    .confirm-btn {
+      background-color: #ef4444;
+      color: #ffffff;
+      border: none;
+
+      &:hover:not(:disabled) {
+        background-color: #dc2626;
+      }
+    }
+  }
+}

@@ -1,10 +1,11 @@
-import React from 'react';
 import { Mail, ArrowLeft, Key, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useForgotPasswordForm } from './hooks/useAuthForms';
 import './Auth.scss';
 
-const ForgotPassword: React.FC = () => {
+function ForgotPassword() {
   const navigate = useNavigate();
+  const { register, errors, isSubmitting, onSubmit } = useForgotPasswordForm();
 
   return (
     <div className="auth-container">
@@ -14,24 +15,32 @@ const ForgotPassword: React.FC = () => {
             <Key size={32} />
           </div>
         </div>
-        
+
         <div className="auth-header">
           <h1 className="auth-title">Forgot Password?</h1>
-          <p className="auth-subtitle">No worries, we'll send you reset instructions</p>
+          <p className="auth-subtitle">
+            No worries, we'll send you reset instructions
+          </p>
         </div>
 
-        <form className="auth-form" onSubmit={(e) => { e.preventDefault(); navigate('/email-sent'); }}>
+        <form className="auth-form" noValidate onSubmit={onSubmit}>
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
-            <div className="input-wrapper">
+            <div className={`input-wrapper ${errors.email ? 'has-error' : ''}`}>
               <Mail className="input-icon" size={20} />
-              <input 
-                type="email" 
-                id="email" 
+              <input
+                type="email"
+                id="email"
                 placeholder="Enter your email address"
-                required 
+                aria-invalid={!!errors.email}
+                {...register('email')}
               />
             </div>
+            {errors.email && (
+              <p className="field-error" role="alert">
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <div className="alert-box">
@@ -39,26 +48,31 @@ const ForgotPassword: React.FC = () => {
               <AlertCircle size={16} /> Email Recovery
             </div>
             <div className="alert-text">
-              Enter the email address associated with your admin account and we'll send you a link to reset your password.
+              Enter the email address associated with your admin account and
+              we'll send you a link to reset your password.
             </div>
           </div>
 
-          <button type="submit" className="auth-button">
-            Send Reset Link
+          <button type="submit" className="auth-button" disabled={isSubmitting}>
+            {isSubmitting ? 'Sending...' : 'Send Reset Link'}
           </button>
         </form>
 
-        <button className="back-link" onClick={() => navigate('/login')}>
+        <button
+          type="button"
+          className="back-link"
+          onClick={() => navigate('/login')}
+        >
           <ArrowLeft size={16} />
           <span>Back to Login</span>
         </button>
-        
-        <p className="auth-footer" style={{marginTop: '32px'}}>
+
+        <p className="auth-footer" style={{ marginTop: '32px' }}>
           © 2024 Vision PME (Gala Management System). All rights reserved.
         </p>
       </div>
     </div>
   );
-};
+}
 
 export default ForgotPassword;

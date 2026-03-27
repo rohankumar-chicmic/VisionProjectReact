@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -8,14 +8,14 @@ import {
   Smartphone,
   Award,
   Circle,
-  Settings
+  Settings,
 } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import './Dashboard.scss';
 import KpiCard, { KpiCardProps } from '../../Components/Shared/KpiCard';
 import BarChart from './Components/BarChart';
 
-const Dashboard: React.FC = () => {
+function Dashboard() {
   const { setTitle, setSubtitle } = useHeader();
   const navigate = useNavigate();
 
@@ -25,12 +25,54 @@ const Dashboard: React.FC = () => {
   }, [setTitle, setSubtitle]);
 
   const kpis: KpiCardProps[] = [
-    { icon: <Users size={22} />, label: 'Total Users', value: '12,543', trend: '+12%', trendType: 'up', color: '#1DB954' },
-    { icon: <Calendar size={22} />, label: 'Active Galas', value: '24', trend: '+8%', trendType: 'up', color: '#3B82F6' },
-    { icon: <DollarSign size={22} />, label: 'Monthly Revenue', value: '$45,231', trend: '+23%', trendType: 'up', color: '#F59E0B' },
-    { icon: <FileText size={22} />, label: 'Applications', value: '187', trend: '+5%', trendType: 'up', color: '#8B5CF6' },
-    { icon: <Smartphone size={22} />, label: 'App Downloads', value: '38,421', trend: '+9%', trendType: 'up', color: '#EC4899' },
-    { icon: <Award size={22} />, label: 'Active Grants', value: '124', trend: '+15%', trendType: 'up', color: '#06B6D4' },
+    {
+      icon: <Users size={22} />,
+      label: 'Total Users',
+      value: '12,543',
+      trend: '+12%',
+      trendType: 'up',
+      color: '#1DB954',
+    },
+    {
+      icon: <Calendar size={22} />,
+      label: 'Active Galas',
+      value: '24',
+      trend: '+8%',
+      trendType: 'up',
+      color: '#3B82F6',
+    },
+    {
+      icon: <DollarSign size={22} />,
+      label: 'Monthly Revenue',
+      value: '$45,231',
+      trend: '+23%',
+      trendType: 'up',
+      color: '#F59E0B',
+    },
+    {
+      icon: <FileText size={22} />,
+      label: 'Applications',
+      value: '187',
+      trend: '+5%',
+      trendType: 'up',
+      color: '#8B5CF6',
+    },
+    {
+      icon: <Smartphone size={22} />,
+      label: 'App Downloads',
+      value: '38,421',
+      trend: '+9%',
+      trendType: 'up',
+      color: '#EC4899',
+    },
+    {
+      icon: <Award size={22} />,
+      label: 'Active Grants',
+      value: '124',
+      trend: '+15%',
+      trendType: 'up',
+      color: '#06B6D4',
+    },
     {
       icon: <Circle size={22} />,
       label: 'Passport KPI',
@@ -67,13 +109,14 @@ const Dashboard: React.FC = () => {
     { month: 'NOV', users: 850, unsubs: 600 },
     { month: 'DEC', users: 950, unsubs: 900 },
   ];
-  const labels = chartData.map(d => d.month);
-  const userData = chartData.map(d => d.users);
-  const unsubData = chartData.map(d => d.unsubs);
+  const labels = chartData.map((d) => d.month);
+  const userData = chartData.map((d) => d.users);
+  const unsubData = chartData.map((d) => d.unsubs);
   return (
     <div className="dashboard-view">
       <HeaderActions>
         <button
+          type="button"
           className="action-btn settings-btn"
           onClick={() => navigate('/settings')}
         >
@@ -118,7 +161,9 @@ const Dashboard: React.FC = () => {
         <div className="chart-container">
           <div className="chart-header">
             <h4 className="chart-title">Monthly Unsubscriptions</h4>
-            <p className="chart-subtitle">Users who cancelled their subscription</p>
+            <p className="chart-subtitle">
+              Users who cancelled their subscription
+            </p>
           </div>
           {/* <div className="chart-body">
             <div className="bar-chart unsubs">
@@ -130,7 +175,6 @@ const Dashboard: React.FC = () => {
               ))}
             </div>
           </div> */}
-
 
           <div className="chart-body">
             <BarChart
@@ -144,6 +188,6 @@ const Dashboard: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default Dashboard;

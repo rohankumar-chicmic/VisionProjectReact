@@ -1,15 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  ChevronDown, 
-  MoreVertical,
-  PlusCircle,
-  Eye
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ChevronDown, MoreVertical, PlusCircle, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import './AddCustomCriteria.scss';
 
-const AddCustomCriteria: React.FC = () => {
+function AddCustomCriteria() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
 
@@ -27,10 +22,18 @@ const AddCustomCriteria: React.FC = () => {
   return (
     <div className="add-custom-criteria-page">
       <HeaderActions>
-        <button className="header-btn btn-outline" onClick={() => navigate('/grants/jury-criteria')}>
+        <button
+          type="button"
+          className="header-btn btn-outline"
+          onClick={() => navigate('/grants/jury-criteria')}
+        >
           Cancel
         </button>
-        <button className="header-btn btn-primary" onClick={() => navigate('/grants/jury-criteria')}>
+        <button
+          type="button"
+          className="header-btn btn-primary"
+          onClick={() => navigate('/grants/jury-criteria')}
+        >
           <PlusCircle size={18} />
           <span>Create Criteria</span>
         </button>
@@ -45,7 +48,10 @@ const AddCustomCriteria: React.FC = () => {
               </div>
               <div className="header-text">
                 <h3>Create New Evaluation Criteria</h3>
-                <p>This criteria will appear as a scoring field on the jury evaluation form</p>
+                <p>
+                  This criteria will appear as a scoring field on the jury
+                  evaluation form
+                </p>
               </div>
             </div>
 
@@ -53,11 +59,13 @@ const AddCustomCriteria: React.FC = () => {
               <div className="form-group">
                 <div className="label-row">
                   <label>Criteria Name *</label>
-                  <span className="char-count">{criteriaName.length}/50 characters</span>
+                  <span className="char-count">
+                    {criteriaName.length}/50 characters
+                  </span>
                 </div>
-                <input 
-                  type="text" 
-                  placeholder="e.g., Pitch Quality" 
+                <input
+                  type="text"
+                  placeholder="e.g., Pitch Quality"
                   maxLength={50}
                   value={criteriaName}
                   onChange={(e) => setCriteriaName(e.target.value)}
@@ -67,44 +75,46 @@ const AddCustomCriteria: React.FC = () => {
               <div className="form-group">
                 <div className="label-row">
                   <label>Description *</label>
-                  <span className="helper-text">Helps jury members understand how to evaluate</span>
+                  <span className="helper-text">
+                    Helps jury members understand how to evaluate
+                  </span>
                 </div>
-                <textarea 
-                  placeholder="e.g., How clearly and compellingly does the applicant present their business idea?" 
+                <textarea
+                  placeholder="e.g., How clearly and compellingly does the applicant present their business idea?"
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                ></textarea>
+                />
               </div>
 
               <div className="form-group">
                 <label>Scoring Scale *</label>
                 <div className="scale-selector">
-                  <div 
+                  <div
                     className={`scale-option ${scale === '0-10' ? 'active' : ''}`}
                     onClick={() => setScale('0-10')}
                   >
-                    <div className="radio"></div>
+                    <div className="radio" />
                     <div className="option-text">
                       <span className="scale-val">0 - 10</span>
                       <span className="desc">Standard (recommended)</span>
                     </div>
                   </div>
-                  <div 
+                  <div
                     className={`scale-option ${scale === '0-5' ? 'active' : ''}`}
                     onClick={() => setScale('0-5')}
                   >
-                    <div className="radio"></div>
+                    <div className="radio" />
                     <div className="option-text">
                       <span className="scale-val">0 - 5</span>
                       <span className="desc">Simplified scale</span>
                     </div>
                   </div>
-                  <div 
+                  <div
                     className={`scale-option ${scale === '1-100' ? 'active' : ''}`}
                     onClick={() => setScale('1-100')}
                   >
-                    <div className="radio"></div>
+                    <div className="radio" />
                     <div className="option-text">
                       <span className="scale-val">1 - 100</span>
                       <span className="desc">Percentage scale</span>
@@ -129,7 +139,7 @@ const AddCustomCriteria: React.FC = () => {
                   <p>Criteria will be pre-selected in Manage Criteria</p>
                 </div>
                 <div className="toggle-switch active">
-                  <div className="switch-handle"></div>
+                  <div className="switch-handle" />
                 </div>
               </div>
             </div>
@@ -143,19 +153,24 @@ const AddCustomCriteria: React.FC = () => {
               <h3>Jury Form Preview</h3>
             </div>
             <p className="preview-sub">How it will appear to jury members:</p>
-            
+
             <div className="preview-box">
               <div className="preview-header">
                 <div className="preview-title-row">
                   <h4>{criteriaName || 'Pitch Quality'}</h4>
-                  <span className="score">8 <span className="max">/ 10</span></span>
+                  <span className="score">
+                    8 <span className="max">/ 10</span>
+                  </span>
                 </div>
-                <p>{description || 'How clearly and compellingly does the applicant present their business idea?'}</p>
+                <p>
+                  {description ||
+                    'How clearly and compellingly does the applicant present their business idea?'}
+                </p>
               </div>
               <div className="preview-slider">
                 <div className="slider-track">
-                  <div className="slider-fill" style={{ width: '80%' }}></div>
-                  <div className="slider-handle" style={{ left: '80%' }}></div>
+                  <div className="slider-fill" style={{ width: '80%' }} />
+                  <div className="slider-handle" style={{ left: '80%' }} />
                 </div>
                 <div className="slider-labels">
                   <span>0</span>
@@ -209,6 +224,6 @@ const AddCustomCriteria: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default AddCustomCriteria;

@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  Search, 
-  ChevronDown, 
-  Download, 
-  CheckCircle2, 
-  XCircle, 
-  Eye, 
+import { useEffect, useState } from 'react';
+import {
+  Search,
+  ChevronDown,
+  Download,
+  CheckCircle2,
+  XCircle,
+  Eye,
   Filter,
-  Star
+  Star,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
@@ -27,7 +27,7 @@ interface Application {
   status: 'Pending' | 'Approved' | 'Rejected';
 }
 
-const ApplicationList: React.FC = () => {
+function ApplicationList() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
@@ -40,7 +40,7 @@ const ApplicationList: React.FC = () => {
       grant: 'Innovation Tech Grant',
       appliedDate: 'Mar 10, 2024',
       juryScore: 9.2,
-      status: 'Pending'
+      status: 'Pending',
     },
     {
       id: 'APP-45231',
@@ -49,7 +49,7 @@ const ApplicationList: React.FC = () => {
       grant: 'Community Grant',
       appliedDate: 'Mar 10, 2024',
       juryScore: 7.1,
-      status: 'Pending'
+      status: 'Pending',
     },
     {
       id: 'APP-45232',
@@ -58,16 +58,19 @@ const ApplicationList: React.FC = () => {
       grant: 'Innovation Tech Grant',
       appliedDate: 'Mar 12, 2024',
       juryScore: 8.4,
-      status: 'Approved'
+      status: 'Approved',
     },
     {
       id: 'APP-45233',
-      applicant: { name: 'Darrell Steward', email: 'darrell.steward@email.com' },
+      applicant: {
+        name: 'Darrell Steward',
+        email: 'darrell.steward@email.com',
+      },
       galaName: 'Spring Gala 2024',
       grant: 'Women Leader Grant',
       appliedDate: 'Mar 10, 2024',
       juryScore: 6.5,
-      status: 'Pending'
+      status: 'Pending',
     },
     {
       id: 'APP-45234',
@@ -76,17 +79,20 @@ const ApplicationList: React.FC = () => {
       grant: 'Community Grant',
       appliedDate: 'Mar 08, 2024',
       juryScore: 3.2,
-      status: 'Rejected'
+      status: 'Rejected',
     },
     {
       id: 'APP-45235',
-      applicant: { name: 'Marvin McKinney', email: 'marvin.mckinney@email.com' },
+      applicant: {
+        name: 'Marvin McKinney',
+        email: 'marvin.mckinney@email.com',
+      },
       galaName: 'Summer Charity Event',
       grant: 'Tech Startup Grant',
       appliedDate: 'Mar 12, 2024',
       juryScore: 0,
-      status: 'Approved'
-    }
+      status: 'Approved',
+    },
   ];
 
   useEffect(() => {
@@ -101,13 +107,13 @@ const ApplicationList: React.FC = () => {
     { label: 'Pending', count: 43 },
     { label: 'Approved', count: 122 },
     { label: 'Rejected', count: 22 },
-    { label: 'Past Events', count: 15 }
+    { label: 'Past Events', count: 15 },
   ];
 
   return (
     <div className="application-list-page">
       <HeaderActions>
-        <button className="header-btn btn-outline">
+        <button type="button" className="header-btn btn-outline">
           <Download size={18} />
           <span>Export CSV</span>
         </button>
@@ -121,8 +127,9 @@ const ApplicationList: React.FC = () => {
               <input type="text" placeholder="Search applications..." />
             </div>
             <div className="status-tabs">
-              {tabs.map(tab => (
-                <button 
+              {tabs.map((tab) => (
+                <button
+                  type="button"
                   key={tab.label}
                   className={`tab-btn ${activeTab === tab.label ? 'active' : ''}`}
                   onClick={() => setActiveTab(tab.label)}
@@ -140,20 +147,28 @@ const ApplicationList: React.FC = () => {
             </div>
             <div className="filter-dropdowns">
               <div className="filter-select">
-                <select><option>All Galas</option></select>
+                <select>
+                  <option>All Galas</option>
+                </select>
                 <ChevronDown size={14} />
               </div>
               <div className="filter-select">
-                <select><option>All Grants</option></select>
+                <select>
+                  <option>All Grants</option>
+                </select>
                 <ChevronDown size={14} />
               </div>
               <div className="filter-select">
-                <select><option>All Classes</option></select>
+                <select>
+                  <option>All Classes</option>
+                </select>
                 <ChevronDown size={14} />
               </div>
               <div className="filter-select rating">
                 <Star size={14} />
-                <select><option>Rating: Best First</option></select>
+                <select>
+                  <option>Rating: Best First</option>
+                </select>
                 <ChevronDown size={14} />
               </div>
             </div>
@@ -178,7 +193,9 @@ const ApplicationList: React.FC = () => {
                 <tr key={app.id}>
                   <td>
                     <div className="applicant-cell">
-                      <div className="avatar">{app.applicant.name.charAt(0)}</div>
+                      <div className="avatar">
+                        {app.applicant.name.charAt(0)}
+                      </div>
                       <div className="info">
                         <span className="name">{app.applicant.name}</span>
                         <span className="email">{app.applicant.email}</span>
@@ -190,8 +207,12 @@ const ApplicationList: React.FC = () => {
                   <td>{app.appliedDate}</td>
                   <td>
                     <div className="score-cell">
-                      <span className={`score-value ${app.juryScore >= 8 ? 'high' : app.juryScore >= 5 ? 'medium' : app.juryScore > 0 ? 'low' : 'none'}`}>
-                        {app.juryScore > 0 ? `${app.juryScore.toFixed(1)} / 10` : '—'}
+                      <span
+                        className={`score-value ${app.juryScore >= 8 ? 'high' : app.juryScore >= 5 ? 'medium' : app.juryScore > 0 ? 'low' : 'none'}`}
+                      >
+                        {app.juryScore > 0
+                          ? `${app.juryScore.toFixed(1)} / 10`
+                          : '—'}
                       </span>
                     </div>
                   </td>
@@ -204,18 +225,19 @@ const ApplicationList: React.FC = () => {
                     <div className="action-buttons">
                       {app.status === 'Pending' && (
                         <>
-                          <button className="btn-approve">
+                          <button type="button" className="btn-approve">
                             <CheckCircle2 size={16} />
                             <span>Approve</span>
                           </button>
-                          <button className="btn-reject">
+                          <button type="button" className="btn-reject">
                             <XCircle size={16} />
                             <span>Reject</span>
                           </button>
                         </>
                       )}
-                      <button 
-                        className="btn-view" 
+                      <button
+                        type="button"
+                        className="btn-view"
                         onClick={() => navigate(`/applications/${app.id}`)}
                       >
                         <Eye size={18} />
@@ -230,6 +252,6 @@ const ApplicationList: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default ApplicationList;

@@ -16,7 +16,7 @@ function Prompt({ when, message }: PromptProps) {
   // Use unstable useBlocker from react-router-dom to block navigation
   useBlocker(() => {
     if (when) {
-      return !window.confirm(message); // Show confirmation dialog for navigation
+      return !globalThis.confirm(message); // Show confirmation dialog for navigation
     }
     return false;
   });

@@ -74,9 +74,14 @@ export const useLoginForm = () => {
           updateAuthTokenRedux({
             token: accessToken,
             refreshToken,
-            user,
+            // user,
+            user: {
+              ...user,
+              role: 'sub_admin',
+            },
           })
         );
+        console.log(user);
         navigate('/dashboard');
       } else {
         const msg = response.message || 'Login failed';

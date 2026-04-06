@@ -11,6 +11,10 @@ export interface AuthData {
   email: string;
   isEmailVerified: boolean;
   isProfileCompleted: boolean;
+  role?: string | number | null;
+  roleLabel?: string | null;
+  userRole?: string | number | null;
+  type?: string | number | null;
 }
 
 export interface AuthResponse {

@@ -1,21 +1,13 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Users,
-  Calendar,
-  Award,
-  FileText,
-  Megaphone,
-  ShieldCheck,
-  Bell,
-  LogOut,
-} from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLogoutAdminMutation } from '../../Services/Api/module/AuthApi';
 import { clearAuthTokenRedux } from '../../Store/Common';
 import { RootState } from '../../Store';
 import LogoutModal from '../Molecule/LogoutModal/LogoutModal';
+import { SIDEBAR_CONFIG } from './sidebarConfig';
+import { useCurrentUserRole } from '../../Shared/Auth/useCurrentUserRole';
 import './Sidebar.scss';
 
 import logo from '../../assets/logo.png';
@@ -25,6 +17,7 @@ function Sidebar() {
   const navigate = useNavigate();
   const [logoutAdmin, { isLoading }] = useLogoutAdminMutation();
   const { user } = useSelector((state: RootState) => state.common);
+  const { role, roleLabel } = useCurrentUserRole();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -40,36 +33,7 @@ function Sidebar() {
     }
   };
 
-  const menuItems = [
-    {
-      icon: <LayoutDashboard size={20} />,
-      label: 'Dashboard',
-      path: '/dashboard',
-    },
-    { icon: <Users size={20} />, label: 'Users Management', path: '/users' },
-    { icon: <Calendar size={20} />, label: 'Galas Management', path: '/galas' },
-    { icon: <Award size={20} />, label: 'Grants', path: '/grants' },
-    {
-      icon: <FileText size={20} />,
-      label: 'Applications',
-      path: '/applications',
-    },
-    {
-      icon: <Megaphone size={20} />,
-      label: 'Announcements',
-      path: '/announcements',
-    },
-    {
-      icon: <ShieldCheck size={20} />,
-      label: 'Admin Managers',
-      path: '/admins',
-    },
-    {
-      icon: <Bell size={20} />,
-      label: 'Notifications',
-      path: '/notifications',
-    },
-  ];
+  const menuItems = SIDEBAR_CONFIG[role];
 
   const userInitial =
     user?.username?.charAt(0) || user?.email?.charAt(0) || 'A';
@@ -93,7 +57,9 @@ function Sidebar() {
                 `nav-item ${isActive ? 'active' : ''}`
               }
             >
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-icon">
+                <item.icon size={20} />
+              </span>
               <span className="nav-label">{item.label}</span>
             </NavLink>
           ))}
@@ -107,7 +73,7 @@ function Sidebar() {
                 {user?.username || 'Admin User'}
               </span>
               <span className="user-email">
-                {user?.email || 'admin@visionpme.com'}
+                {roleLabel} • {user?.email || 'admin@visionpme.com'}
               </span>
             </div>
           </div>

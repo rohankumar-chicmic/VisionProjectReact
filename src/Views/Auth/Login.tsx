@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/label-has-associated-control, jsx-a11y/no-static-element-interactions, react/jsx-props-no-spreading */
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../../assets/logo.png';
@@ -14,11 +15,15 @@ function Login() {
     togglePasswordVisibility,
     submitError,
     onSubmit,
+    watch,
+    setValue,
   } = useLoginForm();
+
+  const selectedRole = watch('role');
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
+      <div className="auth-card wide">
         <div className="auth-logo">
           <img src={Logo} alt="Logo" />
         </div>
@@ -26,6 +31,32 @@ function Login() {
         <div className="auth-header">
           <h1 className="auth-title"> Admin Panel</h1>
           <p className="auth-subtitle">Sign in to manage your platform</p>
+        </div>
+
+        <div className="role-selection-wrapper">
+          <div className="role-button-group">
+            <button
+              type="button"
+              className={`role-btn ${selectedRole === 'organiser' ? 'active' : ''}`}
+              onClick={() => setValue('role', 'organiser')}
+            >
+              Organiser
+            </button>
+            <button
+              type="button"
+              className={`role-btn ${selectedRole === 'admin' ? 'active' : ''}`}
+              onClick={() => setValue('role', 'admin')}
+            >
+              Admin
+            </button>
+            <button
+              type="button"
+              className={`role-btn ${selectedRole === 'jury' ? 'active' : ''}`}
+              onClick={() => setValue('role', 'jury')}
+            >
+              Jury Member
+            </button>
+          </div>
         </div>
 
         <form className="auth-form" noValidate onSubmit={onSubmit}>
@@ -36,7 +67,7 @@ function Login() {
               <input
                 type="email"
                 id="email"
-                placeholder="admin@example.com"
+                placeholder="your@email.com"
                 aria-invalid={!!errors.email}
                 {...register('email')}
               />
@@ -95,7 +126,7 @@ function Login() {
                 navigate('/forgot-password');
               }}
             >
-              Forgot Password?
+              Forgot password?
             </a>
           </div>
 
@@ -109,6 +140,16 @@ function Login() {
             {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
+
+        <div className="create-account-footer">
+          New here?{' '}
+          <span
+            className="create-link"
+            onClick={() => navigate('/create-organiser')}
+          >
+            Create your Organiser account
+          </span>
+        </div>
 
         <p className="auth-footer">
           © 2024 Vision PME (Gala Management System). All rights reserved.

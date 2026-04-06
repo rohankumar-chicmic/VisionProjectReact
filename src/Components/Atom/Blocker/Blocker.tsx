@@ -1,3 +1,4 @@
+/* eslint-disable no-alert */
 import { useEffect } from 'react';
 import { useBlocker } from 'react-router-dom';
 

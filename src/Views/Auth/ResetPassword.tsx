@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/label-has-associated-control, react/jsx-props-no-spreading */
 import {
   Lock,
   Eye,

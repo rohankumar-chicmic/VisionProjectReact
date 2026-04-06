@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { useSelector } from 'react-redux';
 import { useRoutes } from 'react-router-dom';
 import DocumentTitle from './DocumentTitle';

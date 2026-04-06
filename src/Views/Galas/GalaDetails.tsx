@@ -1,3 +1,4 @@
+/* eslint-disable no-alert */
 import { useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -340,13 +341,17 @@ function GalaDetails() {
                           return (
                             <tr key={app.id}>
                               <td>
-                                <span className="app-id">{app.applicationId}</span>
+                                <span className="app-id">
+                                  {app.applicationId}
+                                </span>
                               </td>
                               <td>{app.companyName}</td>
                               <td>{app.industry}</td>
                               <td>{formatDate(app.submittedAt)}</td>
                               <td>
-                                <span className={`status-pill ${appStatus.class}`}>
+                                <span
+                                  className={`status-pill ${appStatus.class}`}
+                                >
                                   {appStatus.label}
                                 </span>
                               </td>

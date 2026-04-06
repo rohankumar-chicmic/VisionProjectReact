@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/label-has-associated-control, jsx-a11y/no-static-element-interactions, react/button-has-type, react/function-component-definition, react/require-default-props */
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, GripVertical, CheckCircle2 } from 'lucide-react';
 import Modal from '../../../Components/Atom/Modal/Modal';

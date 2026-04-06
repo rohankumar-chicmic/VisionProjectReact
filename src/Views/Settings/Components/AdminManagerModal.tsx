@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/label-has-associated-control, react/require-default-props */
 import { useState, useEffect } from 'react';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';

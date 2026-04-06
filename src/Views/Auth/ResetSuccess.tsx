@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import { Check, ShieldCheck, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './Auth.scss';

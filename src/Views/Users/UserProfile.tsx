@@ -276,7 +276,8 @@ function UserProfile() {
                     const targetTab = activeTab.toLowerCase();
                     // Match "Grant" to "Grants" and "Gala" to "Galas"
                     return (
-                      itemType === targetTab || itemType === targetTab.slice(0, -1)
+                      itemType === targetTab ||
+                      itemType === targetTab.slice(0, -1)
                     );
                   })
                   .map((item, idx) => (

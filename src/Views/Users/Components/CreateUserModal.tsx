@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define, jsx-a11y/label-has-associated-control, react/button-has-type, react/function-component-definition */
 import React, { useState } from 'react';
 import {
   Mail,

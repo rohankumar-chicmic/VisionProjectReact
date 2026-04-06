@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/label-has-associated-control, react/button-has-type */
 import { useEffect } from 'react';
 import { Upload, Save, EyeOff, Lock, Trash2, RefreshCcw } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';

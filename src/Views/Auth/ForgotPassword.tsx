@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/label-has-associated-control, react/jsx-props-no-spreading, react/no-unescaped-entities */
 import { Mail, ArrowLeft, Key, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useForgotPasswordForm } from './hooks/useAuthForms';

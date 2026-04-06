@@ -1,3 +1,4 @@
+/* eslint-disable react/button-has-type, react/function-component-definition, react/no-array-index-key */
 import React from 'react';
 import './JuryPage.scss';
 

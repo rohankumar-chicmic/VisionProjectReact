@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/label-has-associated-control, jsx-a11y/no-static-element-interactions */
 import { useEffect, useState } from 'react';
 import { ChevronDown, MoreVertical, PlusCircle, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

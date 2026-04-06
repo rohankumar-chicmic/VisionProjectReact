@@ -11,6 +11,7 @@ import {
   useForgotPasswordMutation,
   useRegisterOrganiserMutation,
 } from '../../../Services/Api/module/AuthApi';
+import { useUploadFileMutation } from '../../../Services/Api/module/CommonApi';
 import { updateAuthTokenRedux } from '../../../Store/Common';
 import type { AppDispatch } from '../../../Store';
 import {
@@ -227,8 +228,11 @@ export const useCreateOrganiserForm = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [registerOrganiser, { isLoading: isSubmitting }] =
+  const [registerOrganiser, { isLoading: isRegistering }] =
     useRegisterOrganiserMutation();
+  const [uploadFile, { isLoading: isUploading }] = useUploadFileMutation();
+
+  const isSubmitting = isRegistering || isUploading;
 
   const getStepSchema = () => {
     if (step === 1) return organiserStep1Schema;
@@ -253,7 +257,31 @@ export const useCreateOrganiserForm = () => {
   const onSubmit = form.handleSubmit(async (data) => {
     setSubmitError(null);
     try {
-      const response = await registerOrganiser(data).unwrap();
+      let finalGovtId = data.govtId;
+
+      if (data.govtId instanceof File) {
+        const formData = new FormData();
+        formData.append('file', data.govtId);
+        const uploadResponse = await uploadFile(formData).unwrap();
+        
+        if (uploadResponse.success && uploadResponse.data) {
+          finalGovtId = uploadResponse.data;
+        } else {
+          throw new Error('Failed to upload Government ID image');
+        }
+      }
+
+      const payload = {
+        fullName: data.fullname,
+        email: data.email,
+        password: data.password,
+        phoneNumber: data.phone,
+        governmentId: finalGovtId,
+        companyName: data.companyName,
+        industryDomain: data.industryType,
+      };
+
+      const response = await registerOrganiser(payload).unwrap();
       if (response.success) {
         showToast.success('Account created successfully!');
         navigate('/login');

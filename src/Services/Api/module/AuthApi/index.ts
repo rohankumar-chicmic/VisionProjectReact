@@ -3,8 +3,17 @@ import api from '../../api';
 import {
   LoginFormValues,
   ResetPasswordFormValues,
-  OrganiserRegistrationValues,
 } from '../../../../Views/Auth/Helpers/AuthValidations';
+
+export interface OrganiserRegisterPayload {
+  fullName: string;
+  email: string;
+  password: string;
+  phoneNumber: string;
+  governmentId: string;
+  companyName: string;
+  industryDomain: string;
+}
 
 export interface AuthData {
   accessToken: string;
@@ -39,10 +48,7 @@ export const userApi = api.injectEndpoints({
         body,
       }),
     }),
-    registerOrganiser: build.mutation<
-      AuthResponse,
-      OrganiserRegistrationValues
-    >({
+    registerOrganiser: build.mutation<AuthResponse, OrganiserRegisterPayload>({
       query: (body) => ({
         url: '/api/v1/organiser/auth/register',
         method: 'POST',

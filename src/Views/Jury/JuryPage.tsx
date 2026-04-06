@@ -3,9 +3,24 @@ import './JuryPage.scss';
 
 const JuryPage: React.FC = () => {
   const applications = [
-    { id: 1, name: 'Jerome Bell', grant: 'Innovative Startup Grant', score: 85 },
-    { id: 2, name: 'Eleanor Pena', grant: 'Young Entrepreneur Award', score: 92 },
-    { id: 3, name: 'Arlene McCoy', grant: 'Sustainability Impact Fund', score: 78 },
+    {
+      id: 1,
+      name: 'Jerome Bell',
+      grant: 'Innovative Startup Grant',
+      score: 85,
+    },
+    {
+      id: 2,
+      name: 'Eleanor Pena',
+      grant: 'Young Entrepreneur Award',
+      score: 92,
+    },
+    {
+      id: 3,
+      name: 'Arlene McCoy',
+      grant: 'Sustainability Impact Fund',
+      score: 78,
+    },
   ];
 
   const criteria = [
@@ -38,8 +53,11 @@ const JuryPage: React.FC = () => {
         <div className="applications-sidebar">
           <h3>Applications</h3>
           <div className="app-list">
-            {applications.map(app => (
-              <div key={app.id} className={`app-item ${app.id === 2 ? 'active' : ''}`}>
+            {applications.map((app) => (
+              <div
+                key={app.id}
+                className={`app-item ${app.id === 2 ? 'active' : ''}`}
+              >
                 <div className="app-info">
                   <strong>{app.name}</strong>
                   <span>{app.grant}</span>
@@ -79,7 +97,7 @@ const JuryPage: React.FC = () => {
           </div>
 
           <div className="panel-footer">
-            <textarea placeholder="Add internal jury comments..."></textarea>
+            <textarea placeholder="Add internal jury comments..." />
             <div className="actions">
               <button className="save-draft-btn">Save Draft</button>
               <button className="submit-score-btn">Submit Final Score</button>

@@ -5,7 +5,6 @@ import {
   Calendar,
   DollarSign,
   FileText,
-  Smartphone,
   Award,
   Circle,
   Settings,
@@ -14,72 +13,77 @@ import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import './Dashboard.scss';
 import KpiCard, { KpiCardProps } from '../../Components/Shared/KpiCard';
 import BarChart from './Components/BarChart';
+import { useGetDashboardDataQuery } from '../../Services/Api/module/CommonApi';
+import { KpiSkeleton, ChartSkeleton } from './Components/DashboardSkeletons';
 
 function Dashboard() {
   const { setTitle, setSubtitle } = useHeader();
   const navigate = useNavigate();
+  const { data: dashboardResponse, isLoading } = useGetDashboardDataQuery();
+  const stats = dashboardResponse?.data;
 
   useEffect(() => {
     setTitle('Dashboard Overview');
     setSubtitle("Welcome back! Here's what's happening today");
   }, [setTitle, setSubtitle]);
 
+  const formatTrend = (percentage: number | undefined) => {
+    const val = percentage || 0;
+    return `${val >= 0 ? '+' : ''}${val}%`;
+  };
+
+  const getTrendType = (percentage: number | undefined): 'up' | 'down' => {
+    return (percentage || 0) >= 0 ? 'up' : 'down';
+  };
+
   const kpis: KpiCardProps[] = [
     {
       icon: <Users size={22} />,
       label: 'Total Users',
-      value: '12,543',
-      trend: '+12%',
-      trendType: 'up',
+      value: stats?.totalUsers.toLocaleString() || '0',
+      trend: formatTrend(stats?.usersGrowthPercentage),
+      trendType: getTrendType(stats?.usersGrowthPercentage),
       color: '#1DB954',
     },
     {
       icon: <Calendar size={22} />,
       label: 'Active Galas',
-      value: '24',
-      trend: '+8%',
-      trendType: 'up',
+      value: stats?.activeGalas.toLocaleString() || '0',
+      trend: formatTrend(stats?.galasGrowthPercentage),
+      trendType: getTrendType(stats?.galasGrowthPercentage),
       color: '#3B82F6',
     },
     {
       icon: <DollarSign size={22} />,
       label: 'Monthly Revenue',
-      value: '$45,231',
-      trend: '+23%',
-      trendType: 'up',
+      value: `$${stats?.monthlyRevenue.toLocaleString() || '0'}`,
+      trend: formatTrend(stats?.revenueGrowthPercentage),
+      trendType: getTrendType(stats?.revenueGrowthPercentage),
       color: '#F59E0B',
     },
     {
       icon: <FileText size={22} />,
       label: 'Applications',
-      value: '187',
-      trend: '+5%',
-      trendType: 'up',
+      value: stats?.totalApplications.toLocaleString() || '0',
+      trend: formatTrend(stats?.applicationsGrowthPercentage),
+      trendType: getTrendType(stats?.applicationsGrowthPercentage),
       color: '#8B5CF6',
-    },
-    {
-      icon: <Smartphone size={22} />,
-      label: 'App Downloads',
-      value: '38,421',
-      trend: '+9%',
-      trendType: 'up',
-      color: '#EC4899',
     },
     {
       icon: <Award size={22} />,
       label: 'Active Grants',
-      value: '124',
-      trend: '+15%',
-      trendType: 'up',
+      value: stats?.activeGrants.toLocaleString() || '0',
+      trend: formatTrend(stats?.grantsGrowthPercentage),
+      trendType: getTrendType(stats?.grantsGrowthPercentage),
       color: '#06B6D4',
     },
     {
       icon: <Circle size={22} />,
       label: 'Passport KPI',
       subLabel: 'Active passports this month',
-      value: '1,284',
-      trend: '+18%',
-      trendType: 'up',
+      value: stats?.monthlyActivePasseports.toLocaleString() || '0',
+      trend: formatTrend(stats?.monthlyPasseportGrowthPercentage),
+      trendType: getTrendType(stats?.monthlyPasseportGrowthPercentage),
       color: '#ef4444',
       period: 'Monthly',
     },
@@ -87,31 +91,32 @@ function Dashboard() {
       icon: <Circle size={22} />,
       label: 'Passport KPI',
       subLabel: 'Total passports this year',
-      value: '9,870',
-      trend: '+34%',
-      trendType: 'up',
+      value: stats?.yearlyTotalPasseports.toLocaleString() || '0',
+      trend: formatTrend(stats?.yearlyPasseportGrowthPercentage),
+      trendType: getTrendType(stats?.yearlyPasseportGrowthPercentage),
       color: '#6366f1',
       period: 'Yearly',
     },
   ];
 
-  const chartData = [
-    { month: 'JAN', users: 300, unsubs: 500 },
-    { month: 'FEB', users: 500, unsubs: 700 },
-    { month: 'MAR', users: 400, unsubs: 600 },
-    { month: 'APR', users: 450, unsubs: 800 },
-    { month: 'MAY', users: 550, unsubs: 900 },
-    { month: 'JUN', users: 700, unsubs: 750 },
-    { month: 'JUL', users: 800, unsubs: 600 },
-    { month: 'AUG', users: 400, unsubs: 550 },
-    { month: 'SEP', users: 600, unsubs: 400 },
-    { month: 'OCT', users: 550, unsubs: 800 },
-    { month: 'NOV', users: 850, unsubs: 600 },
-    { month: 'DEC', users: 950, unsubs: 900 },
-  ];
-  const labels = chartData.map((d) => d.month);
-  const userData = chartData.map((d) => d.users);
-  const unsubData = chartData.map((d) => d.unsubs);
+  const labels = stats?.monthlyNewUsers.map((d) => d.label) || [];
+  const userData = stats?.monthlyNewUsers.map((d) => d.value) || [];
+  const unsubData = stats?.monthlyUnsubscriptions.map((d) => d.value) || [];
+
+  const isEmpty = !isLoading && (!stats || Object.keys(stats).length === 0);
+
+  if (isEmpty) {
+    return (
+      <div className="dashboard-empty">
+        <div className="empty-content">
+          <FileText size={48} />
+          <h3>No Data Available</h3>
+          <p>We couldn&apos;t find any statistics to display at this time.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-view">
       <HeaderActions>
@@ -126,65 +131,58 @@ function Dashboard() {
       </HeaderActions>
 
       <div className="kpi-grid">
-        {kpis.map((kpi, index) => (
-          <KpiCard key={index} {...kpi} />
-        ))}
+        {isLoading
+          ? [1, 2, 3, 4, 5, 6, 7].map((id) => (
+              <KpiSkeleton key={`skeleton-card-${id}`} />
+            ))
+          : kpis.map((kpi) => (
+              <KpiCard key={`${kpi.label}-${kpi.subLabel || ''}`} {...kpi} />
+            ))}
       </div>
 
       <div className="charts-grid">
-        {/* ... Chart code remains the same ... */}
-        <div className="chart-container">
-          <div className="chart-header">
-            <h4 className="chart-title">Monthly New Users</h4>
-            <p className="chart-subtitle">New user registrations per month</p>
-          </div>
-          {/* <div className="chart-body">
-            <div className="bar-chart">
-              {chartData.map((data, index) => (
-                <div key={index} className="bar-wrapper">
-                  <div className="bar" style={{ height: `${(data.users / 1000) * 100}%` }}></div>
-                  <span className="bar-label">{data.month}</span>
-                </div>
-              ))}
+        {isLoading ? (
+          <>
+            <ChartSkeleton />
+            <ChartSkeleton />
+          </>
+        ) : (
+          <>
+            <div className="chart-container">
+              <div className="chart-header">
+                <h4 className="chart-title">Monthly New Users</h4>
+                <p className="chart-subtitle">
+                  New user registrations per month
+                </p>
+              </div>
+              <div className="chart-body">
+                <BarChart
+                  labels={labels}
+                  data={userData}
+                  label="Users"
+                  color="#1DB954"
+                />
+              </div>
             </div>
-          </div> */}
-          <div className="chart-body">
-            <BarChart
-              labels={labels}
-              data={userData}
-              label="Users"
-              color="#00CE86"
-            />
-          </div>
-        </div>
 
-        <div className="chart-container">
-          <div className="chart-header">
-            <h4 className="chart-title">Monthly Unsubscriptions</h4>
-            <p className="chart-subtitle">
-              Users who cancelled their subscription
-            </p>
-          </div>
-          {/* <div className="chart-body">
-            <div className="bar-chart unsubs">
-              {chartData.map((data, index) => (
-                <div key={index} className="bar-wrapper">
-                  <div className="bar" style={{ height: `${(data.unsubs / 1000) * 100}%` }}></div>
-                  <span className="bar-label">{data.month}</span>
-                </div>
-              ))}
+            <div className="chart-container">
+              <div className="chart-header">
+                <h4 className="chart-title">Monthly Unsubscriptions</h4>
+                <p className="chart-subtitle">
+                  Users who cancelled their subscription
+                </p>
+              </div>
+              <div className="chart-body">
+                <BarChart
+                  labels={labels}
+                  data={unsubData}
+                  label="Unsubscriptions"
+                  color="#EF4444"
+                />
+              </div>
             </div>
-          </div> */}
-
-          <div className="chart-body">
-            <BarChart
-              labels={labels}
-              data={unsubData}
-              label="Unsubscriptions"
-              color="#EF4444"
-            />
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

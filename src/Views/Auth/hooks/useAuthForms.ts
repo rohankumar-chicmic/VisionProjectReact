@@ -3,7 +3,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { useLoginAdminMutation } from '../../../Services/Api/module/AuthApi';
+import {
+  useLoginAdminMutation,
+  useForgotPasswordMutation,
+} from '../../../Services/Api/module/AuthApi';
 import { updateAuthTokenRedux } from '../../../Store/Common';
 import type { AppDispatch } from '../../../Store';
 import {
@@ -14,29 +17,7 @@ import {
   resetPasswordSchema,
   ResetPasswordFormValues,
 } from '../Helpers/AuthValidations';
-
-type LoginApiResponse = {
-  token?: string;
-  accessToken?: string;
-  data?: {
-    token?: string;
-    accessToken?: string;
-  };
-};
-
-const getLoginToken = (response: LoginApiResponse | string) => {
-  if (typeof response === 'string') {
-    return response;
-  }
-
-  return (
-    response?.token ??
-    response?.accessToken ??
-    response?.data?.token ??
-    response?.data?.accessToken ??
-    null
-  );
-};
+import showToast from '../../../Shared/Utils/toast';
 
 const getErrorMessage = (error: unknown) => {
   if (typeof error === 'object' && error !== null) {
@@ -84,19 +65,28 @@ export const useLoginForm = () => {
 
     try {
       const response = await loginAdmin({ email, password }).unwrap();
-      const token = getLoginToken(response as LoginApiResponse | string);
 
-      if (!token) {
-        setSubmitError(
-          'Login succeeded, but no authentication token was returned.'
+      if (response.success && response.data) {
+        showToast.success('Login successful!');
+        const { accessToken, refreshToken, ...user } = response.data;
+
+        dispatch(
+          updateAuthTokenRedux({
+            token: accessToken,
+            refreshToken,
+            user,
+          })
         );
-        return;
+        navigate('/dashboard');
+      } else {
+        const msg = response.message || 'Login failed';
+        setSubmitError(msg);
+        showToast.error(msg);
       }
-
-      dispatch(updateAuthTokenRedux({ token }));
-      navigate('/dashboard');
     } catch (error) {
-      setSubmitError(getErrorMessage(error));
+      const msg = getErrorMessage(error);
+      setSubmitError(msg);
+      showToast.error(msg);
     }
   });
 
@@ -113,6 +103,9 @@ export const useLoginForm = () => {
 
 export const useForgotPasswordForm = () => {
   const navigate = useNavigate();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
+
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
@@ -121,14 +114,34 @@ export const useForgotPasswordForm = () => {
     mode: 'onSubmit',
   });
 
-  const onSubmit = form.handleSubmit(async () => {
-    navigate('/email-sent');
+  const onSubmit = form.handleSubmit(async (data) => {
+    setSubmitError(null);
+    try {
+      const response = (await forgotPassword(data).unwrap()) as {
+        success: boolean;
+        message?: string;
+      };
+
+      if (response.success) {
+        showToast.success('Reset link sent to your email!');
+        navigate('/email-sent', { state: { email: data.email } });
+      } else {
+        const msg = response.message || 'Failed to send reset link';
+        setSubmitError(msg);
+        showToast.error(msg);
+      }
+    } catch (error) {
+      const msg = getErrorMessage(error);
+      setSubmitError(msg);
+      showToast.error(msg);
+    }
   });
 
   return {
     ...form,
     errors: form.formState.errors,
-    isSubmitting: form.formState.isSubmitting,
+    isSubmitting: form.formState.isSubmitting || isLoading,
+    submitError,
     onSubmit,
   };
 };

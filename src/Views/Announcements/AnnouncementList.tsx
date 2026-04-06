@@ -1,32 +1,54 @@
 import { useEffect, useState } from 'react';
 import {
   Calendar,
-  Eye,
   Users,
   Edit2,
   Trash2,
   Send,
   CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 import { useHeader } from '../../Shared/Context/HeaderContext';
+import {
+  useGetAnnouncementsQuery,
+  useCreateAnnouncementMutation,
+  useUpdateAnnouncementMutation,
+  useDeleteAnnouncementMutation,
+  AnnouncementItem,
+} from '../../Services/Api/module/AdminApi';
 import './AnnouncementList.scss';
 
-interface Announcement {
-  id: string;
-  title: string;
-  date: string;
-  status: 'Published' | 'Draft';
-  message: string;
-  views?: string;
-  audience: string;
-  isSystem?: boolean;
-}
+const AUDIENCE_MAP = [
+  { value: 1, label: 'All Users' },
+  { value: 2, label: 'Admins Only' },
+  { value: 3, label: 'Jury Members' },
+];
 
 function AnnouncementList() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
+
+  // API Hooks
+  const { data: announcementResponse, isLoading: isListLoading } =
+    useGetAnnouncementsQuery();
+  const [createAnnouncement, { isLoading: isCreating }] =
+    useCreateAnnouncementMutation();
+  const [updateAnnouncement, { isLoading: isUpdating }] =
+    useUpdateAnnouncementMutation();
+  const [deleteAnnouncement, { isLoading: isDeleting }] =
+    useDeleteAnnouncementMutation();
+
+  // State for List
   const [activeTab, setActiveTab] = useState('All');
+
+  // State for Form
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [title, setFormTitle] = useState('');
+  const [message, setFormMessage] = useState('');
+  const [audience, setFormAudience] = useState(1);
   const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
   const [sendPush, setSendPush] = useState(true);
+
   const scheduleInputId = 'announcement-schedule';
   const pushNotificationId = 'announcement-push-notification';
 
@@ -37,38 +59,91 @@ function AnnouncementList() {
     return () => resetHeader();
   }, [setTitle, setSubtitle, setBackAction, resetHeader]);
 
-  const announcements: Announcement[] = [
-    {
-      id: '1',
-      title: 'New Gala Event Announced',
-      date: 'March 15, 2024 at 2:30 PM',
-      status: 'Published',
-      message:
-        'Join us for our annual spring gala celebration. Applications are now open for all members.',
-      views: '1,234',
-      audience: 'All Users',
-    },
-    {
-      id: '2',
-      title: 'System Maintenance Notice',
-      date: 'March 14, 2024 at 10:00 AM',
-      status: 'Published',
-      message:
-        'The platform will undergo scheduled maintenance on March 20th from 2:00 AM to 4:00 AM EST.',
-      views: '892',
-      audience: 'All Users',
-      isSystem: true,
-    },
-    {
-      id: '3',
-      title: 'Grant Applications Open',
-      date: 'Draft • Not published yet',
-      status: 'Draft',
-      message:
-        "We're excited to announce that grant applications for 2024 are now open to all eligible students.",
-      audience: 'All Users',
-    },
-  ];
+  const resetForm = () => {
+    setEditingId(null);
+    setFormTitle('');
+    setFormMessage('');
+    setFormAudience(0);
+    setIsScheduled(false);
+    setScheduledAt('');
+  };
+
+  const handleCreateOrUpdate = async (publishNow: boolean) => {
+    if (!title || !message) return;
+
+    try {
+      if (editingId) {
+        await updateAnnouncement({
+          id: editingId,
+          title,
+          message,
+          isPublished: publishNow,
+          scheduledAt: isScheduled ? scheduledAt : new Date().toISOString(),
+          targetAudience: audience,
+          sendPush,
+        }).unwrap();
+      } else {
+        await createAnnouncement({
+          title,
+          message,
+          publishNow,
+          scheduledAt: isScheduled ? scheduledAt : new Date().toISOString(),
+          targetAudience: audience,
+          sendPush,
+        }).unwrap();
+      }
+      resetForm();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save announcement:', err);
+    }
+  };
+
+  const handleEdit = (ann: AnnouncementItem) => {
+    setEditingId(ann.id);
+    setFormTitle(ann.title);
+    setFormMessage(ann.message);
+    setFormAudience(ann.targetAudience);
+    setSendPush(ann.sendPush);
+    const isAnnScheduled =
+      !!ann.scheduledAt && new Date(ann.scheduledAt).getTime() > Date.now();
+    setIsScheduled(isAnnScheduled);
+    setScheduledAt(ann.scheduledAt ? ann.scheduledAt.slice(0, 16) : '');
+  };
+
+  const handleDelete = async (id: string) => {
+    if (
+      !globalThis.confirm('Are you sure you want to delete this announcement?')
+    ) {
+      return;
+    }
+    try {
+      await deleteAnnouncement(id).unwrap();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to delete announcement:', err);
+    }
+  };
+
+  const announcements = (announcementResponse?.data || []).filter((a) => {
+    if (activeTab === 'Published') {
+      return a.isPublished;
+    }
+    if (activeTab === 'Draft') {
+      return a.isPublished === false;
+    }
+    return true;
+  });
+
+  const getSubmitButtonLabel = () => {
+    if (isCreating || isUpdating) {
+      return <RefreshCw className="animate-spin" size={18} />;
+    }
+    if (editingId) {
+      return 'Update & Publish';
+    }
+    return 'Publish Now';
+  };
 
   return (
     <div className="announcements-page">
@@ -77,8 +152,13 @@ function AnnouncementList() {
         <div className="create-column">
           <div className="create-card">
             <div className="card-header">
-              <h3>Create Announcement</h3>
+              <h3>{editingId ? 'Edit Announcement' : 'Create Announcement'}</h3>
               <p>Publish a new announcement or notification</p>
+              {editingId && (
+                <button type="button" className="btn-clear" onClick={resetForm}>
+                  Clear Form
+                </button>
+              )}
             </div>
 
             <div className="card-body form-body">
@@ -89,6 +169,8 @@ function AnnouncementList() {
                     id="title"
                     type="text"
                     placeholder="Enter announcement title..."
+                    value={title}
+                    onChange={(e) => setFormTitle(e.target.value)}
                   />
                 </label>
               </div>
@@ -98,8 +180,10 @@ function AnnouncementList() {
                   <span>Message</span>
                   <textarea
                     id="message"
-                    rows={6}
+                    rows={4}
                     placeholder="Write your announcement message here..."
+                    value={message}
+                    onChange={(e) => setFormMessage(e.target.value)}
                   />
                 </label>
               </div>
@@ -108,10 +192,16 @@ function AnnouncementList() {
                 <label htmlFor="audience">
                   Target Audience
                   <div className="custom-select">
-                    <select id="audience">
-                      <option>All Users</option>
-                      <option>Admins Only</option>
-                      <option>Jury Members</option>
+                    <select
+                      id="audience"
+                      value={audience}
+                      onChange={(e) => setFormAudience(Number(e.target.value))}
+                    >
+                      {AUDIENCE_MAP.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </label>
@@ -137,9 +227,11 @@ function AnnouncementList() {
                   <Calendar size={18} />
                   <input
                     id={scheduleInputId}
-                    type="text"
+                    type="datetime-local"
                     placeholder="Select date and time"
                     disabled={!isScheduled}
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
                   />
                 </div>
               </div>
@@ -152,10 +244,7 @@ function AnnouncementList() {
                 aria-controls={pushNotificationId}
               >
                 <div className={`styled-checkbox ${sendPush ? 'checked' : ''}`}>
-                  <CheckCircle2
-                    size={16}
-                    className={sendPush ? 'block' : 'hidden'}
-                  />
+                  {sendPush && <CheckCircle2 size={16} />}
                 </div>
                 <span id={pushNotificationId}>
                   Send push notification to users
@@ -163,11 +252,21 @@ function AnnouncementList() {
               </button>
 
               <div className="form-actions">
-                <button type="button" className="btn-publish">
-                  Publish Now
+                <button
+                  type="button"
+                  className="btn-publish"
+                  onClick={() => handleCreateOrUpdate(true)}
+                  disabled={isCreating || isUpdating}
+                >
+                  {getSubmitButtonLabel()}
                 </button>
-                <button type="button" className="btn-draft">
-                  Save as Draft
+                <button
+                  type="button"
+                  className="btn-draft"
+                  onClick={() => handleCreateOrUpdate(false)}
+                  disabled={isCreating || isUpdating}
+                >
+                  {editingId ? 'Keep as Draft' : 'Save as Draft'}
                 </button>
               </div>
             </div>
@@ -193,67 +292,100 @@ function AnnouncementList() {
           </div>
 
           <div className="announcements-list">
-            {announcements.map((ann) => (
-              <div key={ann.id} className="announcement-card">
-                <div className="card-top">
-                  <div className="title-area">
-                    {ann.status === 'Draft' ? (
-                      <h4 className="draft-title">
-                        <CheckCircle2 size={18} className="draft-icon" />
-                        {ann.title}
-                      </h4>
-                    ) : (
-                      <h4>{ann.title}</h4>
-                    )}
-                    <span
-                      className={`date-text ${ann.status === 'Draft' ? 'is-draft' : ''}`}
+            {isListLoading && (
+              <div className="loading-state">
+                <RefreshCw className="animate-spin" size={32} />
+                <p>Loading announcements...</p>
+              </div>
+            )}
+            {!isListLoading && announcements.length === 0 && (
+              <div className="empty-state">
+                <p>No announcements yet</p>
+              </div>
+            )}
+            {!isListLoading &&
+              announcements.map((ann) => (
+                <div key={ann.id} className="announcement-card">
+                  <div className="card-top">
+                    <div className="title-area">
+                      {ann.isPublished ? (
+                        <h4>{ann.title}</h4>
+                      ) : (
+                        <h4 className="draft-title">
+                          <CheckCircle2 size={18} className="draft-icon" />
+                          {ann.title}
+                        </h4>
+                      )}
+                      <span
+                        className={`date-text ${ann.isPublished ? '' : 'is-draft'}`}
+                      >
+                        {new Date(ann.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <div
+                      className={`status-pill ${ann.isPublished ? 'published' : 'draft'}`}
                     >
-                      {ann.date}
-                    </span>
-                  </div>
-                  <div className={`status-pill ${ann.status.toLowerCase()}`}>
-                    {ann.status}
-                  </div>
-                </div>
-
-                <div className="card-msg">
-                  <p>{ann.message}</p>
-                </div>
-
-                <div className="card-footer">
-                  <div className="meta-stats">
-                    {ann.views && (
-                      <div className="stat">
-                        <Eye size={14} />
-                        <span>{ann.views} views</span>
-                      </div>
-                    )}
-                    <div className="stat">
-                      <Users size={14} />
-                      <span>{ann.audience}</span>
+                      {ann.isPublished ? 'Published' : 'Draft'}
                     </div>
                   </div>
 
-                  <div className="actions">
-                    <button type="button" className="btn-edit">
-                      <Edit2 size={14} />
-                      <span>Edit</span>
-                    </button>
-                    {ann.status === 'Draft' ? (
-                      <button type="button" className="btn-action-primary">
-                        <Send size={14} />
-                        <span>Publish</span>
+                  <div className="card-msg">
+                    <p>{ann.message}</p>
+                  </div>
+
+                  <div className="card-footer">
+                    <div className="meta-stats">
+                      <div className="stat">
+                        <Users size={14} />
+                        <span>
+                          {AUDIENCE_MAP.find(
+                            (a) => a.value === ann.targetAudience
+                          )?.label || 'All Users'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className="btn-edit"
+                        onClick={() => handleEdit(ann)}
+                      >
+                        <Edit2 size={14} />
+                        <span>Edit</span>
                       </button>
-                    ) : (
-                      <button type="button" className="btn-delete">
-                        <Trash2 size={14} />
-                        <span>Delete</span>
-                      </button>
-                    )}
+                      {ann.isPublished ? (
+                        <button
+                          type="button"
+                          className="btn-delete"
+                          onClick={() => handleDelete(ann.id)}
+                          disabled={isDeleting}
+                        >
+                          {isDeleting ? (
+                            <RefreshCw className="animate-spin" size={14} />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                          <span>Delete</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-action-primary"
+                          onClick={() => {
+                            setEditingId(ann.id);
+                            // We use handleCreateOrUpdate to publish the draft
+                            handleCreateOrUpdate(true);
+                          }}
+                        >
+                          <Send size={14} />
+                          <span>Publish</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </div>

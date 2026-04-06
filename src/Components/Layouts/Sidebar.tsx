@@ -71,7 +71,8 @@ function Sidebar() {
     },
   ];
 
-  const userInitial = user?.username?.charAt(0) || user?.email?.charAt(0) || 'A';
+  const userInitial =
+    user?.username?.charAt(0) || user?.email?.charAt(0) || 'A';
 
   return (
     <>

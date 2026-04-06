@@ -5,7 +5,8 @@ import './Auth.scss';
 
 function ForgotPassword() {
   const navigate = useNavigate();
-  const { register, errors, isSubmitting, onSubmit } = useForgotPasswordForm();
+  const { register, errors, isSubmitting, onSubmit, submitError } =
+    useForgotPasswordForm();
 
   return (
     <div className="auth-container">
@@ -15,15 +16,22 @@ function ForgotPassword() {
             <Key size={32} />
           </div>
         </div>
-
         <div className="auth-header">
           <h1 className="auth-title">Forgot Password?</h1>
           <p className="auth-subtitle">
             No worries, we'll send you reset instructions
           </p>
         </div>
-
         <form className="auth-form" noValidate onSubmit={onSubmit}>
+          {submitError && (
+            <div className="alert-box error" style={{ marginBottom: '24px' }}>
+              <div className="alert-title">
+                <AlertCircle size={16} /> Error
+              </div>
+              <div className="alert-text">{submitError}</div>
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
             <div className={`input-wrapper ${errors.email ? 'has-error' : ''}`}>

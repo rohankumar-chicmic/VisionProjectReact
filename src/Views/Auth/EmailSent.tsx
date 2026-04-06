@@ -1,15 +1,43 @@
+import { useEffect, useState } from 'react';
 import {
   Mail,
   ArrowLeft,
   ExternalLink,
   RefreshCw,
   AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useForgotPasswordMutation } from '../../Services/Api/module/AuthApi';
 import './Auth.scss';
 
 function EmailSent() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [resendEmail, { isLoading, isSuccess, isError }] =
+    useForgotPasswordMutation();
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const email = (location.state as { email?: string })?.email;
+
+  useEffect(() => {
+    if (!email) {
+      navigate('/forgot-password');
+    }
+  }, [email, navigate]);
+
+  const handleResend = async () => {
+    if (!email) return;
+    setFeedback(null);
+    try {
+      await resendEmail({ email }).unwrap();
+      setFeedback('A new reset link has been sent to your email.');
+    } catch (error) {
+      setFeedback('Failed to resend email. Please try again later.');
+    }
+  };
+
+  if (!email) return null;
 
   return (
     <div className="auth-container">
@@ -30,9 +58,26 @@ function EmailSent() {
         <div className="email-sent-to">
           <span className="label">Email Sent To:</span>
           <span className="value">
-            <Mail size={16} /> admin@example.com
+            <Mail size={16} /> {email}
           </span>
         </div>
+
+        {feedback && (
+          <div
+            className={`alert-box ${isSuccess ? 'success' : ''} ${isError ? 'error' : ''}`}
+            style={{ marginBottom: '24px' }}
+          >
+            <div className="alert-title">
+              {isSuccess ? (
+                <CheckCircle2 size={16} />
+              ) : (
+                <AlertCircle size={16} />
+              )}
+              {isSuccess ? ' Success' : ' Error'}
+            </div>
+            <div className="alert-text">{feedback}</div>
+          </div>
+        )}
 
         <div className="steps-list">
           <div className="step-item">
@@ -63,7 +108,7 @@ function EmailSent() {
             type="button"
             className="auth-button"
             onClick={() => {
-              globalThis.location.href = 'mailto:';
+              globalThis.location.href = `mailto:${email}`;
             }}
           >
             <ExternalLink size={18} /> Open Email App
@@ -71,9 +116,11 @@ function EmailSent() {
           <button
             type="button"
             className="auth-button outline"
-            onClick={() => navigate('/forgot-password')}
+            onClick={handleResend}
+            disabled={isLoading}
           >
-            <RefreshCw size={18} /> Resend Email
+            <RefreshCw className={isLoading ? 'spin' : ''} size={18} />
+            {isLoading ? 'Sending...' : 'Resend Email'}
           </button>
         </div>
 

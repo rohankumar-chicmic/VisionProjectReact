@@ -1,25 +1,53 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import {
+  Search,
+  Edit2,
+  Trash2,
+  Shield,
+  Users,
+  ShieldCheck,
+  UserPlus,
+  AlertCircle,
+} from 'lucide-react';
+import {
+  useGetAdminManagersQuery,
+  useDeleteAdminManagerMutation,
+} from '../../Services/Api/module/AdminApi';
 import { HeaderActions, useHeader } from '../../Shared/Context/HeaderContext';
-import { Search, Edit2, Trash2, Shield, Users, ShieldCheck, UserPlus } from 'lucide-react';
-import CreateAdminModal from './Components/CreateAdminModal';
+import AdminManagerModal from './Components/AdminManagerModal';
+import { AdminManagersTableSkeleton } from './Components/AdminManagersSkeleton';
 import './AdminManagersList.scss';
 
-interface AdminUser {
-  id: string;
-  name: string;
-  initials: string;
-  email: string;
-  role: 'Super Admin' | 'Sub Admin';
-  createdDate: string;
-  lastActive: string;
-  passwordPrefix: string;
-  avatarColor: string;
-}
-
-const AdminManagersList: React.FC = () => {
+function AdminManagersList() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const [activeTab, setActiveTab] = useState('All');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [pageNumber, setPageNumber] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAdminId, setSelectedAdminId] = useState<string | undefined>(
+    undefined
+  );
+
+  const [deleteAdmin, { isLoading: isDeleting }] =
+    useDeleteAdminManagerMutation();
+
+  const roleFilter = useMemo(() => {
+    if (activeTab === 'Super Admin') return 1;
+    if (activeTab === 'Sub Admin') return 2;
+    return undefined;
+  }, [activeTab]);
+
+  const {
+    data: adminResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetAdminManagersQuery({
+    searchTerm: searchTerm || undefined,
+    role: roleFilter,
+    pageNumber,
+    pageSize: 10,
+  });
 
   useEffect(() => {
     setTitle('Admin Managers');
@@ -28,25 +56,192 @@ const AdminManagersList: React.FC = () => {
     return () => resetHeader();
   }, [setTitle, setSubtitle, setBackAction, resetHeader]);
 
-  const admins: AdminUser[] = [
-    { id: 'ADM-001', name: 'John Doe', initials: 'JD', email: 'john.doe@example.com', role: 'Super Admin', createdDate: 'Jan 15, 2024', lastActive: '5 hrs ago', passwordPrefix: 'F7OUbCj1d', avatarColor: '#00ce86' },
-    { id: 'ADM-002', name: 'Sarah Miller', initials: 'SM', email: 'sarah.m@example.com', role: 'Sub Admin', createdDate: 'Feb 03, 2024', lastActive: '30 min ago', passwordPrefix: '3mGQ37b', avatarColor: '#f59e0b' },
-    { id: 'ADM-003', name: 'Robert Johnson', initials: 'RJ', email: 'r.johnson@example.com', role: 'Sub Admin', createdDate: 'Mar 10, 2024', lastActive: '23 hrs ago', passwordPrefix: 'yRzjaHTjxlE4', avatarColor: '#475569' },
-    { id: 'ADM-004', name: 'Jane Cooper', initials: 'JC', email: 'sarah.m@example.com', role: 'Super Admin', createdDate: 'Feb 03, 2024', lastActive: '1 day ago', passwordPrefix: 'y4nyu0', avatarColor: '#64748b' },
-    { id: 'ADM-005', name: 'Bessie Cooper', initials: 'BC', email: 'r.johnson@example.com', role: 'Sub Admin', createdDate: 'Mar 10, 2024', lastActive: '1 week ago', passwordPrefix: 'pJPHHEsz', avatarColor: '#3b82f6' },
-    { id: 'ADM-006', name: 'Guy Hawkins', initials: 'GH', email: 'r.johnson@example.com', role: 'Sub Admin', createdDate: 'Mar 10, 2024', lastActive: '1 month ago', passwordPrefix: 'o7LoDM', avatarColor: '#94a3b8' },
-  ];
+  const admins = useMemo(
+    () => adminResponse?.data?.items || [],
+    [adminResponse]
+  );
+  const summary = adminResponse?.data?.summary;
+  const superAdminCount = summary?.superAdminCount || 0;
+  const subAdminCount = summary?.subAdminCount || 0;
+  const totalCount = summary?.totalAdmins || 0;
+
+  const getRoleLabel = (role: number) => {
+    return role === 1 ? 'Super Admin' : 'Sub Admin';
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return '??';
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  const getRelativeTime = (dateString?: string | null) => {
+    if (!dateString) return 'Never';
+
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60)
+      return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24)
+      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30)
+      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths < 12)
+      return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
+
+    return date.toLocaleDateString();
+  };
+
+  const handleEdit = (id: string) => {
+    setSelectedAdminId(id);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    // eslint-disable-next-line no-alert
+    if (
+      globalThis.confirm(`Are you sure you want to delete admin "${name}"?`)
+    ) {
+      try {
+        await deleteAdmin(id).unwrap();
+      } catch {
+        // Error handled by RTK Query Global middleware or local catch
+      }
+    }
+  };
+
+  const openCreateModal = () => {
+    setSelectedAdminId(undefined);
+    setIsModalOpen(true);
+  };
+
+  const renderRoleBadge = (role: number) => {
+    const Icon = role === 1 ? Shield : Users;
+    return (
+      <div className={`role-badge ${role === 1 ? 'super' : 'sub'}`}>
+        <Icon size={14} />
+        <span>{getRoleLabel(role)}</span>
+      </div>
+    );
+  };
+
+  const renderTableContent = () => {
+    if (isLoading) {
+      return <AdminManagersTableSkeleton rows={8} />;
+    }
+
+    if (isError) {
+      return (
+        <div className="error-state">
+          <AlertCircle size={40} />
+          <p>Failed to load admins</p>
+          <button type="button" className="retry-btn" onClick={() => refetch()}>
+            Retry
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <table className="hi-fi-table">
+        <thead>
+          <tr>
+            <th>Admin</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Created Date</th>
+            <th>Last active</th>
+            <th>Password</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {admins.map((admin) => (
+            <tr key={admin.id}>
+              <td>
+                <div className="admin-cell">
+                  <div
+                    className="avatar"
+                    style={{
+                      backgroundColor: admin.avatarColor || '#94a3b8',
+                    }}
+                  >
+                    {getInitials(admin.fullName)}
+                  </div>
+                  <div className="info">
+                    <span className="name">{admin.fullName}</span>
+                    <span className="id-text">ID: {admin.displayId}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span className="email-text">{admin.email}</span>
+              </td>
+              <td>{renderRoleBadge(admin.role)}</td>
+              <td>{new Date(admin.createdAt).toLocaleDateString()}</td>
+              <td>{getRelativeTime(admin.lastActiveAt)}</td>
+              <td>
+                <span className="password-mask">{admin.passwordMasked}</span>
+              </td>
+              <td>
+                <div className="action-buttons">
+                  <button
+                    type="button"
+                    className="btn-icon edit"
+                    onClick={() => handleEdit(admin.id)}
+                    title="Edit Admin"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-icon delete"
+                    onClick={() => handleDelete(admin.id, admin.fullName)}
+                    disabled={isDeleting}
+                    title="Delete Admin"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
 
   return (
     <div className="admin-managers-page">
-      <CreateAdminModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onConfirm={() => setIsCreateModalOpen(false)}
+      <AdminManagerModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={() => setIsModalOpen(false)}
+        adminId={selectedAdminId}
       />
 
       <HeaderActions>
-        <button className="header-btn btn-primary" onClick={() => setIsCreateModalOpen(true)}>
+        <button
+          type="button"
+          className="header-btn btn-primary"
+          onClick={openCreateModal}
+        >
           <UserPlus size={16} />
           <span>Add New Admin</span>
         </button>
@@ -60,18 +255,22 @@ const AdminManagersList: React.FC = () => {
           </div>
           <div className="stats-wrap">
             <span className="label">Super Admin</span>
-            <span className="value">03</span>
+            <span className="value">
+              {superAdminCount.toString().padStart(2, '0')}
+            </span>
           </div>
         </div>
 
         <div className="kpi-card">
           <div className="icon-wrap sub">
             <Users size={24} />
-            <span className="badge trend green">▲ +2</span>
+            <span className="badge trend green">▲ +0</span>
           </div>
           <div className="stats-wrap">
             <span className="label">Sub Admins</span>
-            <span className="value">04</span>
+            <span className="value">
+              {subAdminCount.toString().padStart(2, '0')}
+            </span>
           </div>
         </div>
 
@@ -81,7 +280,9 @@ const AdminManagersList: React.FC = () => {
           </div>
           <div className="stats-wrap">
             <span className="label">Total Admins</span>
-            <span className="value">07</span>
+            <span className="value">
+              {totalCount.toString().padStart(2, '0')}
+            </span>
           </div>
         </div>
       </div>
@@ -90,14 +291,23 @@ const AdminManagersList: React.FC = () => {
         <div className="table-header-controls">
           <div className="search-bar">
             <Search size={18} />
-            <input type="text" placeholder="Search admins..." />
+            <input
+              type="text"
+              placeholder="Search admins..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
           <div className="status-tabs">
-            {['All', 'Super Admin', 'Sub Admin'].map(tab => (
+            {['All', 'Super Admin', 'Sub Admin'].map((tab) => (
               <button
                 key={tab}
+                type="button"
                 className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setPageNumber(1);
+                }}
               >
                 {tab}
               </button>
@@ -105,63 +315,10 @@ const AdminManagersList: React.FC = () => {
           </div>
         </div>
 
-        <div className="table-wrapper">
-          <table className="hi-fi-table">
-            <thead>
-              <tr>
-                <th>Admin</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Created Date</th>
-                <th>Last active</th>
-                <th>Password</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {admins.map((admin) => (
-                <tr key={admin.id}>
-                  <td>
-                    <div className="admin-cell">
-                      <div className="avatar" style={{ backgroundColor: admin.avatarColor }}>
-                        {admin.initials}
-                      </div>
-                      <div className="info">
-                        <span className="name">{admin.name}</span>
-                        <span className="id-text">ID: {admin.id}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td><span className="email-text">{admin.email}</span></td>
-                  <td>
-                    <div className={`role-badge ${admin.role === 'Super Admin' ? 'super' : 'sub'}`}>
-                      {admin.role === 'Super Admin' ? <Shield size={14} /> : <Users size={14} />}
-                      <span>{admin.role}</span>
-                    </div>
-                  </td>
-                  <td>{admin.createdDate}</td>
-                  <td>{admin.lastActive}</td>
-                  <td>
-                    <span className="password-mask">{admin.passwordPrefix}</span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="btn-icon edit">
-                        <Edit2 size={16} />
-                      </button>
-                      <button className="btn-icon delete">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="table-wrapper">{renderTableContent()}</div>
       </div>
     </div>
   );
-};
+}
 
 export default AdminManagersList;

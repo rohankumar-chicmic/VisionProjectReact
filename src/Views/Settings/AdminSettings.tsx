@@ -1,16 +1,9 @@
-import React, { useEffect } from 'react';
-import { 
-  Upload, 
-  Save, 
-  EyeOff, 
-  Lock, 
-  Trash2, 
-  RefreshCcw,
-} from 'lucide-react';
+import { useEffect } from 'react';
+import { Upload, Save, EyeOff, Lock, Trash2, RefreshCcw } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import './AdminSettings.scss';
 
-const AdminSettings: React.FC = () => {
+function AdminSettings() {
   const { setTitle, setSubtitle } = useHeader();
 
   useEffect(() => {
@@ -99,15 +92,17 @@ const AdminSettings: React.FC = () => {
                 </div>
               </div>
               <button className="btn-update-password">Update Password</button>
-              
+
               <div className="tfa-row">
                 <div className="tfa-info">
                   <span className="title">Two-Factor Authentication</span>
-                  <p className="desc">Add an extra layer of security to your account</p>
+                  <p className="desc">
+                    Add an extra layer of security to your account
+                  </p>
                 </div>
                 <label className="switch">
                   <input type="checkbox" />
-                  <span className="slider round"></span>
+                  <span className="slider round" />
                 </label>
               </div>
             </div>
@@ -124,7 +119,10 @@ const AdminSettings: React.FC = () => {
             <div className="card-body">
               <div className="form-group">
                 <label>Platform Name</label>
-                <input type="text" defaultValue="Vision PME (Gala Management System)" />
+                <input
+                  type="text"
+                  defaultValue="Vision PME (Gala Management System)"
+                />
               </div>
               <div className="form-group">
                 <label>Support Email</label>
@@ -159,11 +157,13 @@ const AdminSettings: React.FC = () => {
               <div className="notification-item">
                 <div className="notif-info">
                   <span className="title">New Application Submitted</span>
-                  <p className="desc">Get notified when users submit applications</p>
+                  <p className="desc">
+                    Get notified when users submit applications
+                  </p>
                 </div>
                 <label className="switch">
                   <input type="checkbox" defaultChecked />
-                  <span className="slider round"></span>
+                  <span className="slider round" />
                 </label>
               </div>
               <div className="notification-item">
@@ -173,27 +173,31 @@ const AdminSettings: React.FC = () => {
                 </div>
                 <label className="switch">
                   <input type="checkbox" defaultChecked />
-                  <span className="slider round"></span>
+                  <span className="slider round" />
                 </label>
               </div>
               <div className="notification-item">
                 <div className="notif-info">
                   <span className="title">Payment Received</span>
-                  <p className="desc">Get notified about subscription payments</p>
+                  <p className="desc">
+                    Get notified about subscription payments
+                  </p>
                 </div>
                 <label className="switch">
                   <input type="checkbox" />
-                  <span className="slider round"></span>
+                  <span className="slider round" />
                 </label>
               </div>
               <div className="notification-item">
                 <div className="notif-info">
                   <span className="title">Gala Deadline Approaching</span>
-                  <p className="desc">Get reminders about upcoming gala deadlines</p>
+                  <p className="desc">
+                    Get reminders about upcoming gala deadlines
+                  </p>
                 </div>
                 <label className="switch">
                   <input type="checkbox" defaultChecked />
-                  <span className="slider round"></span>
+                  <span className="slider round" />
                 </label>
               </div>
             </div>
@@ -232,6 +236,6 @@ const AdminSettings: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default AdminSettings;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -12,51 +12,63 @@ import {
   Info,
 } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
-import KpiCard, { KpiCardProps } from '../../Components/Shared/KpiCard';
+import KpiCard from '../../Components/Shared/KpiCard';
 import Table, { Column } from '../../Components/Atom/Table/Table';
 import ImportUserModal from './Components/ImportUserModal';
 import CreateUserModal from './Components/CreateUserModal';
 import BlockUserModal from './Components/BlockUserModal';
+import {
+  useGetAdminUserDashboardQuery,
+  useGetAdminUsersQuery,
+  AdminUser,
+} from '../../Services/Api/module/AdminApi';
 import './UserList.scss';
+import Skeleton from '../../Components/Shared/Skeleton';
 
-interface User {
-  id: string;
-  name: string;
-  avatar: string;
-  email: string;
-  subscription: 'Monthly' | 'Yearly' | 'Member' | 'Trial' | 'Trial expired';
-  joinedDate: string;
-  status: 'Active' | 'Blocked';
-}
+const getSubscriptionLabel = (plan: number, status: number) => {
+  if (status === 3) return 'Trial';
+  if (status === 4) return 'Trial expired';
+  if (plan === 1) return 'Monthly';
+  if (plan === 2) return 'Yearly';
+  return 'Member';
+};
 
-function UserCell({ user }: Readonly<{ user: User }>) {
+const getStatusLabel = (isBlocked: boolean) =>
+  isBlocked ? 'Blocked' : 'Active';
+
+function UserCell({ user }: Readonly<{ user: AdminUser }>) {
   return (
     <div className="user-info-cell">
-      <div className="avatar-small">{user.name.charAt(0)}</div>
+      <div className="avatar-small">
+        {user.avatarUrl ? (
+          <img src={user.avatarUrl} alt={user.fullName} />
+        ) : (
+          user.fullName.charAt(0)
+        )}
+      </div>
       <div className="text-info">
-        <span className="name">{user.name}</span>
-        <span className="id">ID: {user.id}</span>
+        <span className="name">{user.fullName}</span>
+        <span className="id">ID: {user.displayId}</span>
       </div>
     </div>
   );
 }
 
-function SubscriptionCell({ user }: Readonly<{ user: User }>) {
+function SubscriptionCell({ user }: Readonly<{ user: AdminUser }>) {
+  const label = getSubscriptionLabel(
+    user.subscriptionPlan,
+    user.subscriptionStatus
+  );
   return (
-    <span
-      className={`sub-badge ${user.subscription.toLowerCase().replace(' ', '-')}`}
-    >
-      {user.subscription}
+    <span className={`sub-badge ${label.toLowerCase().replace(' ', '-')}`}>
+      {label}
     </span>
   );
 }
 
-function StatusCell({ user }: Readonly<{ user: User }>) {
-  return (
-    <span className={`status-pill ${user.status.toLowerCase()}`}>
-      {user.status}
-    </span>
-  );
+function StatusCell({ user }: Readonly<{ user: AdminUser }>) {
+  const label = getStatusLabel(user.isBlocked);
+  return <span className={`status-pill ${label.toLowerCase()}`}>{label}</span>;
 }
 
 function ActionsCell({
@@ -64,7 +76,12 @@ function ActionsCell({
   navigate,
   setSelectedUser,
   setIsBlockModalOpen,
-}: any) {
+}: Readonly<{
+  user: AdminUser;
+  navigate: ReturnType<typeof useNavigate>;
+  setSelectedUser: (user: AdminUser) => void;
+  setIsBlockModalOpen: (open: boolean) => void;
+}>) {
   return (
     <div className="table-actions">
       <button
@@ -80,9 +97,7 @@ function ActionsCell({
 
       <button
         type="button"
-        className={`block-action-btn ${
-          user.status === 'Blocked' ? 'unblock' : ''
-        }`}
+        className={`block-action-btn ${user.isBlocked ? 'unblock' : ''}`}
         onClick={(e) => {
           e.stopPropagation();
           setSelectedUser(user);
@@ -90,150 +105,196 @@ function ActionsCell({
         }}
       >
         <Slash size={18} />
-        <span>{user.status === 'Blocked' ? 'Unblock' : 'Block'}</span>
+        <span>{user.isBlocked ? 'Unblock' : 'Block'}</span>
       </button>
     </div>
   );
 }
 
 function UserList() {
-  const { setTitle, setSubtitle } = useHeader();
+  const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [pageNumber, setPageNumber] = useState(1);
+  const pageSize = 10;
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
-    setTitle('User Management');
-    setSubtitle('View and manage all registered users');
-  }, [setTitle, setSubtitle]);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPageNumber(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  const kpis: KpiCardProps[] = [
+  const { data: dashboardData, isLoading: isDashboardLoading } =
+    useGetAdminUserDashboardQuery();
+
+  const getParams = (): Record<
+    string,
+    string | number | boolean | undefined
+  > => {
+    const params: Record<string, string | number | boolean | undefined> = {
+      pageNumber,
+      pageSize,
+      searchTerm: debouncedSearch || undefined,
+    };
+
+    switch (activeTab) {
+      case 'Active':
+        params.isBlocked = false;
+        break;
+      case 'Blocked':
+        params.isBlocked = true;
+        break;
+      case 'Passport':
+        params.subscriptionPlan = 1;
+        break;
+      case 'Member':
+        params.subscriptionPlan = 0;
+        break;
+      case 'Trial':
+        params.subscriptionStatus = 3;
+        break;
+      case 'Trial Expired':
+        params.subscriptionStatus = 4;
+        break;
+      default:
+        break;
+    }
+
+    return params;
+  };
+
+  const { data: usersData, isLoading: isUsersLoading } =
+    useGetAdminUsersQuery(getParams());
+
+  useEffect(() => {
+    setTitle('Users Management');
+    setSubtitle('Manage, filter, and monitor platform users');
+    setBackAction(false);
+    return () => resetHeader();
+  }, [setTitle, setSubtitle, setBackAction, resetHeader]);
+
+  const handleExportUsers = () => {
+    const headers = [
+      'ID',
+      'Full Name',
+      'Email',
+      'Subscription',
+      'Status',
+      'Joined Date',
+    ];
+    const rows = (usersData?.data?.items || []).map((u) => [
+      u.displayId,
+      u.fullName,
+      u.email,
+      getSubscriptionLabel(u.subscriptionPlan, u.subscriptionStatus),
+      getStatusLabel(u.isBlocked),
+      new Date(u.createdAt).toLocaleDateString(),
+    ]);
+
+    const csvContent = [headers, ...rows].map((e) => e.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `users_export_${Date.now()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const kpis = [
     {
+      id: 'total-users',
       icon: <Plus size={22} />,
       label: 'Total Users',
-      value: '12,543',
+      value: dashboardData?.data?.totalUsers?.toLocaleString() || '0',
       trend: '+12.5% from last month',
-      trendType: 'up',
+      trendType: 'up' as const,
       color: '#1DB954',
     },
     {
+      id: 'active-subs',
       icon: <Plus size={22} />,
       label: 'Active Subscriptions',
-      value: '8,234',
+      value: dashboardData?.data?.activeSubscriptions?.toLocaleString() || '0',
       trend: '+8.2% from last month',
-      trendType: 'up',
+      trendType: 'up' as const,
       color: '#3B82F6',
     },
     {
+      id: 'members-no-passport',
       icon: <Plus size={22} />,
       label: 'Members (No Passport)',
-      value: '3,108',
+      value:
+        dashboardData?.data?.membersWithoutPassport?.toLocaleString() || '0',
       trend: '+5.1% from last month',
-      trendType: 'up',
+      trendType: 'up' as const,
       color: '#6366F1',
     },
     {
+      id: 'blocked-users',
       icon: <Slash size={22} />,
       label: 'Blocked Users',
-      value: '18',
+      value: dashboardData?.data?.blockedUsers?.toLocaleString() || '0',
       trend: '-5.3% from last month',
-      trendType: 'down',
+      trendType: 'down' as const,
       color: '#EF4444',
     },
   ];
 
-  const users: User[] = [
-    {
-      id: 'USR-10234',
-      name: 'John Doe',
-      avatar: '',
-      email: 'john.doe@example.com',
-      subscription: 'Yearly',
-      joinedDate: 'Jan 15, 2024',
-      status: 'Active',
-    },
-    {
-      id: 'USR-10235',
-      name: 'Sarah Miller',
-      avatar: '',
-      email: 'sarah.m@example.com',
-      subscription: 'Monthly',
-      joinedDate: 'Feb 03, 2024',
-      status: 'Active',
-    },
-    {
-      id: 'USR-10236',
-      name: 'Robert Johnson',
-      avatar: '',
-      email: 'r.johnson@example.com',
-      subscription: 'Trial',
-      joinedDate: 'Mar 10, 2024',
-      status: 'Active',
-    },
-    {
-      id: 'USR-10235',
-      name: 'Jane Cooper',
-      avatar: '',
-      email: 'sarah.m@example.com',
-      subscription: 'Member',
-      joinedDate: 'Feb 03, 2024',
-      status: 'Blocked',
-    },
-    {
-      id: 'USR-10236',
-      name: 'Bessie Cooper',
-      avatar: '',
-      email: 'r.johnson@example.com',
-      subscription: 'Trial expired',
-      joinedDate: 'Mar 10, 2024',
-      status: 'Blocked',
-    },
-    {
-      id: 'USR-10236',
-      name: 'Guy Hawkins',
-      avatar: '',
-      email: 'r.johnson@example.com',
-      subscription: 'Trial',
-      joinedDate: 'Mar 10, 2024',
-      status: 'Active',
-    },
-  ];
-
-  const columns: Column<User>[] = [
-    {
-      header: 'User',
-      accessor: (user) => <UserCell user={user} />,
-    },
-    { header: 'Email', accessor: 'email' },
-    {
-      header: (
-        <div className="header-with-icon">
-          <span>Subscription</span>
-          <Info size={14} className="info-icon" />
-        </div>
-      ),
-      accessor: (user) => <SubscriptionCell user={user} />,
-    },
-    { header: 'Joined Date', accessor: 'joinedDate' },
-    {
-      header: 'Status',
-      accessor: (user) => <StatusCell user={user} />,
-    },
-    {
-      header: 'Actions',
-      accessor: (user) => (
-        <ActionsCell
-          user={user}
-          navigate={navigate}
-          setSelectedUser={setSelectedUser}
-          setIsBlockModalOpen={setIsBlockModalOpen}
-        />
-      ),
-    },
-  ];
+  const columns: Column<AdminUser>[] = useMemo(
+    () => [
+      {
+        header: 'User',
+        accessor: (user) => <UserCell user={user} />,
+      },
+      { header: 'Email', accessor: 'email' },
+      {
+        header: (
+          <div className="header-with-icon">
+            <span>Subscription</span>
+            <Info size={14} className="info-icon" />
+          </div>
+        ),
+        accessor: (user) => <SubscriptionCell user={user} />,
+      },
+      {
+        header: 'Joined Date',
+        accessor: (user) =>
+          new Date(user.createdAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+          }),
+      },
+      {
+        header: 'Status',
+        accessor: (user) => <StatusCell user={user} />,
+      },
+      {
+        header: 'Actions',
+        accessor: (user) => (
+          <ActionsCell
+            user={user}
+            navigate={navigate}
+            setSelectedUser={setSelectedUser}
+            setIsBlockModalOpen={setIsBlockModalOpen}
+          />
+        ),
+      },
+    ],
+    [navigate]
+  );
 
   return (
     <div className="user-list-page">
@@ -246,7 +307,11 @@ function UserList() {
           <Upload size={18} />
           <span>Import Users</span>
         </button>
-        <button type="button" className="header-btn btn-outline">
+        <button
+          type="button"
+          className="header-btn btn-outline"
+          onClick={handleExportUsers}
+        >
           <Download size={18} />
           <span>Export Users</span>
         </button>
@@ -261,9 +326,16 @@ function UserList() {
       </HeaderActions>
 
       <div className="kpi-grid">
-        {kpis.map((kpi, idx) => (
-          <KpiCard key={idx} {...kpi} />
-        ))}
+        {isDashboardLoading ? (
+          <>
+            <Skeleton height={140} />
+            <Skeleton height={140} />
+            <Skeleton height={140} />
+            <Skeleton height={140} />
+          </>
+        ) : (
+          kpis.map((kpi) => <KpiCard key={kpi.id} {...kpi} />)
+        )}
       </div>
 
       <div className="legend-and-filters">
@@ -286,7 +358,12 @@ function UserList() {
         <div className="table-controls">
           <div className="search-bar-inline">
             <Search size={18} />
-            <input type="text" placeholder="Search users..." />
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
           <div className="filter-tabs">
             {[
@@ -302,7 +379,10 @@ function UserList() {
                 type="button"
                 key={tab}
                 className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setPageNumber(1);
+                }}
               >
                 {tab}
               </button>
@@ -314,30 +394,61 @@ function UserList() {
       <div className="table-container-styled">
         <Table
           columns={columns}
-          data={users}
+          data={usersData?.data?.items || []}
           onRowClick={(user) => navigate(`/users/${user.id}`)}
+          isLoading={isUsersLoading}
         />
 
         <div className="table-pagination">
-          <span className="pagination-info">Showing 1-7 of 12,543 users</span>
+          <span className="pagination-info">
+            Showing{' '}
+            {((usersData?.data?.pageNumber || 1) - 1) * pageSize +
+              (usersData?.data?.items?.length ? 1 : 0)}
+            -
+            {((usersData?.data?.pageNumber || 1) - 1) * pageSize +
+              (usersData?.data?.items?.length || 0)}{' '}
+            of {usersData?.data?.totalCount || 0} users
+          </span>
           <div className="pagination-controls">
-            <button type="button" className="page-nav">
+            <button
+              type="button"
+              className="page-nav"
+              onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+              disabled={!usersData?.data?.hasPreviousPage}
+            >
               <ChevronLeft size={16} />
             </button>
-            <button type="button" className="page-num active">
-              1
-            </button>
-            <button type="button" className="page-num">
-              2
-            </button>
-            <button type="button" className="page-num">
-              3
-            </button>
-            <span className="dots">...</span>
-            <button type="button" className="page-num">
-              125
-            </button>
-            <button type="button" className="page-nav">
+            {Array.from(
+              { length: usersData?.data?.totalPages || 0 },
+              (_, i) => i + 1
+            )
+              .filter((p) => {
+                const current = usersData?.data?.pageNumber || 1;
+                const total = usersData?.data?.totalPages || 0;
+                return p === 1 || p === total || Math.abs(p - current) <= 1;
+              })
+              .map((p, i, arr) => (
+                <div key={p} style={{ display: 'flex', alignItems: 'center' }}>
+                  {i > 0 && arr[i - 1] !== p - 1 && (
+                    <span className="dots">...</span>
+                  )}
+                  <button
+                    type="button"
+                    className={`page-num ${
+                      (usersData?.data?.pageNumber || 1) === p ? 'active' : ''
+                    }`}
+                    onClick={() => setPageNumber(p)}
+                  >
+                    {p}
+                  </button>
+                </div>
+              ))}
+            <button
+              type="button"
+              className="page-nav"
+              onClick={() => setPageNumber((p) => p + 1)}
+              disabled={!usersData?.data?.hasNextPage}
+            >
               <ChevronRight size={16} />
             </button>
           </div>
@@ -352,7 +463,9 @@ function UserList() {
       <BlockUserModal
         isOpen={isBlockModalOpen}
         onClose={() => setIsBlockModalOpen(false)}
-        userName={selectedUser?.name || ''}
+        userId={selectedUser?.id || ''}
+        userName={selectedUser?.fullName || ''}
+        isBlocked={selectedUser?.isBlocked || false}
       />
       <ImportUserModal
         isOpen={isImportModalOpen}

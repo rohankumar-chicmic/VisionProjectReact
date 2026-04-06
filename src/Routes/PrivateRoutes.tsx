@@ -12,6 +12,7 @@ import JuryPanel from '../Views/Applications/JuryPanel';
 import AnnouncementList from '../Views/Announcements/AnnouncementList';
 import AdminManagersList from '../Views/Settings/AdminManagersList';
 import UserProfile from '../Views/Users/UserProfile';
+import GalaDetails from '../Views/Galas/GalaDetails';
 import Notifications from '../Views/Notifications/NotificationAutomations';
 import JuryPage from '../Views/Jury/JuryPage';
 import AdminSettings from '../Views/Settings/AdminSettings';
@@ -46,6 +47,16 @@ export const PRIVATE_ROUTES: Array<CustomRouter> = [
     title: 'Create Gala',
   },
   {
+    path: '/galas/:id',
+    element: <GalaDetails />,
+    title: 'Gala Details',
+  },
+  {
+    path: '/galas/edit/:id',
+    element: <CreateGala />,
+    title: 'Edit Gala',
+  },
+  {
     path: '/grants',
     element: <GrantList />,
     title: 'Grants',
@@ -54,6 +65,11 @@ export const PRIVATE_ROUTES: Array<CustomRouter> = [
     path: '/grants/create',
     element: <CreateGrant />,
     title: 'Create Grant',
+  },
+  {
+    path: '/grants/edit/:id',
+    element: <CreateGrant />,
+    title: 'Edit Grant',
   },
   {
     path: '/grants/jury-criteria',

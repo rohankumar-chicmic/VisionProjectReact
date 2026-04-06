@@ -10,14 +10,16 @@ import type { RootState } from '../../Store';
 import { API_BASE_URL } from './Constants';
 import { ResponseOptions } from './api.d';
 import { updateAuthTokenRedux, clearAuthTokenRedux } from '../../Store/Common';
+import { AuthResponse } from './module/AuthApi';
 
 const baseQuery: BaseQueryFn = fetchBaseQuery({
   baseUrl: API_BASE_URL,
   prepareHeaders: async (headers: Headers, { getState }) => {
     const { token } = (getState() as RootState).common;
     if (token) {
-      headers.append('authorization', `${token}`);
+      headers.append('authorization', `Bearer ${token}`);
     }
+    headers.set('ngrok-skip-browser-warning', 'true');
     return headers;
   },
 });
@@ -42,7 +44,7 @@ const baseQueryWithInterceptor = async (
         },
         api,
         extraOptions
-      )) as { data?: { data: { accessToken: string; refreshToken: string } } };
+      )) as { data: AuthResponse };
 
       if (refreshResult.data) {
         // store the new token
@@ -68,6 +70,7 @@ const baseQueryWithInterceptor = async (
 const api = createApi({
   baseQuery: baseQueryWithInterceptor,
   endpoints: () => ({}),
+  tagTypes: ['Galas', 'Grants', 'Admins', 'Notifications', 'Announcements'],
 });
 
 export default api;

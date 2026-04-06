@@ -1,32 +1,123 @@
-import React, { useEffect } from 'react';
-import { 
-  Download, 
-  Mail, 
-  Phone, 
-  Plus,
-  Calendar, 
-  Slash, 
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  Download,
+  Mail,
+  Phone,
+  Calendar,
+  Slash,
   Edit,
-  Clock,
   MessageSquare,
   Bell,
-  Send
+  Send,
 } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
+import { useGetAdminUserByIdQuery } from '../../Services/Api/module/AdminApi';
+import Skeleton from '../../Components/Shared/Skeleton';
+import BlockUserModal from './Components/BlockUserModal';
+import EditUserModal from './Components/EditUserModal';
 import './UserProfile.scss';
 
-const UserProfile: React.FC = () => {
+interface HistoryItem {
+  title: string;
+  subtitle: string;
+  type: string;
+  date: string;
+  status: string;
+  color?: string;
+  id?: string;
+}
+
+interface ActivityItem {
+  title: string;
+  time: string;
+  meta: string;
+  status: string;
+  id?: string;
+}
+
+function UserProfile() {
   const { setTitle, setSubtitle } = useHeader();
+  const { id } = useParams<{ id: string }>();
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('All');
+
+  const {
+    data: userResponse,
+    isLoading,
+    error,
+  } = useGetAdminUserByIdQuery(id || '');
+  const user = userResponse?.data;
 
   useEffect(() => {
     setTitle('User Profile');
     setSubtitle('Complete profile and account information');
   }, [setTitle, setSubtitle]);
 
+  const handleExportJSON = () => {
+    if (!user) return;
+    const blob = new Blob([JSON.stringify(user, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `user_profile_${id || 'user'}_${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="user-profile-page">
+        <div className="profile-grid">
+          <div className="profile-left">
+            <Skeleton height={400} />
+            <div style={{ marginTop: '20px' }}>
+              <Skeleton height={400} />
+            </div>
+          </div>
+          <div className="profile-right">
+            <Skeleton height={400} />
+            <div style={{ marginTop: '20px' }}>
+              <Skeleton height={400} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !user) {
+    return (
+      <div className="user-profile-page">
+        <div className="error-state">
+          <h3>User not found</h3>
+          <p>
+            The user you are looking for does not exist or has been removed.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const getSubscriptionLabel = () => {
+    if (user.subscriptionPlan === 1) return 'Monthly';
+    if (user.subscriptionPlan === 2) return 'Yearly';
+    return 'Regular Member';
+  };
+
   return (
     <div className="user-profile-page">
       <HeaderActions>
-        <button className="header-btn btn-outline">
+        <button
+          type="button"
+          className="header-btn btn-outline"
+          onClick={handleExportJSON}
+        >
           <Download size={18} />
           <span>Export Profile Details</span>
         </button>
@@ -40,25 +131,35 @@ const UserProfile: React.FC = () => {
               <h3>User Profile Details</h3>
               <p>Complete information and account status</p>
             </div>
-            
+
             <div className="user-hero">
-              <div className="hero-avatar">JD</div>
+              <div className="hero-avatar">{user.fullName.charAt(0)}</div>
               <div className="hero-info">
                 <div className="name-row">
-                  <h2>John Doe</h2>
-                  <span className="status-pill active">Active</span>
+                  <h2>{user.fullName}</h2>
+                  <span
+                    className={`status-pill ${
+                      user.isBlocked ? 'blocked' : 'active'
+                    }`}
+                  >
+                    {user.isBlocked ? 'Blocked' : 'Active'}
+                  </span>
                 </div>
-                <span className="user-id">#USR-10234</span>
-                
+                <span className="user-id">
+                  #{user.id.substring(0, 8).toUpperCase()}
+                </span>
+
                 <div className="contact-info">
                   <div className="info-item">
                     <Phone size={16} />
-                    <span>+1 (514) 555-0123</span>
+                    <span>N/A</span>
                   </div>
                   <div className="info-item">
                     <Mail size={16} />
-                    <span>john.doe@example.com</span>
-                    <button className="copy-btn"><Download size={12} /></button>
+                    <span>{user.email}</span>
+                    <button type="button" className="copy-btn">
+                      <Download size={12} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -67,36 +168,83 @@ const UserProfile: React.FC = () => {
             <div className="details-grid">
               <div className="detail-row">
                 <span className="label">Business Name</span>
-                <span className="value">TechCorp Industries Inc.</span>
+                <span className="value">{user.companyName || 'N/A'}</span>
               </div>
               <div className="detail-row">
                 <span className="label">Subscription</span>
-                <span className="value">Yearly Plan</span>
+                <span className="value">{getSubscriptionLabel()} Plan</span>
               </div>
               <div className="detail-row">
                 <span className="label">Joined Date</span>
-                <span className="value">Jan 15, 2024</span>
+                <span className="value">
+                  {new Date(user.createdAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: '2-digit',
+                    year: 'numeric',
+                  })}
+                </span>
               </div>
               <div className="detail-row">
-                <span className="label">Free Account</span>
+                <span className="label">Account Status</span>
                 <div className="value-with-badge">
-                  <span className="badge-green">Given</span>
-                  <span className="value-text"><strong>3 months</strong> · Expires Apr 15, 2026</span>
+                  <span
+                    className={`badge-${
+                      user.isEmailVerified ? 'green' : 'red'
+                    }`}
+                  >
+                    {user.isEmailVerified ? 'Verified' : 'Unverified'}
+                  </span>
+                  <span className="value-text">
+                    Email address{' '}
+                    {user.isEmailVerified
+                      ? 'has been confirmed'
+                      : 'is pending verification'}
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="card-actions">
-              <button className="btn-action block-btn">
+              <button
+                type="button"
+                className="btn-action block-btn"
+                onClick={() => setIsBlockModalOpen(true)}
+              >
                 <Slash size={18} />
-                <span>Block User</span>
+                <span>{user.isBlocked ? 'Unblock User' : 'Block User'}</span>
               </button>
-              <button className="btn-action edit-btn">
+              <button
+                type="button"
+                className="btn-action edit-btn"
+                onClick={() => setIsEditModalOpen(true)}
+              >
                 <Edit size={18} />
                 <span>Edit User Profile</span>
               </button>
             </div>
           </div>
+
+          <BlockUserModal
+            isOpen={isBlockModalOpen}
+            onClose={() => setIsBlockModalOpen(false)}
+            userId={user.id}
+            userName={user.fullName}
+            isBlocked={user.isBlocked}
+          />
+
+          <EditUserModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            onConfirm={() => {
+              setIsEditModalOpen(false);
+              // In the future this would trigger a refetch
+            }}
+            userData={{
+              fullName: user.fullName,
+              email: user.email,
+              companyName: user.companyName,
+            }}
+          />
 
           {/* User Historic Card */}
           <div className="card user-historic-card">
@@ -106,33 +254,67 @@ const UserProfile: React.FC = () => {
                 <p>Past activity across grants & galas</p>
               </div>
               <div className="header-filters">
-                <button className="filter-pill active">All</button>
-                <button className="filter-pill">Grants</button>
-                <button className="filter-pill">Galas</button>
+                {['All', 'Grants', 'Galas'].map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    className={`filter-pill ${activeTab === tab ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
             </div>
 
             <div className="historic-list">
-              {[
-                { type: 'Grant', name: 'Innovation Technology Grant', date: 'Feb 24, 2026', status: 'Pending', icon: 'file', color: '#dcfce7' },
-                { type: 'Gala', name: 'Gala Vision Montréal 2025', date: 'Nov 12, 2025', status: 'Pending', icon: 'calendar', color: '#fef3c7' },
-                { type: 'Grant', name: 'Green Startup Fund 2025', date: 'Sep 5, 2025', status: 'Approved', icon: 'file', color: '#f0f3ff' },
-                { type: 'Gala', name: 'Gala Vision Québec 2024', date: 'Oct 3, 2024', status: 'Rejected', icon: 'calendar', color: '#eff6ff' },
-              ].map((item, idx) => (
-                <div key={idx} className="historic-item">
-                  <div className="item-icon" style={{ backgroundColor: item.color }}>
-                    {item.icon === 'file' ? <Calendar size={18} /> : <Calendar size={18} />}
-                  </div>
-                  <div className="item-info">
-                    <span className="name">{item.name}</span>
-                    <span className="meta">{item.type} Application · {item.date}</span>
-                  </div>
-                  <span className={`status-tag ${item.status.toLowerCase()}`}>{item.status}</span>
-                </div>
-              ))}
+              {user.history.length > 0 ? (
+                (user.history as HistoryItem[])
+                  .filter((item) => {
+                    if (activeTab === 'All') return true;
+                    const itemType = item.type?.toLowerCase();
+                    const targetTab = activeTab.toLowerCase();
+                    // Match "Grant" to "Grants" and "Gala" to "Galas"
+                    return (
+                      itemType === targetTab || itemType === targetTab.slice(0, -1)
+                    );
+                  })
+                  .map((item, idx) => (
+                    <div key={item.id || idx} className="historic-item">
+                      <div
+                        className="item-icon"
+                        style={{ backgroundColor: item.color || '#f0f3ff' }}
+                      >
+                        <Calendar size={18} />
+                      </div>
+                      <div className="item-info">
+                        <span className="name">{item.title}</span>
+                        <span className="meta">
+                          {item.subtitle} ·{' '}
+                          {new Date(item.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      <span
+                        className={`status-tag ${
+                          item.status ? item.status.toLowerCase() : ''
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+                  ))
+              ) : (
+                <div className="empty-state">No historic records found</div>
+              )}
             </div>
-            
-            <button className="see-history-btn">See full history</button>
+
+            <button type="button" className="see-history-btn">
+              See full history
+            </button>
           </div>
         </div>
 
@@ -145,26 +327,25 @@ const UserProfile: React.FC = () => {
             </div>
 
             <div className="timeline-list">
-              {[
-                { title: 'Application Submitted', time: '2 hours ago', meta: 'John Doe submitted application for Innovation Technology Grant', user: 'John Doe', status: 'active' },
-                { title: 'Interview Scheduled', time: '2 hours ago', meta: 'Applicant selected interview slot for Feb 25, 2026 at 10:30 AM', details: '10:30 AM - 11:00 AM', status: 'pending' },
-                { title: 'Application Opened', time: '3 hours ago', meta: 'Admin team started reviewing this application', user: 'Admin User', status: 'warning' },
-                { title: 'Email Notification Sent', time: '5 hours ago', meta: 'Confirmation email sent to applicant', email: 'john.doe@quackpreneur.com', status: 'muted' },
-              ].map((step, idx) => (
-                <div key={idx} className={`timeline-item ${step.status}`}>
-                  <div className="timeline-marker"></div>
-                  <div className="timeline-content">
-                    <div className="item-header">
-                      <span className="title">{step.title}</span>
-                      <span className="time">{step.time}</span>
+              {user.recentActivity.length > 0 ? (
+                (user.recentActivity as ActivityItem[]).map((step, idx) => (
+                  <div
+                    key={step.id || idx}
+                    className={`timeline-item ${step.status}`}
+                  >
+                    <div className="timeline-marker" />
+                    <div className="timeline-content">
+                      <div className="item-header">
+                        <span className="title">{step.title}</span>
+                        <span className="time">{step.time}</span>
+                      </div>
+                      <p className="meta">{step.meta}</p>
                     </div>
-                    <p className="meta">{step.meta}</p>
-                    {step.details && <span className="details-badge"><Clock size={12} /> {step.details}</span>}
-                    {step.user && <span className="user-ref"><Plus size={12} /> {step.user}</span>}
-                    {step.email && <span className="email-ref"><Mail size={12} /> {step.email}</span>}
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="empty-state">No recent activity</div>
+              )}
             </div>
           </div>
 
@@ -177,13 +358,48 @@ const UserProfile: React.FC = () => {
 
             <div className="feed-list">
               {[
-                { type: 'Email', title: 'Welcome email sent', meta: 'Login credentials sent to john.doe@example.com', time: '2h ago', icon: <Mail size={16} />, color: '#dcfce7' },
-                { type: 'SMS', title: 'SMS reminder sent', meta: 'Interview reminder for Feb 25 sent via SMS', time: '5h ago', icon: <MessageSquare size={16} />, color: '#eff6ff' },
-                { type: 'Notification', title: 'Push notification', meta: 'Application status update sent via app notification', time: '1d ago', icon: <Bell size={16} />, color: '#fff7ed' },
-                { type: 'Email', title: 'Grant deadline reminder', meta: 'Email sent: Innovation Grant closes Mar 31', time: '3d ago', icon: <Send size={16} />, color: '#fdf2f8' },
-              ].map((activity, idx) => (
-                <div key={idx} className="activity-item">
-                  <div className="activity-icon" style={{ backgroundColor: activity.color }}>
+                {
+                  id: 'feed-welcome',
+                  type: 'Email',
+                  title: 'Welcome email sent',
+                  meta: 'Login credentials sent to john.doe@example.com',
+                  time: '2h ago',
+                  icon: <Mail size={16} />,
+                  color: '#dcfce7',
+                },
+                {
+                  id: 'feed-sms',
+                  type: 'SMS',
+                  title: 'SMS reminder sent',
+                  meta: 'Interview reminder for Feb 25 sent via SMS',
+                  time: '5h ago',
+                  icon: <MessageSquare size={16} />,
+                  color: '#eff6ff',
+                },
+                {
+                  id: 'feed-push',
+                  type: 'Notification',
+                  title: 'Push notification',
+                  meta: 'Application status update sent via app notification',
+                  time: '1d ago',
+                  icon: <Bell size={16} />,
+                  color: '#fff7ed',
+                },
+                {
+                  id: 'feed-grant',
+                  type: 'Email',
+                  title: 'Grant deadline reminder',
+                  meta: 'Email sent: Innovation Grant closes Mar 31',
+                  time: '3d ago',
+                  icon: <Send size={16} />,
+                  color: '#fdf2f8',
+                },
+              ].map((activity) => (
+                <div key={activity.id} className="activity-item">
+                  <div
+                    className="activity-icon"
+                    style={{ backgroundColor: activity.color }}
+                  >
                     {activity.icon}
                   </div>
                   <div className="activity-info">
@@ -201,6 +417,6 @@ const UserProfile: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default UserProfile;

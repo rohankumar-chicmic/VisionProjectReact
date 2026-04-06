@@ -7,6 +7,8 @@ import {
 } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { PersistGate } from 'redux-persist/integration/react';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { store, persistor } from './Store';
 import RootRouter from './Routes/RootRouter';
 
@@ -24,6 +26,7 @@ function App() {
       <PersistGate persistor={persistor}>
         <HelmetProvider>
           <RouterProvider router={router} />
+          <ToastContainer />
         </HelmetProvider>
       </PersistGate>
     </Provider>

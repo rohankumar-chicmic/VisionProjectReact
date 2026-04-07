@@ -58,46 +58,66 @@ function JuryAssignmentStep({
             </div>
 
             <div className="array-card-grid">
-              <div className="wizard-field">
-                <label htmlFor={`jury-name-${index}`}>Name</label>
+              <label className="wizard-field" htmlFor={`jury-name-${index}`}>
+                <span>Name</span>
                 <input
                   id={`jury-name-${index}`}
                   type="text"
                   placeholder="Avery Taylor"
-                  {...register(`juryAssignments.${index}.name`, {
-                    required: 'Name is required',
-                  })}
+                  name={
+                    register(`juryAssignments.${index}.name`, {
+                      required: 'Name is required',
+                    }).name
+                  }
+                  onChange={register(`juryAssignments.${index}.name`).onChange}
+                  onBlur={register(`juryAssignments.${index}.name`).onBlur}
+                  ref={register(`juryAssignments.${index}.name`).ref}
                 />
                 {errors.juryAssignments?.[index]?.name && (
                   <span className="field-error">
                     {errors.juryAssignments[index]?.name?.message}
                   </span>
                 )}
-              </div>
+              </label>
 
-              <div className="wizard-field">
-                <label htmlFor={`jury-expertise-${index}`}>Expertise</label>
+              <label
+                className="wizard-field"
+                htmlFor={`jury-expertise-${index}`}
+              >
+                <span>Expertise</span>
                 <input
                   id={`jury-expertise-${index}`}
                   type="text"
                   placeholder="Venture Capital"
-                  {...register(`juryAssignments.${index}.expertise`, {
-                    required: 'Expertise is required',
-                  })}
+                  name={
+                    register(`juryAssignments.${index}.expertise`, {
+                      required: 'Expertise is required',
+                    }).name
+                  }
+                  onChange={
+                    register(`juryAssignments.${index}.expertise`).onChange
+                  }
+                  onBlur={register(`juryAssignments.${index}.expertise`).onBlur}
+                  ref={register(`juryAssignments.${index}.expertise`).ref}
                 />
-              </div>
+              </label>
 
-              <div className="wizard-field">
-                <label htmlFor={`jury-email-${index}`}>Email</label>
+              <label className="wizard-field" htmlFor={`jury-email-${index}`}>
+                <span>Email</span>
                 <input
                   id={`jury-email-${index}`}
                   type="email"
                   placeholder="avery@example.com"
-                  {...register(`juryAssignments.${index}.email`, {
-                    required: 'Email is required',
-                  })}
+                  name={
+                    register(`juryAssignments.${index}.email`, {
+                      required: 'Email is required',
+                    }).name
+                  }
+                  onChange={register(`juryAssignments.${index}.email`).onChange}
+                  onBlur={register(`juryAssignments.${index}.email`).onBlur}
+                  ref={register(`juryAssignments.${index}.email`).ref}
                 />
-              </div>
+              </label>
             </div>
           </div>
         ))}

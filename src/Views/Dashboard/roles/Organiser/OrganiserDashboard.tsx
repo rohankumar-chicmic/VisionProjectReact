@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
-import { HeaderActions, useHeader } from '../../../../Shared/Context/HeaderContext';
+import {
+  HeaderActions,
+  useHeader,
+} from '../../../../Shared/Context/HeaderContext';
 import { useGetGrantsSummaryQuery } from '../../../../Services/Api/module/GrantsApi';
 import { useGetGalasQuery } from '../../../../Services/Api/module/GalaApi';
 import DashboardStats from './components/DashboardStats';
@@ -25,7 +28,9 @@ function OrganiserDashboard() {
 
   useEffect(() => {
     setTitle('Organiser Dashboard');
-    setSubtitle('Plan galas, shape pricing, and assign jury members from one flow');
+    setSubtitle(
+      'Plan galas, shape pricing, and assign jury members from one flow'
+    );
     return () => resetHeader();
   }, [resetHeader, setSubtitle, setTitle]);
 

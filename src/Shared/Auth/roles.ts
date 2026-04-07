@@ -29,7 +29,10 @@ const ROLE_ALIASES: Record<string, AppRole> = {
 };
 
 const normalizeRoleString = (value: string) =>
-  value.trim().toLowerCase().replace(/[-\s]+/g, '_');
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, '_');
 
 export const normalizeRole = (
   value?: string | number | null

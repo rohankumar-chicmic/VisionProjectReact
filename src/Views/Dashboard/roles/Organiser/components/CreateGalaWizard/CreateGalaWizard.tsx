@@ -41,8 +41,11 @@ function CreateGalaWizard({ onComplete }: Readonly<CreateGalaWizardProps>) {
     watch,
     formState: { errors },
   } = useForm<CreateGalaWizardValues>({ defaultValues });
-  const { fields: grantFields, append: appendGrant, remove: removeGrant } =
-    useFieldArray({ control, name: 'grants' });
+  const {
+    fields: grantFields,
+    append: appendGrant,
+    remove: removeGrant,
+  } = useFieldArray({ control, name: 'grants' });
   const {
     fields: juryFields,
     append: appendJuryMember,
@@ -50,11 +53,13 @@ function CreateGalaWizard({ onComplete }: Readonly<CreateGalaWizardProps>) {
   } = useFieldArray({ control, name: 'juryAssignments' });
   const values = watch();
   const totalPrizePool = values.grants.reduce(
-    (total, grant) => total + (Number(grant.prizeAmount) || 0) * (Number(grant.slots) || 0),
+    (total, grant) =>
+      total + (Number(grant.prizeAmount) || 0) * (Number(grant.slots) || 0),
     0
   );
   const expectedAttendees = Number(values.expectedAttendees) || 0;
-  const estimatedTicketPrice = expectedAttendees > 0 ? totalPrizePool / expectedAttendees : 0;
+  const estimatedTicketPrice =
+    expectedAttendees > 0 ? totalPrizePool / expectedAttendees : 0;
 
   const handlePublish = handleSubmit((data) => {
     showToast.success(`"${data.name || 'New gala'}" is ready for publishing.`);
@@ -101,7 +106,9 @@ function CreateGalaWizard({ onComplete }: Readonly<CreateGalaWizardProps>) {
         <div className="dashboard-section-header">
           <div>
             <h3>Create Gala Wizard</h3>
-            <p>Plan a gala in five steps without leaving the dashboard shell.</p>
+            <p>
+              Plan a gala in five steps without leaving the dashboard shell.
+            </p>
           </div>
         </div>
 
@@ -139,7 +146,9 @@ function CreateGalaWizard({ onComplete }: Readonly<CreateGalaWizardProps>) {
           </div>
         </div>
 
-        <div className="warning-banner">Final price is locked after publishing</div>
+        <div className="warning-banner">
+          Final price is locked after publishing
+        </div>
 
         {stepViews[currentStep]}
 

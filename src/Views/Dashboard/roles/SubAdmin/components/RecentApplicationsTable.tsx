@@ -12,7 +12,8 @@ const columns: Column<AdminApplication>[] = [
   { header: 'Grant', accessor: 'grantName' },
   {
     header: 'Score',
-    accessor: (item) => (item.juryScore ? item.juryScore.toFixed(1) : 'Pending'),
+    accessor: (item) =>
+      item.juryScore ? item.juryScore.toFixed(1) : 'Pending',
   },
 ];
 

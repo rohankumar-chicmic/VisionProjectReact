@@ -17,7 +17,11 @@ function CreateGalaCTA({ isOpen, onToggle }: Readonly<CreateGalaCTAProps>) {
       </div>
 
       <div className="dashboard-highlight-actions">
-        <button type="button" className="dashboard-btn primary" onClick={onToggle}>
+        <button
+          type="button"
+          className="dashboard-btn primary"
+          onClick={onToggle}
+        >
           <CalendarPlus size={18} />
           <span>{isOpen ? 'Hide Wizard' : 'Launch Wizard'}</span>
         </button>

@@ -28,7 +28,9 @@ function ReportsPanel({ stats }: Readonly<ReportsPanelProps>) {
       <div className="dashboard-section-header">
         <div>
           <h3>Reports Panel</h3>
-          <p>Quick signals to guide daily operations and executive reporting.</p>
+          <p>
+            Quick signals to guide daily operations and executive reporting.
+          </p>
         </div>
       </div>
 

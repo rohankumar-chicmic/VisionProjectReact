@@ -17,7 +17,9 @@ function SubAdminDashboard() {
 
   useEffect(() => {
     setTitle('Sub Admin Dashboard');
-    setSubtitle('Daily moderation, operational follow-up, and queue visibility');
+    setSubtitle(
+      'Daily moderation, operational follow-up, and queue visibility'
+    );
     return () => resetHeader();
   }, [resetHeader, setSubtitle, setTitle]);
 

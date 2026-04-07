@@ -17,52 +17,70 @@ function BasicInfoStep({ register, errors }: Readonly<BasicInfoStepProps>) {
       </div>
 
       <div className="wizard-form-grid">
-        <div className="wizard-field">
-          <label htmlFor="gala-name">Gala name</label>
+        <label className="wizard-field" htmlFor="gala-name">
+          <span>Gala name</span>
           <input
             id="gala-name"
             type="text"
             placeholder="Vision PME Awards 2026"
-            {...register('name', { required: 'Gala name is required' })}
+            name={register('name', { required: 'Gala name is required' }).name}
+            onChange={register('name').onChange}
+            onBlur={register('name').onBlur}
+            ref={register('name').ref}
           />
-          {errors.name && <span className="field-error">{errors.name.message}</span>}
-        </div>
+          {errors.name && (
+            <span className="field-error">{errors.name.message}</span>
+          )}
+        </label>
 
-        <div className="wizard-field">
-          <label htmlFor="event-date">Event date</label>
+        <label className="wizard-field" htmlFor="event-date">
+          <span>Event date</span>
           <input
             id="event-date"
             type="date"
-            {...register('eventDate', { required: 'Event date is required' })}
+            name={
+              register('eventDate', { required: 'Event date is required' }).name
+            }
+            onChange={register('eventDate').onChange}
+            onBlur={register('eventDate').onBlur}
+            ref={register('eventDate').ref}
           />
           {errors.eventDate && (
             <span className="field-error">{errors.eventDate.message}</span>
           )}
-        </div>
+        </label>
 
-        <div className="wizard-field">
-          <label htmlFor="venue">Venue</label>
+        <label className="wizard-field" htmlFor="venue">
+          <span>Venue</span>
           <input
             id="venue"
             type="text"
             placeholder="Grand Hall"
-            {...register('venue', { required: 'Venue is required' })}
+            name={register('venue', { required: 'Venue is required' }).name}
+            onChange={register('venue').onChange}
+            onBlur={register('venue').onBlur}
+            ref={register('venue').ref}
           />
           {errors.venue && (
             <span className="field-error">{errors.venue.message}</span>
           )}
-        </div>
+        </label>
 
-        <div className="wizard-field">
-          <label htmlFor="city">City</label>
+        <label className="wizard-field" htmlFor="city">
+          <span>City</span>
           <input
             id="city"
             type="text"
             placeholder="Montreal"
-            {...register('city', { required: 'City is required' })}
+            name={register('city', { required: 'City is required' }).name}
+            onChange={register('city').onChange}
+            onBlur={register('city').onBlur}
+            ref={register('city').ref}
           />
-          {errors.city && <span className="field-error">{errors.city.message}</span>}
-        </div>
+          {errors.city && (
+            <span className="field-error">{errors.city.message}</span>
+          )}
+        </label>
       </div>
     </div>
   );

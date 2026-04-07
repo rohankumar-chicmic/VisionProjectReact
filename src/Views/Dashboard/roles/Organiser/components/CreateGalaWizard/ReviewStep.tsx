@@ -64,7 +64,9 @@ function ReviewStep({
                   <strong>{member.name || 'Pending assignment'}</strong>
                   <span>{member.expertise || 'Expertise TBD'}</span>
                 </div>
-                <span className="dashboard-tag-muted">{member.email || 'No email'}</span>
+                <span className="dashboard-tag-muted">
+                  {member.email || 'No email'}
+                </span>
               </li>
             ))}
           </ul>

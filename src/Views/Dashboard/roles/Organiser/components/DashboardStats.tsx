@@ -1,5 +1,7 @@
 import { Calendar, Ticket, Trophy } from 'lucide-react';
-import KpiCard, { type KpiCardProps } from '../../../../../Components/Shared/KpiCard';
+import KpiCard, {
+  type KpiCardProps,
+} from '../../../../../Components/Shared/KpiCard';
 
 interface DashboardStatsProps {
   activeGalas: number;
@@ -42,7 +44,15 @@ function DashboardStats({
   return (
     <div className="kpi-grid">
       {cards.map((card) => (
-        <KpiCard key={`${card.label}-${card.value}`} {...card} />
+        <KpiCard
+          key={`${card.label}-${card.value}`}
+          icon={card.icon}
+          label={card.label}
+          value={card.value}
+          trend={card.trend}
+          trendType={card.trendType}
+          color={card.color}
+        />
       ))}
     </div>
   );

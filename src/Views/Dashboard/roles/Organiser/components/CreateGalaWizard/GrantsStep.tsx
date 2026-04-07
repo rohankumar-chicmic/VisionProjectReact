@@ -30,7 +30,9 @@ function GrantsStep({
       <div className="dashboard-section-header">
         <div>
           <h3>Grants</h3>
-          <p>Define the grant lineup and the prize pool driving ticket pricing.</p>
+          <p>
+            Define the grant lineup and the prize pool driving ticket pricing.
+          </p>
         </div>
         <button
           type="button"
@@ -64,50 +66,71 @@ function GrantsStep({
             </div>
 
             <div className="array-card-grid">
-              <div className="wizard-field">
-                <label htmlFor={`grant-name-${index}`}>Grant name</label>
+              <label className="wizard-field" htmlFor={`grant-name-${index}`}>
+                <span>Grant name</span>
                 <input
                   id={`grant-name-${index}`}
                   type="text"
                   placeholder="Innovation Technology Grant"
-                  {...register(`grants.${index}.name`, {
-                    required: 'Grant name is required',
-                  })}
+                  name={
+                    register(`grants.${index}.name`, {
+                      required: 'Grant name is required',
+                    }).name
+                  }
+                  onChange={register(`grants.${index}.name`).onChange}
+                  onBlur={register(`grants.${index}.name`).onBlur}
+                  ref={register(`grants.${index}.name`).ref}
                 />
                 {errors.grants?.[index]?.name && (
                   <span className="field-error">
                     {errors.grants[index]?.name?.message}
                   </span>
                 )}
-              </div>
+              </label>
 
-              <div className="wizard-field">
-                <label htmlFor={`grant-prize-${index}`}>Prize amount</label>
+              <label className="wizard-field" htmlFor={`grant-prize-${index}`}>
+                <span>Prize amount</span>
                 <input
                   id={`grant-prize-${index}`}
                   type="number"
                   min="0"
                   placeholder="10000"
-                  {...register(`grants.${index}.prizeAmount`, {
-                    valueAsNumber: true,
-                    min: { value: 0, message: 'Prize amount cannot be negative' },
-                  })}
+                  name={
+                    register(`grants.${index}.prizeAmount`, {
+                      valueAsNumber: true,
+                      min: {
+                        value: 0,
+                        message: 'Prize amount cannot be negative',
+                      },
+                    }).name
+                  }
+                  onChange={register(`grants.${index}.prizeAmount`).onChange}
+                  onBlur={register(`grants.${index}.prizeAmount`).onBlur}
+                  ref={register(`grants.${index}.prizeAmount`).ref}
                 />
-              </div>
+              </label>
 
-              <div className="wizard-field">
-                <label htmlFor={`grant-slots-${index}`}>Number of prizes</label>
+              <label className="wizard-field" htmlFor={`grant-slots-${index}`}>
+                <span>Number of prizes</span>
                 <input
                   id={`grant-slots-${index}`}
                   type="number"
                   min="1"
                   placeholder="2"
-                  {...register(`grants.${index}.slots`, {
-                    valueAsNumber: true,
-                    min: { value: 1, message: 'At least one prize is required' },
-                  })}
+                  name={
+                    register(`grants.${index}.slots`, {
+                      valueAsNumber: true,
+                      min: {
+                        value: 1,
+                        message: 'At least one prize is required',
+                      },
+                    }).name
+                  }
+                  onChange={register(`grants.${index}.slots`).onChange}
+                  onBlur={register(`grants.${index}.slots`).onBlur}
+                  ref={register(`grants.${index}.slots`).ref}
                 />
-              </div>
+              </label>
             </div>
           </div>
         ))}

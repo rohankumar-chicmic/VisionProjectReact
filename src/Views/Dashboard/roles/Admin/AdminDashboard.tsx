@@ -16,25 +16,23 @@ function AdminDashboard() {
     pageNumber: 1,
     pageSize: 4,
   });
-  const { data: userResponse, isLoading: isUserLoading } = useGetAdminUsersQuery(
-    {
+  const { data: userResponse, isLoading: isUserLoading } =
+    useGetAdminUsersQuery({
       pageNumber: 1,
       pageSize: 4,
-    }
-  );
+    });
 
   useEffect(() => {
     setTitle('Admin Dashboard');
-    setSubtitle('Platform health, recent galas, and user activity in one place');
+    setSubtitle(
+      'Platform health, recent galas, and user activity in one place'
+    );
     return () => resetHeader();
   }, [resetHeader, setSubtitle, setTitle]);
 
   return (
     <div className="dashboard-view role-dashboard">
-      <AdminStats
-        isLoading={isStatsLoading}
-        stats={dashboardResponse?.data}
-      />
+      <AdminStats isLoading={isStatsLoading} stats={dashboardResponse?.data} />
 
       <div className="dashboard-grid-two">
         <GalaTable

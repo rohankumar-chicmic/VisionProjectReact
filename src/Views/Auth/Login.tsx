@@ -161,15 +161,15 @@ function Login() {
         {selectedRole === 'organiser' && (
           <div className="create-account-footer">
             New here?{' '}
-            <span
-              className="create-link"
+            <button
+              type="button"
+              className="create-link-btn"
               onClick={() => navigate('/create-organiser')}
             >
               Create your Organiser account
-            </span>
+            </button>
           </div>
         )}
-
 
         <p className="auth-footer">
           © 2024 Vision PME (Gala Management System). All rights reserved.

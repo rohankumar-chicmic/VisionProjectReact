@@ -12,7 +12,10 @@ const columns: Column<GalaItem>[] = [
     header: 'Date',
     accessor: (item) => new Date(item.eventDate).toLocaleDateString(),
   },
-  { header: 'Attendees', accessor: (item) => item.expectedAttendees.toLocaleString() },
+  {
+    header: 'Attendees',
+    accessor: (item) => item.expectedAttendees.toLocaleString(),
+  },
   {
     header: 'Prize Pool',
     accessor: (item) => `$${item.totalPrizePool.toLocaleString()}`,

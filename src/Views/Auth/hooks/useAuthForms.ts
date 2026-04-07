@@ -103,7 +103,6 @@ export const useLoginForm = () => {
 
             user,
             role: data.role,
-
           })
         );
         // console.log(user);

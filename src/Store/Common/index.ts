@@ -6,7 +6,7 @@ interface User {
   isEmailVerified: boolean;
   isProfileCompleted: boolean;
   role?: string | number | null;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface CommonState {

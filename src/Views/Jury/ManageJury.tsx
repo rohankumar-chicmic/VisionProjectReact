@@ -57,6 +57,89 @@ const MOCK_JURY: JuryMember[] = [
   },
 ];
 
+function UserCell({ jury }: { jury: JuryMember }) {
+  return (
+    <div className="jury-user-cell">
+      <div className="avatar-circle">{jury.fullName.charAt(0)}</div>
+      <div className="user-details">
+        <span className="name">{jury.fullName}</span>
+        <span className="date">
+          Added {new Date(jury.createdAt).toLocaleDateString()}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ContactCell({ jury }: { jury: JuryMember }) {
+  return (
+    <div className="contact-cell">
+      <div className="contact-item">
+        <Mail size={14} />
+        <span>{jury.email}</span>
+      </div>
+      <div className="contact-item">
+        <Phone size={14} />
+        <span>{jury.phoneNumber}</span>
+      </div>
+    </div>
+  );
+}
+
+function CompanyCell({ jury }: { jury: JuryMember }) {
+  return (
+    <div className="company-cell">
+      <div className="company-item">
+        <Building2 size={14} />
+        <span>{jury.companyName}</span>
+      </div>
+      <div className="industry-badge">
+        <Briefcase size={12} />
+        <span>{jury.industryType}</span>
+      </div>
+    </div>
+  );
+}
+
+function ActionsCell() {
+  return (
+    <div className="table-actions">
+      <button type="button" className="action-btn edit" title="Edit">
+        <Edit2 size={16} />
+      </button>
+      <button type="button" className="action-btn delete" title="Delete">
+        <Trash2 size={16} />
+      </button>
+      <button
+        type="button"
+        className="action-btn more"
+        aria-label="More actions"
+      >
+        <MoreVertical size={16} />
+      </button>
+    </div>
+  );
+}
+
+const JURY_COLUMNS: Column<JuryMember>[] = [
+  {
+    header: 'Jury Member',
+    accessor: (jury) => <UserCell jury={jury} />,
+  },
+  {
+    header: 'Contact Information',
+    accessor: (jury) => <ContactCell jury={jury} />,
+  },
+  {
+    header: 'Company & Industry',
+    accessor: (jury) => <CompanyCell jury={jury} />,
+  },
+  {
+    header: 'Actions',
+    accessor: () => <ActionsCell />,
+  },
+];
+
 function ManageJury() {
   const { setTitle, setSubtitle, resetHeader } = useHeader();
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,69 +170,6 @@ function ManageJury() {
     setJuryList((prev) => [member, ...prev]);
     setIsModalOpen(false);
   };
-
-  const columns: Column<JuryMember>[] = [
-    {
-      header: 'Jury Member',
-      accessor: (jury) => (
-        <div className="jury-user-cell">
-          <div className="avatar-circle">
-            {jury.fullName.charAt(0)}
-          </div>
-          <div className="user-details">
-            <span className="name">{jury.fullName}</span>
-            <span className="date">Added {new Date(jury.createdAt).toLocaleDateString()}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: 'Contact Information',
-      accessor: (jury) => (
-        <div className="contact-cell">
-          <div className="contact-item">
-            <Mail size={14} />
-            <span>{jury.email}</span>
-          </div>
-          <div className="contact-item">
-            <Phone size={14} />
-            <span>{jury.phoneNumber}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: 'Company & Industry',
-      accessor: (jury) => (
-        <div className="company-cell">
-          <div className="company-item">
-            <Building2 size={14} />
-            <span>{jury.companyName}</span>
-          </div>
-          <div className="industry-badge">
-            <Briefcase size={12} />
-            <span>{jury.industryType}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: 'Actions',
-      accessor: () => (
-        <div className="table-actions">
-          <button type="button" className="action-btn edit" title="Edit">
-            <Edit2 size={16} />
-          </button>
-          <button type="button" className="action-btn delete" title="Delete">
-            <Trash2 size={16} />
-          </button>
-          <button type="button" className="action-btn more">
-            <MoreVertical size={16} />
-          </button>
-        </div>
-      ),
-    },
-  ];
 
   return (
     <div className="manage-jury-page">
@@ -191,7 +211,7 @@ function ManageJury() {
 
         <div className="table-wrapper">
           <Table<JuryMember>
-            columns={columns}
+            columns={JURY_COLUMNS}
             data={filteredJury}
             isLoading={false}
           />

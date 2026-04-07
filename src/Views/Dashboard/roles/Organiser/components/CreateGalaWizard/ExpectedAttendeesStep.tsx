@@ -20,37 +20,51 @@ function ExpectedAttendeesStep({
       </div>
 
       <div className="wizard-form-grid">
-        <div className="wizard-field">
-          <label htmlFor="expected-attendees">Expected attendees</label>
+        <label className="wizard-field" htmlFor="expected-attendees">
+          <span>Expected attendees</span>
           <input
             id="expected-attendees"
             type="number"
             min="1"
             placeholder="250"
-            {...register('expectedAttendees', {
-              required: 'Attendee count is required',
-              valueAsNumber: true,
-              min: { value: 1, message: 'Expected attendees must be at least 1' },
-            })}
+            name={
+              register('expectedAttendees', {
+                required: 'Attendee count is required',
+                valueAsNumber: true,
+                min: {
+                  value: 1,
+                  message: 'Expected attendees must be at least 1',
+                },
+              }).name
+            }
+            onChange={register('expectedAttendees').onChange}
+            onBlur={register('expectedAttendees').onBlur}
+            ref={register('expectedAttendees').ref}
           />
           {errors.expectedAttendees && (
             <span className="field-error">
               {errors.expectedAttendees.message}
             </span>
           )}
-        </div>
+        </label>
 
-        <div className="wizard-field wizard-field-full">
-          <label htmlFor="organiser-notes">Attendance notes</label>
+        <label
+          className="wizard-field wizard-field-full"
+          htmlFor="organiser-notes"
+        >
+          <span>Attendance notes</span>
           <textarea
             id="organiser-notes"
             placeholder="VIP allocation, partner tables, sponsorship considerations, or audience mix."
-            {...register('notes')}
+            name={register('notes').name}
+            onChange={register('notes').onChange}
+            onBlur={register('notes').onBlur}
+            ref={register('notes').ref}
           />
           <span className="field-help">
             These notes stay local to the planning review inside the dashboard.
           </span>
-        </div>
+        </label>
       </div>
     </div>
   );

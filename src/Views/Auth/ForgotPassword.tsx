@@ -66,8 +66,8 @@ function ForgotPassword() {
               Enter the email address associated with your{' '}
               {role === 'admin' && 'admin'}
               {role === 'organiser' && 'organiser'}
-              {role === 'jury' && 'jury member'}{' '}
-              account and we&apos;ll send you a link to reset your password.
+              {role === 'jury' && 'jury member'} account and we&apos;ll send you
+              a link to reset your password.
             </div>
           </div>
 

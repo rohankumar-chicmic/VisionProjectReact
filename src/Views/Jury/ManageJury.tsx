@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Search,
   Mail,
@@ -101,6 +101,10 @@ function ActionsCell({ onEdit, onDelete }: ActionsCellProps) {
   );
 }
 
+const renderUserCell = (jury: JuryMember) => <UserCell jury={jury} />;
+const renderContactCell = (jury: JuryMember) => <ContactCell jury={jury} />;
+const renderCompanyCell = (jury: JuryMember) => <CompanyCell jury={jury} />;
+
 function ManageJury() {
   const { setTitle, setSubtitle, resetHeader } = useHeader();
   const [searchTerm, setSearchTerm] = useState('');
@@ -151,35 +155,43 @@ function ManageJury() {
     }
   };
 
-  const JURY_COLUMNS: Column<JuryMember>[] = [
-    {
-      header: 'Jury Member',
-      accessor: (jury) => <UserCell jury={jury} />,
-    },
-    {
-      header: 'Contact Information',
-      accessor: (jury) => <ContactCell jury={jury} />,
-    },
-    {
-      header: 'Company & Industry',
-      accessor: (jury) => <CompanyCell jury={jury} />,
-    },
-    {
-      header: 'Actions',
-      accessor: (jury) => (
-        <ActionsCell
-          onEdit={() => {
-            setEditingJury(jury);
-            setIsModalOpen(true);
-          }}
-          onDelete={() => {
-            setJuryToDelete(jury);
-            setIsDeleteModalOpen(true);
-          }}
-        />
-      ),
-    },
-  ];
+  const renderActionsColumn = useCallback(
+    (jury: JuryMember) => (
+      <ActionsCell
+        onEdit={() => {
+          setEditingJury(jury);
+          setIsModalOpen(true);
+        }}
+        onDelete={() => {
+          setJuryToDelete(jury);
+          setIsDeleteModalOpen(true);
+        }}
+      />
+    ),
+    []
+  );
+
+  const JURY_COLUMNS: Column<JuryMember>[] = useMemo(
+    () => [
+      {
+        header: 'Jury Member',
+        accessor: renderUserCell,
+      },
+      {
+        header: 'Contact Information',
+        accessor: renderContactCell,
+      },
+      {
+        header: 'Company & Industry',
+        accessor: renderCompanyCell,
+      },
+      {
+        header: 'Actions',
+        accessor: renderActionsColumn,
+      },
+    ],
+    [renderActionsColumn]
+  );
 
   const handleCreateOrUpdateJury = async (data: JuryFormData) => {
     try {
@@ -196,7 +208,9 @@ function ManageJury() {
       setEditingJury(null);
     } catch (error) {
       showToast.error(
-        editingJury ? 'Failed to update jury member' : 'Failed to invite jury member'
+        editingJury
+          ? 'Failed to update jury member'
+          : 'Failed to invite jury member'
       );
     }
   };
@@ -291,7 +305,8 @@ function ManageJury() {
             <AlertTriangle size={32} />
           </div>
           <p>
-            Are you sure you want to delete <strong>{juryToDelete?.fullName}</strong>?
+            Are you sure you want to delete{' '}
+            <strong>{juryToDelete?.fullName}</strong>?
             <br />
             This action cannot be undone.
           </p>

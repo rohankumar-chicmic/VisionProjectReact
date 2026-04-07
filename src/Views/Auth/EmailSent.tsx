@@ -19,16 +19,35 @@ function EmailSent() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [forgotAdmin, { isLoading: isAdminLoading, isSuccess: isAdminSuccess, isError: isAdminError }] =
-    useForgotPasswordAdminMutation();
-  const [forgotOrganiser, { isLoading: isOrganiserLoading, isSuccess: isOrganiserSuccess, isError: isOrganiserError }] =
-    useForgotPasswordOrganiserMutation();
-  const [forgotJury, { isLoading: isJuryLoading, isSuccess: isJurySuccess, isError: isJuryError }] =
-    useForgotPasswordJuryMutation();
+  const [
+    forgotAdmin,
+    {
+      isLoading: isAdminLoading,
+      isSuccess: isAdminSuccess,
+      isError: isAdminError,
+    },
+  ] = useForgotPasswordAdminMutation();
+  const [
+    forgotOrganiser,
+    {
+      isLoading: isOrganiserLoading,
+      isSuccess: isOrganiserSuccess,
+      isError: isOrganiserError,
+    },
+  ] = useForgotPasswordOrganiserMutation();
+  const [
+    forgotJury,
+    {
+      isLoading: isJuryLoading,
+      isSuccess: isJurySuccess,
+      isError: isJuryError,
+    },
+  ] = useForgotPasswordJuryMutation();
 
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const { email, role } = (location.state as { email?: string; role?: string }) || {};
+  const { email, role } =
+    (location.state as { email?: string; role?: string }) || {};
 
   const isLoading = isAdminLoading || isOrganiserLoading || isJuryLoading;
   const isSuccess = isAdminSuccess || isOrganiserSuccess || isJurySuccess;

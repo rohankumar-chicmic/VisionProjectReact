@@ -48,11 +48,13 @@ function AssignedGrantsList() {
               </div>
             </div>
             <div className="grant-actions">
-              <span className={`status-pill ${grant.status.toLowerCase().replace(' ', '-')}`}>
+              <span
+                className={`status-pill ${grant.status.toLowerCase().replace(' ', '-')}`}
+              >
                 {grant.status}
               </span>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="view-btn"
                 onClick={() => navigate('/jury/workspace')}
               >

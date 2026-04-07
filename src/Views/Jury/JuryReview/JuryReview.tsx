@@ -10,7 +10,10 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useHeader, HeaderActions } from '../../../Shared/Context/HeaderContext';
+import {
+  useHeader,
+  HeaderActions,
+} from '../../../Shared/Context/HeaderContext';
 import './JuryReview.scss';
 
 function JuryReview() {
@@ -65,7 +68,9 @@ function JuryReview() {
           disabled={isSubmitted}
         >
           <CheckCircle2 size={18} />
-          <span>{isSubmitted ? 'Evaluation Submitted' : 'Submit Evaluation'}</span>
+          <span>
+            {isSubmitted ? 'Evaluation Submitted' : 'Submit Evaluation'}
+          </span>
         </button>
       </HeaderActions>
 
@@ -76,8 +81,9 @@ function JuryReview() {
             <div className="alert-text">
               <strong>Interview Deadline Approaching</strong>
               <span>
-                All evaluations must be submitted by **Feb 24, 2026 (tomorrow)**. 
-                Results will be announced on the Gala day (Feb 25).
+                All evaluations must be submitted by **Feb 24, 2026
+                (tomorrow)**. Results will be announced on the Gala day (Feb
+                25).
               </span>
             </div>
           </div>
@@ -108,25 +114,25 @@ function JuryReview() {
             </div>
             <div className="content-card">
               <div className="content-item">
-                <label>Company Name</label>
+                <span className="label-text">Company Name</span>
                 <div className="value-box">Quackpreneur</div>
               </div>
               <div className="content-item">
-                <label>Motivation Statement</label>
+                <span className="label-text">Motivation Statement</span>
                 <div className="value-box text-content">
-                  I believe our innovative approach to solving real-world problems
-                  through technology deserves recognition. Our platform has the
-                  potential to revolutionize the industry and create meaningful
-                  impact for users worldwide.
+                  I believe our innovative approach to solving real-world
+                  problems through technology deserves recognition. Our platform
+                  has the potential to revolutionize the industry and create
+                  meaningful impact for users worldwide.
                 </div>
               </div>
               <div className="content-item">
-                <label>Participation Video</label>
-                <a href="#" className="video-player-mock">
+                <span className="label-text">Participation Video</span>
+                <div className="video-player-mock">
                   <PlayCircle size={48} />
                   <span>Click to watch pitch video</span>
                   <ExternalLink size={16} className="ext" />
-                </a>
+                </div>
               </div>
             </div>
           </section>
@@ -173,15 +179,31 @@ function JuryReview() {
 
           <div className="criteria-scoring">
             {[
-              { id: 'businessViability', label: 'Business Viability', desc: 'Is the business model sustainable?' },
-              { id: 'innovationLevel', label: 'Innovation Level', desc: 'Uniqueness of the solution?' },
-              { id: 'teamExperience', label: 'Team Experience', desc: 'Relevant skills and background.' },
-              { id: 'pitchQuality', label: 'Pitch Quality', desc: 'Clarity and impact of the presentation.' },
+              {
+                id: 'businessViability',
+                label: 'Business Viability',
+                desc: 'Is the business model sustainable?',
+              },
+              {
+                id: 'innovationLevel',
+                label: 'Innovation Level',
+                desc: 'Uniqueness of the solution?',
+              },
+              {
+                id: 'teamExperience',
+                label: 'Team Experience',
+                desc: 'Relevant skills and background.',
+              },
+              {
+                id: 'pitchQuality',
+                label: 'Pitch Quality',
+                desc: 'Clarity and impact of the presentation.',
+              },
             ].map((c) => (
               <div key={c.id} className="scoring-group">
                 <div className="group-header">
                   <div className="text">
-                    <label>{c.label}</label>
+                    <span className="label-text">{c.label}</span>
                     <span>{c.desc}</span>
                   </div>
                   <div className="score-badge">
@@ -195,7 +217,9 @@ function JuryReview() {
                     max="10"
                     step="0.5"
                     value={scores[c.id as keyof typeof scores]}
-                    onChange={(e) => handleScoreChange(c.id, parseFloat(e.target.value))}
+                    onChange={(e) =>
+                      handleScoreChange(c.id, parseFloat(e.target.value))
+                    }
                     disabled={isSubmitted}
                   />
                   <div className="slider-ticks">
@@ -211,20 +235,21 @@ function JuryReview() {
           <div className="feedback-section">
             <label htmlFor="comments">
               <MessageSquare size={16} /> Qualitative Feedback
+              <textarea
+                id="comments"
+                placeholder="Provide your professional assessment of this application..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                disabled={isSubmitted}
+              />
             </label>
-            <textarea
-              id="comments"
-              placeholder="Provide your professional assessment of this application..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              disabled={isSubmitted}
-            />
           </div>
 
           {!isSubmitted && (
             <div className="completion-check">
               <p>
-                <Clock size={14} /> Please ensure all criteria are scored before submitting.
+                <Clock size={14} /> Please ensure all criteria are scored before
+                submitting.
               </p>
             </div>
           )}

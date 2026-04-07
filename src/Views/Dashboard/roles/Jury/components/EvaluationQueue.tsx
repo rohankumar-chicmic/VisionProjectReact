@@ -46,7 +46,9 @@ function EvaluationQueue() {
                 </div>
                 <div>
                   <strong>{item.applicant}</strong>
-                  <span>{item.id} • {item.grant}</span>
+                  <span>
+                    {item.id} • {item.grant}
+                  </span>
                 </div>
               </div>
               <div className="item-meta">
@@ -55,8 +57,8 @@ function EvaluationQueue() {
                 </span>
               </div>
             </div>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="action-btn"
               onClick={() => navigate(`/jury/review/${item.id}`)}
             >

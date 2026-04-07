@@ -2,16 +2,29 @@ import { CheckCircle2, Clock, ListTodo } from 'lucide-react';
 
 function JurySummary() {
   const stats = [
-    { label: 'Assigned Applications', value: '12', icon: ListTodo, color: '#3b82f6' },
+    {
+      label: 'Assigned Applications',
+      value: '12',
+      icon: ListTodo,
+      color: '#3b82f6',
+    },
     { label: 'Pending Reviews', value: '08', icon: Clock, color: '#f59e0b' },
-    { label: 'Completed Reviews', value: '04', icon: CheckCircle2, color: '#00ce86' },
+    {
+      label: 'Completed Reviews',
+      value: '04',
+      icon: CheckCircle2,
+      color: '#00ce86',
+    },
   ];
 
   return (
     <section className="jury-summary-cards">
       {stats.map((stat) => (
         <div key={stat.label} className="summary-card">
-          <div className="card-icon" style={{ backgroundColor: `${stat.color}15`, color: stat.color }}>
+          <div
+            className="card-icon"
+            style={{ backgroundColor: `${stat.color}15`, color: stat.color }}
+          >
             <stat.icon size={24} />
           </div>
           <div className="card-info">

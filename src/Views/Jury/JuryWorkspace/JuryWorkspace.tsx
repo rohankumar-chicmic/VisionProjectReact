@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import {
-  Search,
-  Filter,
-  ArrowRight,
-  ChevronDown,
-} from 'lucide-react';
+import { Search, Filter, ArrowRight, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useHeader, HeaderActions } from '../../../Shared/Context/HeaderContext';
+import {
+  useHeader,
+  HeaderActions,
+} from '../../../Shared/Context/HeaderContext';
 import './JuryWorkspace.scss';
 
 function JuryWorkspace() {
@@ -115,20 +113,28 @@ function JuryWorkspace() {
 
         <div className="assignments-grid">
           {filteredAssignments.map((item) => {
-            const isUrgent = item.status !== 'Reviewed' && item.deadline.includes('10'); // Simple logic for demo
+            const isUrgent =
+              item.status !== 'Reviewed' && item.deadline.includes('10'); // Simple logic for demo
             return (
-              <div key={item.id} className={`assignment-card ${isUrgent ? 'urgent' : ''}`}>
+              <div
+                key={item.id}
+                className={`assignment-card ${isUrgent ? 'urgent' : ''}`}
+              >
                 <div className="card-top">
                   <div className="status-indicator">
                     {item.status === 'Reviewed' ? (
                       <span className="status-badge reviewed">Reviewed</span>
                     ) : (
-                      <span className={`status-badge ${item.status === 'In Progress' ? 'in-progress' : 'pending'}`}>
+                      <span
+                        className={`status-badge ${item.status === 'In Progress' ? 'in-progress' : 'pending'}`}
+                      >
                         {item.status}
                       </span>
                     )}
                   </div>
-                  <div className={`deadline ${isUrgent ? 'high-priority' : ''}`}>
+                  <div
+                    className={`deadline ${isUrgent ? 'high-priority' : ''}`}
+                  >
                     Interview Deadline: <strong>{item.deadline}</strong>
                   </div>
                 </div>
@@ -146,7 +152,9 @@ function JuryWorkspace() {
                     <p className="grant-name">{item.grant}</p>
                     <div className="gala-meta">
                       <p className="gala-name">{item.gala}</p>
-                      <span className="announcement-tag">Results: Feb 25, 2026</span>
+                      <span className="announcement-tag">
+                        Results: Feb 25, 2026
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -155,14 +163,25 @@ function JuryWorkspace() {
                   {item.status === 'Reviewed' ? (
                     <div className="score-display">
                       <span className="lbl">Your Score</span>
-                      <strong className="val">{item.score?.toFixed(1)} / 10</strong>
+                      <strong className="val">
+                        {item.score?.toFixed(1)} / 10
+                      </strong>
                     </div>
                   ) : (
                     <div className="progress-hint">
                       <div className="progress-bar">
-                        <div className="fill" style={{ width: item.status === 'In Progress' ? '40%' : '0%' }} />
+                        <div
+                          className="fill"
+                          style={{
+                            width: item.status === 'In Progress' ? '40%' : '0%',
+                          }}
+                        />
                       </div>
-                      <span>{item.status === 'In Progress' ? 'Evaluation started' : 'Not started'}</span>
+                      <span>
+                        {item.status === 'In Progress'
+                          ? 'Evaluation started'
+                          : 'Not started'}
+                      </span>
                     </div>
                   )}
                   <button
@@ -170,7 +189,9 @@ function JuryWorkspace() {
                     className="action-btn"
                     onClick={() => navigate(`/jury/review/${item.id}`)}
                   >
-                    {item.status === 'Reviewed' ? 'View Evaluation' : 'Start Scoring'}
+                    {item.status === 'Reviewed'
+                      ? 'View Evaluation'
+                      : 'Start Scoring'}
                     <ArrowRight size={18} />
                   </button>
                 </div>

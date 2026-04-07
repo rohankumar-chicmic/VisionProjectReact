@@ -124,46 +124,55 @@ function JuryProfile() {
               <div className="form-group">
                 <label htmlFor="fullName">
                   <Edit2 size={14} /> Full Name
+                  <input
+                    id="fullName"
+                    type="text"
+                    value={profileData.fullName}
+                    disabled={!isEditing}
+                    onChange={(e) =>
+                      setProfileData({
+                        ...profileData,
+                        fullName: e.target.value,
+                      })
+                    }
+                  />
                 </label>
-                <input
-                  id="fullName"
-                  type="text"
-                  value={profileData.fullName}
-                  disabled={!isEditing}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, fullName: e.target.value })
-                  }
-                />
               </div>
 
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="email">
                     <Mail size={14} /> Email Address
+                    <input
+                      id="email"
+                      type="email"
+                      value={profileData.email}
+                      disabled={!isEditing}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          email: e.target.value,
+                        })
+                      }
+                    />
                   </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={profileData.email}
-                    disabled={!isEditing}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, email: e.target.value })
-                    }
-                  />
                 </div>
                 <div className="form-group">
                   <label htmlFor="phone">
                     <Phone size={14} /> Phone Number
+                    <input
+                      id="phone"
+                      type="text"
+                      value={profileData.phone}
+                      disabled={!isEditing}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          phone: e.target.value,
+                        })
+                      }
+                    />
                   </label>
-                  <input
-                    id="phone"
-                    type="text"
-                    value={profileData.phone}
-                    disabled={!isEditing}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, phone: e.target.value })
-                    }
-                  />
                 </div>
               </div>
 
@@ -171,30 +180,36 @@ function JuryProfile() {
                 <div className="form-group">
                   <label htmlFor="company">
                     <Building2 size={14} /> Company
+                    <input
+                      id="company"
+                      type="text"
+                      value={profileData.company}
+                      disabled={!isEditing}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          company: e.target.value,
+                        })
+                      }
+                    />
                   </label>
-                  <input
-                    id="company"
-                    type="text"
-                    value={profileData.company}
-                    disabled={!isEditing}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, company: e.target.value })
-                    }
-                  />
                 </div>
                 <div className="form-group">
                   <label htmlFor="position">
                     <Briefcase size={14} /> Position
+                    <input
+                      id="position"
+                      type="text"
+                      value={profileData.position}
+                      disabled={!isEditing}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          position: e.target.value,
+                        })
+                      }
+                    />
                   </label>
-                  <input
-                    id="position"
-                    type="text"
-                    value={profileData.position}
-                    disabled={!isEditing}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, position: e.target.value })
-                    }
-                  />
                 </div>
               </div>
             </div>
@@ -206,11 +221,14 @@ function JuryProfile() {
               <div className="pref-item">
                 <div className="info">
                   <strong>New Assignment Emails</strong>
-                  <span>Get notified as soon as a new application is assigned.</span>
+                  <span>
+                    Get notified as soon as a new application is assigned.
+                  </span>
                 </div>
                 <div className="custom-toggle">
-                  <input type="checkbox" id="email-notif" defaultChecked />
-                  <label htmlFor="email-notif" aria-label="Toggle notification" />
+                  <label htmlFor="email-notif" aria-label="Toggle notification">
+                    <input type="checkbox" id="email-notif" defaultChecked />
+                  </label>
                 </div>
               </div>
               <div className="pref-item">
@@ -219,8 +237,12 @@ function JuryProfile() {
                   <span>Receive reminders 48h before a review is due.</span>
                 </div>
                 <div className="custom-toggle">
-                  <input type="checkbox" id="deadline-notif" defaultChecked />
-                  <label htmlFor="deadline-notif" aria-label="Toggle notification" />
+                  <label
+                    htmlFor="deadline-notif"
+                    aria-label="Toggle notification"
+                  >
+                    <input type="checkbox" id="deadline-notif" defaultChecked />
+                  </label>
                 </div>
               </div>
             </div>

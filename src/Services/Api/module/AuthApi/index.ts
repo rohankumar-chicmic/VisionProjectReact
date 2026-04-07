@@ -98,7 +98,10 @@ export const userApi = api.injectEndpoints({
       }),
     }),
 
-    refreshTokenOrganiser: build.mutation<AuthResponse, { refreshToken: string }>({
+    refreshTokenOrganiser: build.mutation<
+      AuthResponse,
+      { refreshToken: string }
+    >({
       query: (body) => ({
         url: '/api/v1/organiser/auth/refresh',
         method: 'POST',

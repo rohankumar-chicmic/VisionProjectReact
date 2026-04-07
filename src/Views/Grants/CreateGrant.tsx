@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/label-has-associated-control, react/no-array-index-key */
 import { useEffect, useState, useMemo } from 'react';
 import {
   Plus,
@@ -677,6 +678,6 @@ function CreateGrant() {
       </div>
     </div>
   );
-};
+}
 
 export default CreateGrant;

@@ -5,7 +5,10 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
   useLoginAdminMutation,
+  useLoginOrganiserMutation,
+  useLoginJuryMutation,
   useForgotPasswordMutation,
+  useRegisterOrganiserMutation,
 } from '../../../Services/Api/module/AuthApi';
 import { updateAuthTokenRedux } from '../../../Store/Common';
 import type { AppDispatch } from '../../../Store';
@@ -16,6 +19,10 @@ import {
   LoginFormValues,
   resetPasswordSchema,
   ResetPasswordFormValues,
+  organiserStep1Schema,
+  organiserStep2Schema,
+  organiserStep3Schema,
+  OrganiserRegistrationValues,
 } from '../Helpers/AuthValidations';
 import showToast from '../../../Shared/Utils/toast';
 
@@ -48,23 +55,37 @@ export const useLoginForm = () => {
   const dispatch = useDispatch<AppDispatch>();
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [loginAdmin, { isLoading }] = useLoginAdminMutation();
+
+  const [loginAdmin, { isLoading: isAdminLoading }] = useLoginAdminMutation();
+  const [loginOrganiser, { isLoading: isOrganiserLoading }] =
+    useLoginOrganiserMutation();
+  const [loginJury, { isLoading: isJuryLoading }] = useLoginJuryMutation();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
+      role: 'organiser',
       rememberMe: false,
     },
     mode: 'onSubmit',
   });
 
-  const onSubmit = form.handleSubmit(async ({ email, password }) => {
+  const onSubmit = form.handleSubmit(async (data) => {
     setSubmitError(null);
 
     try {
-      const response = await loginAdmin({ email, password }).unwrap();
+      let loginMutation;
+      if (data.role === 'admin') {
+        loginMutation = loginAdmin;
+      } else if (data.role === 'organiser') {
+        loginMutation = loginOrganiser;
+      } else {
+        loginMutation = loginJury;
+      }
+
+      const response = await loginMutation(data).unwrap();
 
       if (response.success && response.data) {
         showToast.success('Login successful!');
@@ -77,11 +98,11 @@ export const useLoginForm = () => {
             // user,
             user: {
               ...user,
-              role: 'sub_admin',
+              role: 'admin',
             },
           })
         );
-        console.log(user);
+        // console.log(user);
         navigate('/dashboard');
       } else {
         const msg = response.message || 'Login failed';
@@ -98,7 +119,11 @@ export const useLoginForm = () => {
   return {
     ...form,
     errors: form.formState.errors,
-    isSubmitting: form.formState.isSubmitting || isLoading,
+    isSubmitting:
+      form.formState.isSubmitting ||
+      isAdminLoading ||
+      isOrganiserLoading ||
+      isJuryLoading,
     showPassword,
     togglePasswordVisibility: () => setShowPassword((prev) => !prev),
     submitError,
@@ -199,5 +224,91 @@ export const useResetPasswordForm = () => {
       setShowConfirmPassword((prev) => !prev),
     passwordRequirements,
     onSubmit,
+  };
+};
+
+export const useCreateOrganiserForm = () => {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [registerOrganiser, { isLoading: isSubmitting }] =
+    useRegisterOrganiserMutation();
+
+  const getStepSchema = () => {
+    if (step === 1) return organiserStep1Schema;
+    if (step === 2) return organiserStep2Schema;
+    return organiserStep3Schema;
+  };
+
+  const form = useForm<OrganiserRegistrationValues>({
+    resolver: zodResolver(
+      getStepSchema()
+    ) as unknown as import('react-hook-form').Resolver<OrganiserRegistrationValues>,
+    defaultValues: {
+      fullname: '',
+      email: '',
+      phone: '',
+      password: '',
+      companyName: '',
+      industryType: 'Technology',
+      govtId: undefined,
+    },
+    mode: 'onChange',
+  });
+
+  const onSubmit = form.handleSubmit(async (data) => {
+    setSubmitError(null);
+    try {
+      const response = await registerOrganiser(data).unwrap();
+      if (response.success) {
+        showToast.success('Account created successfully!');
+        navigate('/login');
+      } else {
+        setSubmitError(response.message || 'Registration failed');
+        showToast.error(response.message || 'Registration failed');
+      }
+    } catch (error) {
+      const msg = getErrorMessage(error);
+      setSubmitError(msg);
+      showToast.error(msg);
+    }
+  });
+
+  const nextStep = async () => {
+    const fieldsToValidate = (() => {
+      if (step === 1) return ['fullname', 'email', 'phone', 'password'];
+      if (step === 2) return ['companyName', 'industryType'];
+      return ['govtId'];
+    })();
+
+    const isValid = await form.trigger(
+      fieldsToValidate as Array<keyof OrganiserRegistrationValues>
+    );
+    if (isValid) {
+      if (step < 3) {
+        setStep((s) => s + 1);
+      } else {
+        await onSubmit();
+      }
+    }
+  };
+
+  const prevStep = () => {
+    if (step > 1) {
+      setStep((s) => s - 1);
+    } else {
+      navigate('/login');
+    }
+  };
+
+  return {
+    ...form,
+    step,
+    setStep,
+    nextStep,
+    prevStep,
+    submitError,
+    isSubmitting: isSubmitting || form.formState.isSubmitting,
+    errors: form.formState.errors,
   };
 };

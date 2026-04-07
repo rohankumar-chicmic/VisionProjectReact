@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, react/button-has-type, react/function-component-definition */
 import React, { useEffect, useState } from 'react';
 import { Check, Info, Plus, X, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react/no-array-index-key */
 import React from 'react';
 import './Table.scss';
 

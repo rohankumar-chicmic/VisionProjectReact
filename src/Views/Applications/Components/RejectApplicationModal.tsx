@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/label-has-associated-control */
 import { useState } from 'react';
 import { XCircle } from 'lucide-react';
 import Modal from '../../../Components/Atom/Modal/Modal';

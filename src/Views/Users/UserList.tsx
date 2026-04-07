@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-props-no-spreading, react/no-unstable-nested-components */
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {

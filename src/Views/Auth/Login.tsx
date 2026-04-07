@@ -14,11 +14,15 @@ function Login() {
     togglePasswordVisibility,
     submitError,
     onSubmit,
+    watch,
+    setValue,
   } = useLoginForm();
+
+  const selectedRole = watch('role');
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
+      <div className="auth-card wide">
         <div className="auth-logo">
           <img src={Logo} alt="Logo" />
         </div>
@@ -28,19 +32,52 @@ function Login() {
           <p className="auth-subtitle">Sign in to manage your platform</p>
         </div>
 
+        <div className="role-selection-wrapper">
+          <div className="role-button-group">
+            <button
+              type="button"
+              className={`role-btn ${selectedRole === 'organiser' ? 'active' : ''}`}
+              onClick={() => setValue('role', 'organiser')}
+            >
+              Organiser
+            </button>
+            <button
+              type="button"
+              className={`role-btn ${selectedRole === 'admin' ? 'active' : ''}`}
+              onClick={() => setValue('role', 'admin')}
+            >
+              Admin
+            </button>
+            <button
+              type="button"
+              className={`role-btn ${selectedRole === 'jury' ? 'active' : ''}`}
+              onClick={() => setValue('role', 'jury')}
+            >
+              Jury Member
+            </button>
+          </div>
+        </div>
+
         <form className="auth-form" noValidate onSubmit={onSubmit}>
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <div className={`input-wrapper ${errors.email ? 'has-error' : ''}`}>
-              <Mail className="input-icon" size={20} />
-              <input
-                type="email"
-                id="email"
-                placeholder="admin@example.com"
-                aria-invalid={!!errors.email}
-                {...register('email')}
-              />
-            </div>
+            <label htmlFor="email">
+              <span className="label-text">Email Address</span>
+              <div
+                className={`input-wrapper ${errors.email ? 'has-error' : ''}`}
+              >
+                <Mail className="input-icon" size={20} />
+                <input
+                  type="email"
+                  id="email"
+                  placeholder="your@email.com"
+                  aria-invalid={!!errors.email}
+                  name={register('email').name}
+                  onChange={register('email').onChange}
+                  onBlur={register('email').onBlur}
+                  ref={register('email').ref}
+                />
+              </div>
+            </label>
             {errors.email && (
               <p className="field-error" role="alert">
                 {errors.email.message}
@@ -49,27 +86,32 @@ function Login() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div
-              className={`input-wrapper ${errors.password ? 'has-error' : ''}`}
-            >
-              <Lock className="input-icon" size={20} />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                placeholder="••••••••"
-                aria-invalid={!!errors.password}
-                {...register('password')}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={togglePasswordVisibility}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+            <label htmlFor="password">
+              <span className="label-text">Password</span>
+              <div
+                className={`input-wrapper ${errors.password ? 'has-error' : ''}`}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
+                <Lock className="input-icon" size={20} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  placeholder="••••••••"
+                  aria-invalid={!!errors.password}
+                  name={register('password').name}
+                  onChange={register('password').onChange}
+                  onBlur={register('password').onBlur}
+                  ref={register('password').ref}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={togglePasswordVisibility}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </label>
             {errors.password && (
               <p className="field-error" role="alert">
                 {errors.password.message}
@@ -82,7 +124,10 @@ function Login() {
               <input
                 type="checkbox"
                 id="rememberMe"
-                {...register('rememberMe')}
+                name={register('rememberMe').name}
+                onChange={register('rememberMe').onChange}
+                onBlur={register('rememberMe').onBlur}
+                ref={register('rememberMe').ref}
               />
               Remember me
             </label>
@@ -95,7 +140,7 @@ function Login() {
                 navigate('/forgot-password');
               }}
             >
-              Forgot Password?
+              Forgot password?
             </a>
           </div>
 
@@ -109,6 +154,23 @@ function Login() {
             {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
+
+        <div className="create-account-footer">
+          New here?{' '}
+          <span
+            className="create-link"
+            onClick={() => navigate('/create-organiser')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                navigate('/create-organiser');
+              }
+            }}
+          >
+            Create your Organiser account
+          </span>
+        </div>
 
         <p className="auth-footer">
           © 2024 Vision PME (Gala Management System). All rights reserved.

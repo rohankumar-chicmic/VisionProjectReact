@@ -19,7 +19,7 @@ function ForgotPassword() {
         <div className="auth-header">
           <h1 className="auth-title">Forgot Password?</h1>
           <p className="auth-subtitle">
-            No worries, we'll send you reset instructions
+            No worries, we&apos;ll send you reset instructions
           </p>
         </div>
         <form className="auth-form" noValidate onSubmit={onSubmit}>
@@ -33,17 +33,24 @@ function ForgotPassword() {
           )}
 
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <div className={`input-wrapper ${errors.email ? 'has-error' : ''}`}>
-              <Mail className="input-icon" size={20} />
-              <input
-                type="email"
-                id="email"
-                placeholder="Enter your email address"
-                aria-invalid={!!errors.email}
-                {...register('email')}
-              />
-            </div>
+            <label htmlFor="email">
+              <span className="label-text">Email Address</span>
+              <div
+                className={`input-wrapper ${errors.email ? 'has-error' : ''}`}
+              >
+                <Mail className="input-icon" size={20} />
+                <input
+                  type="email"
+                  id="email"
+                  placeholder="Enter your email address"
+                  aria-invalid={!!errors.email}
+                  name={register('email').name}
+                  onChange={register('email').onChange}
+                  onBlur={register('email').onBlur}
+                  ref={register('email').ref}
+                />
+              </div>
+            </label>
             {errors.email && (
               <p className="field-error" role="alert">
                 {errors.email.message}
@@ -57,7 +64,7 @@ function ForgotPassword() {
             </div>
             <div className="alert-text">
               Enter the email address associated with your admin account and
-              we'll send you a link to reset your password.
+              we&apos;ll send you a link to reset your password.
             </div>
           </div>
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-alert */
 import { useEffect, useState, useMemo } from 'react';
 import {
   Search,

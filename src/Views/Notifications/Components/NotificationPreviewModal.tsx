@@ -1,3 +1,4 @@
+/* eslint-disable import/no-cycle */
 import { X, Mail, MessageSquare, Bell, Info, FileText } from 'lucide-react';
 import { NotificationItem } from '../NotificationAutomations';
 import { AutomationFormData } from './AddAutomationModal';

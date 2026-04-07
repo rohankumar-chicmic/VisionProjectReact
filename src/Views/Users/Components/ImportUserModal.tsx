@@ -1,3 +1,4 @@
+/* eslint-disable no-alert, react/function-component-definition */
 import React, { useState, useRef } from 'react';
 import {
   Upload,

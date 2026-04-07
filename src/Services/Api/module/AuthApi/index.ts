@@ -1,7 +1,9 @@
+/* eslint-disable import/no-cycle */
 import api from '../../api';
 import {
   LoginFormValues,
   ResetPasswordFormValues,
+  OrganiserRegistrationValues,
 } from '../../../../Views/Auth/Helpers/AuthValidations';
 
 export interface AuthData {
@@ -30,6 +32,30 @@ export const userApi = api.injectEndpoints({
     loginAdmin: build.mutation<AuthResponse, LoginFormValues>({
       query: (body) => ({
         url: '/api/v1/admin/auth/login',
+        method: 'POST',
+        body,
+      }),
+    }),
+    loginOrganiser: build.mutation<AuthResponse, LoginFormValues>({
+      query: (body) => ({
+        url: '/api/v1/organiser/auth/login',
+        method: 'POST',
+        body,
+      }),
+    }),
+    registerOrganiser: build.mutation<
+      AuthResponse,
+      OrganiserRegistrationValues
+    >({
+      query: (body) => ({
+        url: '/api/v1/organiser/auth/register',
+        method: 'POST',
+        body,
+      }),
+    }),
+    loginJury: build.mutation<AuthResponse, LoginFormValues>({
+      query: (body) => ({
+        url: '/api/v1/jury/auth/login',
         method: 'POST',
         body,
       }),
@@ -71,8 +97,11 @@ export const userApi = api.injectEndpoints({
 
 export const {
   useLoginAdminMutation,
+  useLoginOrganiserMutation,
+  useLoginJuryMutation,
   useLogoutAdminMutation,
   useRefreshTokenMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useRegisterOrganiserMutation,
 } = userApi;

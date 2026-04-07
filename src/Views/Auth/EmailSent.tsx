@@ -51,7 +51,7 @@ function EmailSent() {
         <div className="auth-header">
           <h1 className="auth-title">Check Your Email</h1>
           <p className="auth-subtitle">
-            We've sent password reset instructions
+            We&apos;ve sent password reset instructions
           </p>
         </div>
 
@@ -134,7 +134,7 @@ function EmailSent() {
         </button>
 
         <p className="spam-folder-text">
-          Didn't receive the email? Check your spam folder
+          Didn&apos;t receive the email? Check your spam folder
         </p>
       </div>
     </div>

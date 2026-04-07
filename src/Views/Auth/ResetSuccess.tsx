@@ -32,7 +32,7 @@ function ResetSuccess() {
         </div>
 
         <div className="whats-next-block">
-          <div className="whats-next-title">What's Next?</div>
+          <div className="whats-next-title">What&apos;s Next?</div>
 
           <div className="next-item">
             <div className="next-icon">
@@ -53,7 +53,7 @@ function ResetSuccess() {
             <div className="next-content">
               <div className="next-heading">Keep your password secure</div>
               <div className="next-desc">
-                Don't share your password with anyone
+                Don&apos;t share your password with anyone
               </div>
             </div>
           </div>

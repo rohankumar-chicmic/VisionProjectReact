@@ -42,27 +42,32 @@ function ResetPassword() {
 
         <form className="auth-form" noValidate onSubmit={onSubmit}>
           <div className="form-group">
-            <label htmlFor="password">New Password</label>
-            <div
-              className={`input-wrapper ${errors.password ? 'has-error' : ''}`}
-            >
-              <Lock className="input-icon" size={20} />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                placeholder="Enter new password"
-                aria-invalid={!!errors.password}
-                {...register('password')}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={togglePasswordVisibility}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+            <label htmlFor="password">
+              <span className="label-text">New Password</span>
+              <div
+                className={`input-wrapper ${errors.password ? 'has-error' : ''}`}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
+                <Lock className="input-icon" size={20} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  placeholder="Enter new password"
+                  aria-invalid={!!errors.password}
+                  name={register('password').name}
+                  onChange={register('password').onChange}
+                  onBlur={register('password').onBlur}
+                  ref={register('password').ref}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={togglePasswordVisibility}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </label>
             {errors.password && (
               <p className="field-error" role="alert">
                 {errors.password.message}
@@ -71,31 +76,40 @@ function ResetPassword() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirmPassword">Confirm Password</label>
-            <div
-              className={`input-wrapper ${
-                errors.confirmPassword ? 'has-error' : ''
-              }`}
-            >
-              <Lock className="input-icon" size={20} />
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                id="confirmPassword"
-                placeholder="Confirm new password"
-                aria-invalid={!!errors.confirmPassword}
-                {...register('confirmPassword')}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={toggleConfirmPasswordVisibility}
-                aria-label={
-                  showConfirmPassword ? 'Hide password' : 'Show password'
-                }
+            <label htmlFor="confirmPassword">
+              <span className="label-text">Confirm Password</span>
+              <div
+                className={`input-wrapper ${
+                  errors.confirmPassword ? 'has-error' : ''
+                }`}
               >
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
+                <Lock className="input-icon" size={20} />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  id="confirmPassword"
+                  placeholder="Confirm new password"
+                  aria-invalid={!!errors.confirmPassword}
+                  name={register('confirmPassword').name}
+                  onChange={register('confirmPassword').onChange}
+                  onBlur={register('confirmPassword').onBlur}
+                  ref={register('confirmPassword').ref}
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={toggleConfirmPasswordVisibility}
+                  aria-label={
+                    showConfirmPassword ? 'Hide password' : 'Show password'
+                  }
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={20} />
+                  ) : (
+                    <Eye size={20} />
+                  )}
+                </button>
+              </div>
+            </label>
             {errors.confirmPassword && (
               <p className="field-error" role="alert">
                 {errors.confirmPassword.message}

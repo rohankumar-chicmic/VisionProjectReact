@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-props-no-spreading, react/no-array-index-key */
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Check, Edit2, Send } from 'lucide-react';

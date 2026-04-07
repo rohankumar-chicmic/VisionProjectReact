@@ -32,7 +32,7 @@ const getErrorMessage = (error: unknown) => {
   if (typeof error === 'object' && error !== null) {
     if ('data' in error) {
       const { data } = error as {
-        data?: { message?: string; error?: string };
+        data?: { message?: string; error?: string; errors?: unknown };
       };
 
       if (data?.message) {
@@ -41,6 +41,10 @@ const getErrorMessage = (error: unknown) => {
 
       if (data?.error) {
         return data.error;
+      }
+
+      if (data?.errors) {
+        return JSON.stringify(data.errors);
       }
     }
 
@@ -98,6 +102,7 @@ export const useLoginForm = () => {
             token: accessToken,
             refreshToken,
             user,
+            role: data.role,
           })
         );
         navigate('/dashboard');
@@ -226,6 +231,7 @@ export const useResetPasswordForm = () => {
 
 export const useCreateOrganiserForm = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const [step, setStep] = useState(1);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [registerOrganiser, { isLoading: isRegistering }] =
@@ -254,7 +260,8 @@ export const useCreateOrganiserForm = () => {
     mode: 'onChange',
   });
 
-  const onSubmit = form.handleSubmit(async (data) => {
+  const onSubmit = form.handleSubmit(async () => {
+    const data = form.getValues();
     setSubmitError(null);
     try {
       let finalGovtId = data.govtId;
@@ -263,12 +270,16 @@ export const useCreateOrganiserForm = () => {
         const formData = new FormData();
         formData.append('file', data.govtId);
         const uploadResponse = await uploadFile(formData).unwrap();
-        
+
         if (uploadResponse.success && uploadResponse.data) {
           finalGovtId = uploadResponse.data;
         } else {
           throw new Error('Failed to upload Government ID image');
         }
+      }
+
+      if (typeof finalGovtId !== 'string' || !finalGovtId.trim()) {
+        throw new Error('Government ID upload failed or was not provided');
       }
 
       const payload = {
@@ -282,8 +293,11 @@ export const useCreateOrganiserForm = () => {
       };
 
       const response = await registerOrganiser(payload).unwrap();
+
       if (response.success) {
         showToast.success('Account created successfully!');
+
+        dispatch(updateAuthTokenRedux({ token: null, role: 'organiser' }));
         navigate('/login');
       } else {
         setSubmitError(response.message || 'Registration failed');

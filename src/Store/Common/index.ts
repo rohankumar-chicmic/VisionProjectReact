@@ -5,18 +5,21 @@ interface User {
   email: string;
   isEmailVerified: boolean;
   isProfileCompleted: boolean;
+  role?: string;
 }
 
 interface CommonState {
   token: string | null;
   refreshToken: string | null;
   user: User | null;
+  role: string | null;
 }
 
 const initialState: CommonState = {
   token: null,
   refreshToken: null,
   user: null,
+  role: null,
 };
 
 const common = createSlice({
@@ -29,18 +32,21 @@ const common = createSlice({
         token: string | null;
         refreshToken?: string | null;
         user?: User | null;
+        role?: string | null;
       }>
     ) => ({
       ...state,
       token: action.payload.token,
       refreshToken: action.payload.refreshToken || state.refreshToken,
       user: action.payload.user || state.user,
+      role: action.payload.role ?? state.role,
     }),
     clearAuthTokenRedux: (state) => ({
       ...state,
       token: null,
       refreshToken: null,
       user: null,
+      role: null,
     }),
   },
 });

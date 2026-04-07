@@ -8,6 +8,7 @@ import {
 import JurySummary from './components/JurySummary';
 import AssignedGrantsList from './components/AssignedGrantsList';
 import EvaluationQueue from './components/EvaluationQueue';
+import './JuryDashboard.scss';
 
 function JuryDashboard() {
   const navigate = useNavigate();

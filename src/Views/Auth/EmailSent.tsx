@@ -8,17 +8,31 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useForgotPasswordMutation } from '../../Services/Api/module/AuthApi';
+import {
+  useForgotPasswordAdminMutation,
+  useForgotPasswordOrganiserMutation,
+  useForgotPasswordJuryMutation,
+} from '../../Services/Api/module/AuthApi';
 import './Auth.scss';
 
 function EmailSent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [resendEmail, { isLoading, isSuccess, isError }] =
-    useForgotPasswordMutation();
+
+  const [forgotAdmin, { isLoading: isAdminLoading, isSuccess: isAdminSuccess, isError: isAdminError }] =
+    useForgotPasswordAdminMutation();
+  const [forgotOrganiser, { isLoading: isOrganiserLoading, isSuccess: isOrganiserSuccess, isError: isOrganiserError }] =
+    useForgotPasswordOrganiserMutation();
+  const [forgotJury, { isLoading: isJuryLoading, isSuccess: isJurySuccess, isError: isJuryError }] =
+    useForgotPasswordJuryMutation();
+
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const email = (location.state as { email?: string })?.email;
+  const { email, role } = (location.state as { email?: string; role?: string }) || {};
+
+  const isLoading = isAdminLoading || isOrganiserLoading || isJuryLoading;
+  const isSuccess = isAdminSuccess || isOrganiserSuccess || isJurySuccess;
+  const isError = isAdminError || isOrganiserError || isJuryError;
 
   useEffect(() => {
     if (!email) {
@@ -30,7 +44,16 @@ function EmailSent() {
     if (!email) return;
     setFeedback(null);
     try {
-      await resendEmail({ email }).unwrap();
+      let resendMutation;
+      if (role === 'admin') {
+        resendMutation = forgotAdmin;
+      } else if (role === 'organiser') {
+        resendMutation = forgotOrganiser;
+      } else {
+        resendMutation = forgotJury;
+      }
+
+      await resendMutation({ email }).unwrap();
       setFeedback('A new reset link has been sent to your email.');
     } catch (error) {
       setFeedback('Failed to resend email. Please try again later.');

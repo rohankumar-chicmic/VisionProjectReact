@@ -2,12 +2,17 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   useLoginAdminMutation,
   useLoginOrganiserMutation,
   useLoginJuryMutation,
-  useForgotPasswordMutation,
+  useForgotPasswordAdminMutation,
+  useForgotPasswordOrganiserMutation,
+  useForgotPasswordJuryMutation,
+  useResetPasswordAdminMutation,
+  useResetPasswordOrganiserMutation,
+  useResetPasswordJuryMutation,
   useRegisterOrganiserMutation,
 } from '../../../Services/Api/module/AuthApi';
 import { useUploadFileMutation } from '../../../Services/Api/module/CommonApi';
@@ -77,6 +82,8 @@ export const useLoginForm = () => {
     mode: 'onSubmit',
   });
 
+  const selectedRole = form.watch('role');
+
   const onSubmit = form.handleSubmit(async (data) => {
     setSubmitError(null);
 
@@ -131,13 +138,23 @@ export const useLoginForm = () => {
     togglePasswordVisibility: () => setShowPassword((prev) => !prev),
     submitError,
     onSubmit,
+    selectedRole,
   };
 };
 
 export const useForgotPasswordForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const role = location.state?.role || 'organiser';
+
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
+
+  const [forgotAdmin, { isLoading: isAdminLoading }] =
+    useForgotPasswordAdminMutation();
+  const [forgotOrganiser, { isLoading: isOrganiserLoading }] =
+    useForgotPasswordOrganiserMutation();
+  const [forgotJury, { isLoading: isJuryLoading }] =
+    useForgotPasswordJuryMutation();
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -150,14 +167,23 @@ export const useForgotPasswordForm = () => {
   const onSubmit = form.handleSubmit(async (data) => {
     setSubmitError(null);
     try {
-      const response = (await forgotPassword(data).unwrap()) as {
+      let forgotMutation;
+      if (role === 'admin') {
+        forgotMutation = forgotAdmin;
+      } else if (role === 'organiser') {
+        forgotMutation = forgotOrganiser;
+      } else {
+        forgotMutation = forgotJury;
+      }
+
+      const response = (await forgotMutation(data).unwrap()) as {
         success: boolean;
         message?: string;
       };
 
       if (response.success) {
         showToast.success('Reset link sent to your email!');
-        navigate('/email-sent', { state: { email: data.email } });
+        navigate('/email-sent', { state: { email: data.email, role } });
       } else {
         const msg = response.message || 'Failed to send reset link';
         setSubmitError(msg);
@@ -173,16 +199,36 @@ export const useForgotPasswordForm = () => {
   return {
     ...form,
     errors: form.formState.errors,
-    isSubmitting: form.formState.isSubmitting || isLoading,
+    isSubmitting:
+      form.formState.isSubmitting ||
+      isAdminLoading ||
+      isOrganiserLoading ||
+      isJuryLoading,
     submitError,
     onSubmit,
+    role,
   };
 };
 
 export const useResetPasswordForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // We should ideally get the role from the URL or state
+  const queryParams = new URLSearchParams(location.search);
+  const role = queryParams.get('role') || 'organiser';
+  const token = queryParams.get('token') || '';
+
+  const [resetAdmin, { isLoading: isAdminLoading }] =
+    useResetPasswordAdminMutation();
+  const [resetOrganiser, { isLoading: isOrganiserLoading }] =
+    useResetPasswordOrganiserMutation();
+  const [resetJury, { isLoading: isJuryLoading }] =
+    useResetPasswordJuryMutation();
+
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
@@ -212,14 +258,46 @@ export const useResetPasswordForm = () => {
     },
   ];
 
-  const onSubmit = form.handleSubmit(async () => {
-    navigate('/reset-success');
+  const onSubmit = form.handleSubmit(async (data) => {
+    setSubmitError(null);
+    try {
+      let resetMutation;
+      if (role === 'admin') {
+        resetMutation = resetAdmin;
+      } else if (role === 'organiser') {
+        resetMutation = resetOrganiser;
+      } else {
+        resetMutation = resetJury;
+      }
+
+      const response = (await resetMutation({ ...data, token }).unwrap()) as {
+        success: boolean;
+        message?: string;
+      };
+
+      if (response.success) {
+        showToast.success('Password reset successfully!');
+        navigate('/reset-success');
+      } else {
+        const msg = response.message || 'Failed to reset password';
+        setSubmitError(msg);
+        showToast.error(msg);
+      }
+    } catch (error) {
+      const msg = getErrorMessage(error);
+      setSubmitError(msg);
+      showToast.error(msg);
+    }
   });
 
   return {
     ...form,
     errors: form.formState.errors,
-    isSubmitting: form.formState.isSubmitting,
+    isSubmitting:
+      form.formState.isSubmitting ||
+      isAdminLoading ||
+      isOrganiserLoading ||
+      isJuryLoading,
     showPassword,
     showConfirmPassword,
     togglePasswordVisibility: () => setShowPassword((prev) => !prev),
@@ -227,6 +305,7 @@ export const useResetPasswordForm = () => {
       setShowConfirmPassword((prev) => !prev),
     passwordRequirements,
     onSubmit,
+    submitError,
   };
 };
 

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   Mail,
@@ -7,14 +8,27 @@ import {
   User,
   Loader2,
   Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import Modal from '../../../Components/Atom/Modal/Modal';
 import './CreateJuryModal.scss';
+
+export interface JuryFormData {
+  id?: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  companyName: string;
+  domainOfExpertise: string;
+  password?: string;
+}
 
 interface CreateJuryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: JuryFormData) => void;
+  initialData?: JuryFormData | null;
 }
 
 const INDUSTRY_OPTIONS = [
@@ -27,16 +41,14 @@ const INDUSTRY_OPTIONS = [
   'Other',
 ];
 
-interface JuryFormData {
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  companyName: string;
-  industryType: string;
-  password: string;
-}
+function CreateJuryModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  initialData,
+}: CreateJuryModalProps) {
+  const [showPassword, setShowPassword] = useState(false);
 
-function CreateJuryModal({ isOpen, onClose, onSubmit }: CreateJuryModalProps) {
   const {
     register,
     handleSubmit,
@@ -48,10 +60,29 @@ function CreateJuryModal({ isOpen, onClose, onSubmit }: CreateJuryModalProps) {
       email: '',
       phoneNumber: '',
       companyName: '',
-      industryType: '',
+      domainOfExpertise: '',
       password: '',
     },
   });
+
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        ...initialData,
+        password: '', // Don't pre-fill password when editing
+      });
+    } else {
+      reset({
+        fullName: '',
+        email: '',
+        phoneNumber: '',
+        companyName: '',
+        domainOfExpertise: '',
+        password: '',
+      });
+    }
+    setShowPassword(false);
+  }, [initialData, reset, isOpen]);
 
   const handleModalClose = () => {
     reset();
@@ -60,7 +91,6 @@ function CreateJuryModal({ isOpen, onClose, onSubmit }: CreateJuryModalProps) {
 
   const onFormSubmit = (data: JuryFormData) => {
     onSubmit(data);
-    reset();
   };
 
   const footer = (
@@ -82,7 +112,7 @@ function CreateJuryModal({ isOpen, onClose, onSubmit }: CreateJuryModalProps) {
         {isSubmitting ? (
           <Loader2 className="spinner" size={18} />
         ) : (
-          <span>Invite Jury Member</span>
+          <span>{initialData ? 'Update Jury Member' : 'Invite Jury Member'}</span>
         )}
       </button>
     </div>
@@ -92,8 +122,12 @@ function CreateJuryModal({ isOpen, onClose, onSubmit }: CreateJuryModalProps) {
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
-      title="Invite New Jury Member"
-      subtitle="Add a jury member to help review and score grant applications"
+      title={initialData ? 'Edit Jury Member' : 'Invite New Jury Member'}
+      subtitle={
+        initialData
+          ? 'Update the details of this jury member'
+          : 'Add a jury member to help review and score grant applications'
+      }
       width="550px"
       footer={footer}
     >
@@ -103,24 +137,18 @@ function CreateJuryModal({ isOpen, onClose, onSubmit }: CreateJuryModalProps) {
         onSubmit={handleSubmit(onFormSubmit)}
       >
         <div className="form-group mb-4">
-          <label htmlFor="fullName">
-            <span className="label-text">Full Name *</span>
-            <div className="input-with-icon">
-              <User size={16} />
-              <input
-                id="fullName"
-                type="text"
-                placeholder="Enter full name"
-                name={
-                  register('fullName', { required: 'Full name is required' })
-                    .name
-                }
-                onChange={register('fullName').onChange}
-                onBlur={register('fullName').onBlur}
-                ref={register('fullName').ref}
-              />
-            </div>
+          <label htmlFor="fullName" className="label-text">
+            Full Name *
           </label>
+          <div className="input-with-icon">
+            <User size={16} className="input-icon" />
+            <input
+              id="fullName"
+              type="text"
+              placeholder="Enter full name"
+              {...register('fullName', { required: 'Full name is required' })}
+            />
+          </div>
           {errors.fullName && (
             <span className="field-error">{errors.fullName.message}</span>
           )}
@@ -128,53 +156,43 @@ function CreateJuryModal({ isOpen, onClose, onSubmit }: CreateJuryModalProps) {
 
         <div className="form-row half-grid mb-4">
           <div className="form-group">
-            <label htmlFor="email">
-              <span className="label-text">Email Address *</span>
-              <div className="input-with-icon">
-                <Mail size={16} />
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="jury@example.com"
-                  name={
-                    register('email', {
-                      required: 'Email is required',
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Invalid email address',
-                      },
-                    }).name
-                  }
-                  onChange={register('email').onChange}
-                  onBlur={register('email').onBlur}
-                  ref={register('email').ref}
-                />
-              </div>
+            <label htmlFor="email" className="label-text">
+              Email Address *
             </label>
+            <div className="input-with-icon">
+              <Mail size={16} className="input-icon" />
+              <input
+                id="email"
+                type="email"
+                placeholder="jury@example.com"
+                {...register('email', {
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Invalid email address',
+                  },
+                })}
+              />
+            </div>
             {errors.email && (
               <span className="field-error">{errors.email.message}</span>
             )}
           </div>
           <div className="form-group">
-            <label htmlFor="phoneNumber">
-              <span className="label-text">Phone Number *</span>
-              <div className="input-with-icon">
-                <Phone size={16} />
-                <input
-                  id="phoneNumber"
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
-                  name={
-                    register('phoneNumber', {
-                      required: 'Phone number is required',
-                    }).name
-                  }
-                  onChange={register('phoneNumber').onChange}
-                  onBlur={register('phoneNumber').onBlur}
-                  ref={register('phoneNumber').ref}
-                />
-              </div>
+            <label htmlFor="phoneNumber" className="label-text">
+              Phone Number *
             </label>
+            <div className="input-with-icon">
+              <Phone size={16} className="input-icon" />
+              <input
+                id="phoneNumber"
+                type="tel"
+                placeholder="+1 (555) 000-0000"
+                {...register('phoneNumber', {
+                  required: 'Phone number is required',
+                })}
+              />
+            </div>
             {errors.phoneNumber && (
               <span className="field-error">{errors.phoneNumber.message}</span>
             )}
@@ -182,88 +200,85 @@ function CreateJuryModal({ isOpen, onClose, onSubmit }: CreateJuryModalProps) {
         </div>
 
         <div className="form-group mb-4">
-          <label htmlFor="companyName">
-            <span className="label-text">Company Name *</span>
-            <div className="input-with-icon">
-              <Building2 size={16} />
-              <input
-                id="companyName"
-                type="text"
-                placeholder="Enter company name"
-                name={
-                  register('companyName', {
-                    required: 'Company name is required',
-                  }).name
-                }
-                onChange={register('companyName').onChange}
-                onBlur={register('companyName').onBlur}
-                ref={register('companyName').ref}
-              />
-            </div>
+          <label htmlFor="companyName" className="label-text">
+            Company Name *
           </label>
+          <div className="input-with-icon">
+            <Building2 size={16} className="input-icon" />
+            <input
+              id="companyName"
+              type="text"
+              placeholder="Enter company name"
+              {...register('companyName', {
+                required: 'Company name is required',
+              })}
+            />
+          </div>
           {errors.companyName && (
             <span className="field-error">{errors.companyName.message}</span>
           )}
         </div>
 
         <div className="form-group mb-4">
-          <label htmlFor="industryType">
-            <span className="label-text">Industry Type *</span>
-            <div className="input-with-icon">
-              <Briefcase size={16} />
-              <select
-                id="industryType"
-                name={
-                  register('industryType', {
-                    required: 'Please select an industry',
-                  }).name
-                }
-                onChange={register('industryType').onChange}
-                onBlur={register('industryType').onBlur}
-                ref={register('industryType').ref}
-              >
-                <option value="">Select Industry</option>
-                {INDUSTRY_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <label htmlFor="domainOfExpertise" className="label-text">
+            Industry Type *
           </label>
-          {errors.industryType && (
-            <span className="field-error">{errors.industryType.message}</span>
+          <div className="input-with-icon">
+            <Briefcase size={16} className="input-icon" />
+            <select
+              id="domainOfExpertise"
+              {...register('domainOfExpertise', {
+                required: 'Please select an industry',
+              })}
+            >
+              <option value="">Select Industry</option>
+              {INDUSTRY_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+          {errors.domainOfExpertise && (
+            <span className="field-error">
+              {errors.domainOfExpertise.message}
+            </span>
           )}
         </div>
 
-        <div className="form-group">
-          <label htmlFor="password">
-            <span className="label-text">Password *</span>
+        {!initialData && (
+          <div className="form-group">
+            <label htmlFor="password" className="label-text">
+              Password *
+            </label>
             <div className="input-with-icon">
-              <Lock size={16} />
+              <Lock size={16} className="input-icon" />
               <input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="Set account password"
-                name={
-                  register('password', {
-                    required: 'Password is required',
-                    minLength: {
-                      value: 6,
-                      message: 'Password must be at least 8 characters',
-                    },
-                  }).name
-                }
-                onChange={register('password').onChange}
-                onBlur={register('password').onBlur}
-                ref={register('password').ref}
+                {...register('password', {
+                  required: 'Password is required',
+                  minLength: {
+                    value: 6,
+                    message: 'Password must be at least 6 characters',
+                  },
+                })}
               />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
-          </label>
-          {errors.password && (
-            <span className="field-error">{errors.password.message}</span>
-          )}
-        </div>
+            {errors.password && (
+              <span className="field-error">{errors.password.message}</span>
+            )}
+          </div>
+        )}
       </form>
     </Modal>
   );

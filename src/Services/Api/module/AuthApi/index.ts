@@ -66,7 +66,7 @@ export const userApi = api.injectEndpoints({
         body,
       }),
     }),
-    refreshToken: build.mutation<AuthResponse, { refreshToken: string }>({
+    refreshTokenAdmin: build.mutation<AuthResponse, { refreshToken: string }>({
       query: (body) => ({
         url: '/api/v1/admin/auth/refresh',
         method: 'POST',
@@ -80,19 +80,83 @@ export const userApi = api.injectEndpoints({
         body,
       }),
     }),
-    forgotPassword: build.mutation<unknown, { email: string }>({
+    forgotPasswordAdmin: build.mutation<unknown, { email: string }>({
       query: (body) => ({
         url: '/api/v1/admin/auth/forgot-password',
         method: 'POST',
         body,
       }),
     }),
-    resetPassword: build.mutation<
+    resetPasswordAdmin: build.mutation<
       unknown,
       ResetPasswordFormValues & { token: string }
     >({
       query: (body) => ({
         url: '/api/v1/admin/auth/reset-password',
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    refreshTokenOrganiser: build.mutation<AuthResponse, { refreshToken: string }>({
+      query: (body) => ({
+        url: '/api/v1/organiser/auth/refresh',
+        method: 'POST',
+        body,
+      }),
+    }),
+    logoutOrganiser: build.mutation<unknown, { email: string }>({
+      query: (body) => ({
+        url: '/api/v1/organiser/auth/logout',
+        method: 'POST',
+        body,
+      }),
+    }),
+    forgotPasswordOrganiser: build.mutation<unknown, { email: string }>({
+      query: (body) => ({
+        url: '/api/v1/organiser/auth/forgot-password',
+        method: 'POST',
+        body,
+      }),
+    }),
+    resetPasswordOrganiser: build.mutation<
+      unknown,
+      ResetPasswordFormValues & { token: string }
+    >({
+      query: (body) => ({
+        url: '/api/v1/organiser/auth/reset-password',
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    refreshTokenJury: build.mutation<AuthResponse, { refreshToken: string }>({
+      query: (body) => ({
+        url: '/api/v1/jury/auth/refresh',
+        method: 'POST',
+        body,
+      }),
+    }),
+    logoutJury: build.mutation<unknown, { email: string }>({
+      query: (body) => ({
+        url: '/api/v1/jury/auth/logout',
+        method: 'POST',
+        body,
+      }),
+    }),
+    forgotPasswordJury: build.mutation<unknown, { email: string }>({
+      query: (body) => ({
+        url: '/api/v1/jury/auth/forgot-password',
+        method: 'POST',
+        body,
+      }),
+    }),
+    resetPasswordJury: build.mutation<
+      unknown,
+      ResetPasswordFormValues & { token: string }
+    >({
+      query: (body) => ({
+        url: '/api/v1/jury/auth/reset-password',
         method: 'POST',
         body,
       }),
@@ -106,8 +170,16 @@ export const {
   useLoginOrganiserMutation,
   useLoginJuryMutation,
   useLogoutAdminMutation,
-  useRefreshTokenMutation,
-  useForgotPasswordMutation,
-  useResetPasswordMutation,
+  useLogoutOrganiserMutation,
+  useLogoutJuryMutation,
+  useRefreshTokenAdminMutation,
+  useRefreshTokenOrganiserMutation,
+  useRefreshTokenJuryMutation,
+  useForgotPasswordAdminMutation,
+  useForgotPasswordOrganiserMutation,
+  useForgotPasswordJuryMutation,
+  useResetPasswordAdminMutation,
+  useResetPasswordOrganiserMutation,
+  useResetPasswordJuryMutation,
   useRegisterOrganiserMutation,
 } = userApi;

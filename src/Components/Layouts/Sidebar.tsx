@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useLogoutAdminMutation } from '../../Services/Api/module/AuthApi';
+import {
+  useLogoutAdminMutation,
+  useLogoutOrganiserMutation,
+  useLogoutJuryMutation,
+} from '../../Services/Api/module/AuthApi';
 import { clearAuthTokenRedux } from '../../Store/Common';
 import { RootState } from '../../Store';
 import LogoutModal from '../Molecule/LogoutModal/LogoutModal';
@@ -15,7 +19,13 @@ import logo from '../../assets/logo.png';
 function Sidebar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [logoutAdmin, { isLoading }] = useLogoutAdminMutation();
+  const [logoutAdmin, { isLoading: isAdminLoading }] = useLogoutAdminMutation();
+  const [logoutOrganiser, { isLoading: isOrganiserLoading }] =
+    useLogoutOrganiserMutation();
+  const [logoutJury, { isLoading: isJuryLoading }] = useLogoutJuryMutation();
+
+  const isLoading = isAdminLoading || isOrganiserLoading || isJuryLoading;
+
   const { user } = useSelector((state: RootState) => state.common);
   const { role, roleLabel } = useCurrentUserRole();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -23,7 +33,15 @@ function Sidebar() {
   const handleLogout = async () => {
     try {
       if (user?.email) {
-        await logoutAdmin({ email: user.email }).unwrap();
+        let logoutMutation;
+        if (role === 'admin') {
+          logoutMutation = logoutAdmin;
+        } else if (role === 'organiser') {
+          logoutMutation = logoutOrganiser;
+        } else {
+          logoutMutation = logoutJury;
+        }
+        await logoutMutation({ email: user.email }).unwrap();
       }
     } catch (error) {
       // Even if API fails, we should clear local state and redirect

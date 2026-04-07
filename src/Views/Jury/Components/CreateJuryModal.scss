@@ -5,10 +5,12 @@
     gap: 16px;
   }
 
-  .mb-4 { margin-bottom: 24px; }
+  .mb-4 {
+    margin-bottom: 24px;
+  }
 
   .form-group {
-    label {
+    .label-text {
       display: block;
       font-size: 13px;
       font-weight: 700;
@@ -16,20 +18,24 @@
       margin-bottom: 8px;
     }
 
-    input[type="text"], input[type="email"], input[type="tel"], select {
+    input[type='text'],
+    input[type='email'],
+    input[type='tel'],
+    input[type='password'],
+    select {
       width: 100%;
       padding: 12px 16px;
-      border: 1px solid #e2e8f0;
+      border: none;
       border-radius: 10px;
       font-size: 14px;
       color: #1e293b;
-      background-color: #f8fafc;
+      background-color: transparent;
       outline: none;
-      transition: border-color 0.2s;
-      height: 46px;
+      height: 44px;
 
-      &:focus { border-color: var(--primary-color); background-color: #fff; }
-      &::placeholder { color: #94a3b8; }
+      &::placeholder {
+        color: #94a3b8;
+      }
     }
 
     select {
@@ -42,11 +48,73 @@
 
     .input-with-icon {
       position: relative;
+      width: 100%;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
+      height: 48px;
+      padding: 0 12px;
 
-      svg { position: absolute; left: 16px; color: #94a3b8; pointer-events: none; }
-      input, select { padding-left: 44px; }
+      &:focus-within {
+        border-color: var(--primary-color);
+        background-color: #fff;
+        box-shadow: 0 0 0 1px var(--primary-color);
+      }
+
+      .input-icon {
+        color: #94a3b8;
+        flex-shrink: 0;
+        margin-right: 12px;
+      }
+
+      input,
+      select {
+        flex: 1;
+        border: none;
+        background-color: transparent;
+        outline: none;
+        font-size: 14px;
+        color: #1e293b;
+        height: 100%;
+        padding: 0;
+
+        &::placeholder {
+          color: #94a3b8;
+        }
+      }
+
+      select {
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 4px center;
+        padding-right: 24px;
+      }
+
+      .password-toggle {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s;
+        flex-shrink: 0;
+
+        &:hover {
+          color: var(--primary-color);
+        }
+
+        &:focus {
+          outline: none;
+        }
+      }
     }
   }
 
@@ -79,7 +147,10 @@
     color: #475569;
     background: #f1f5f9;
     border: none;
-    &:hover { background-color: #e2e8f0;}
+
+    &:hover {
+      background-color: #e2e8f0;
+    }
   }
 
   .btn-confirm-jury {
@@ -89,8 +160,12 @@
     background-color: var(--primary-color);
     color: #fff;
     border: none;
-    &:hover { opacity: 0.9; box-shadow: 0 4px 12px rgba(0, 206, 134, 0.2); }
-    
+
+    &:hover {
+      opacity: 0.9;
+      box-shadow: 0 4px 12px rgba(0, 206, 134, 0.2);
+    }
+
     &:disabled {
       opacity: 0.6;
       cursor: not-allowed;
@@ -103,6 +178,11 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }

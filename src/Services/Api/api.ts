@@ -70,7 +70,14 @@ const baseQueryWithInterceptor = async (
 const api = createApi({
   baseQuery: baseQueryWithInterceptor,
   endpoints: () => ({}),
-  tagTypes: ['Galas', 'Grants', 'Admins', 'Notifications', 'Announcements'],
+  tagTypes: [
+    'Galas',
+    'Grants',
+    'Admins',
+    'Notifications',
+    'Announcements',
+    'Jury',
+  ],
 });
 
 export default api;

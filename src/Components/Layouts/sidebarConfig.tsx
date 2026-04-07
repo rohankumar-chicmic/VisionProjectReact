@@ -47,9 +47,9 @@ export const SIDEBAR_CONFIG: Record<AppRole, SidebarItem[]> = {
     { icon: Bell, label: 'Notifications', path: '/notifications' },
   ],
   jury: [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Star, label: 'Jury Workspace', path: '/jury' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/jury/dashboard' },
+    { icon: Star, label: 'My Workspace', path: '/jury/workspace' },
     { icon: FileText, label: 'Applications', path: '/applications' },
-    { icon: Calendar, label: 'Galas Management', path: '/galas' },
+    { icon: Users, label: 'My Profile', path: '/jury/profile' },
   ],
 };

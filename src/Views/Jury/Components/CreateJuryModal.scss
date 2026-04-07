@@ -1,0 +1,108 @@
+.create-jury-form {
+  .half-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .mb-4 { margin-bottom: 24px; }
+
+  .form-group {
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"], input[type="email"], input[type="tel"], select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px;
+      color: #1e293b;
+      background-color: #f8fafc;
+      outline: none;
+      transition: border-color 0.2s;
+      height: 46px;
+
+      &:focus { border-color: var(--primary-color); background-color: #fff; }
+      &::placeholder { color: #94a3b8; }
+    }
+
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+    }
+
+    .input-with-icon {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      svg { position: absolute; left: 16px; color: #94a3b8; pointer-events: none; }
+      input, select { padding-left: 44px; }
+    }
+  }
+
+  .field-error {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ef4444;
+  }
+}
+
+.modal-actions-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+
+  button {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .btn-cancel {
+    color: #475569;
+    background: #f1f5f9;
+    border: none;
+    &:hover { background-color: #e2e8f0;}
+  }
+
+  .btn-confirm-jury {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    &:hover { opacity: 0.9; box-shadow: 0 4px 12px rgba(0, 206, 134, 0.2); }
+    
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .spinner {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

@@ -10,6 +10,7 @@ import {
   useForgotPasswordMutation,
   useRegisterOrganiserMutation,
 } from '../../../Services/Api/module/AuthApi';
+import { useUploadFileMutation } from '../../../Services/Api/module/CommonApi';
 import { updateAuthTokenRedux } from '../../../Store/Common';
 import type { AppDispatch } from '../../../Store';
 import {
@@ -30,7 +31,7 @@ const getErrorMessage = (error: unknown) => {
   if (typeof error === 'object' && error !== null) {
     if ('data' in error) {
       const { data } = error as {
-        data?: { message?: string; error?: string };
+        data?: { message?: string; error?: string; errors?: unknown };
       };
 
       if (data?.message) {
@@ -39,6 +40,10 @@ const getErrorMessage = (error: unknown) => {
 
       if (data?.error) {
         return data.error;
+      }
+
+      if (data?.errors) {
+        return JSON.stringify(data.errors);
       }
     }
 
@@ -95,11 +100,10 @@ export const useLoginForm = () => {
           updateAuthTokenRedux({
             token: accessToken,
             refreshToken,
-            // user,
-            user: {
-              ...user,
-              role: 'admin',
-            },
+
+            user,
+            role: data.role,
+
           })
         );
         // console.log(user);
@@ -229,10 +233,14 @@ export const useResetPasswordForm = () => {
 
 export const useCreateOrganiserForm = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const [step, setStep] = useState(1);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [registerOrganiser, { isLoading: isSubmitting }] =
+  const [registerOrganiser, { isLoading: isRegistering }] =
     useRegisterOrganiserMutation();
+  const [uploadFile, { isLoading: isUploading }] = useUploadFileMutation();
+
+  const isSubmitting = isRegistering || isUploading;
 
   const getStepSchema = () => {
     if (step === 1) return organiserStep1Schema;
@@ -256,12 +264,44 @@ export const useCreateOrganiserForm = () => {
     mode: 'onChange',
   });
 
-  const onSubmit = form.handleSubmit(async (data) => {
+  const onSubmit = form.handleSubmit(async () => {
+    const data = form.getValues();
     setSubmitError(null);
     try {
-      const response = await registerOrganiser(data).unwrap();
+      let finalGovtId = data.govtId;
+
+      if (data.govtId instanceof File) {
+        const formData = new FormData();
+        formData.append('file', data.govtId);
+        const uploadResponse = await uploadFile(formData).unwrap();
+
+        if (uploadResponse.success && uploadResponse.data) {
+          finalGovtId = uploadResponse.data;
+        } else {
+          throw new Error('Failed to upload Government ID image');
+        }
+      }
+
+      if (typeof finalGovtId !== 'string' || !finalGovtId.trim()) {
+        throw new Error('Government ID upload failed or was not provided');
+      }
+
+      const payload = {
+        fullName: data.fullname,
+        email: data.email,
+        password: data.password,
+        phoneNumber: data.phone,
+        governmentId: finalGovtId,
+        companyName: data.companyName,
+        industryDomain: data.industryType,
+      };
+
+      const response = await registerOrganiser(payload).unwrap();
+
       if (response.success) {
         showToast.success('Account created successfully!');
+
+        dispatch(updateAuthTokenRedux({ token: null, role: 'organiser' }));
         navigate('/login');
       } else {
         setSubmitError(response.message || 'Registration failed');

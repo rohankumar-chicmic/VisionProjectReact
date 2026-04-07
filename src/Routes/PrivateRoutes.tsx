@@ -18,6 +18,7 @@ import JuryPage from '../Views/Jury/JuryPage';
 import AdminSettings from '../Views/Settings/AdminSettings';
 import ManageJuryCriteria from '../Views/Grants/ManageJuryCriteria';
 import AddCustomCriteria from '../Views/Grants/AddCustomCriteria';
+import ManageJury from '../Views/Jury/ManageJury';
 
 // eslint-disable-next-line import/prefer-default-export
 export const PRIVATE_ROUTES: Array<CustomRouter> = [
@@ -110,6 +111,11 @@ export const PRIVATE_ROUTES: Array<CustomRouter> = [
     path: '/notifications',
     element: <Notifications />,
     title: 'Notifications',
+  },
+  {
+    path: '/manage-jury',
+    element: <ManageJury />,
+    title: 'Manage Jury',
   },
   {
     path: '/jury',

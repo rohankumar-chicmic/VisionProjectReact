@@ -28,7 +28,11 @@ function Login() {
         </div>
 
         <div className="auth-header">
-          <h1 className="auth-title"> Admin Panel</h1>
+          <h1 className="auth-title">
+            {selectedRole === 'admin' && 'Admin Panel'}
+            {selectedRole === 'organiser' && 'Organiser Panel'}
+            {selectedRole === 'jury' && 'Jury Panel'}
+          </h1>
           <p className="auth-subtitle">Sign in to manage your platform</p>
         </div>
 
@@ -154,23 +158,18 @@ function Login() {
             {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
+        {selectedRole === 'organiser' && (
+          <div className="create-account-footer">
+            New here?{' '}
+            <span
+              className="create-link"
+              onClick={() => navigate('/create-organiser')}
+            >
+              Create your Organiser account
+            </span>
+          </div>
+        )}
 
-        <div className="create-account-footer">
-          New here?{' '}
-          <span
-            className="create-link"
-            onClick={() => navigate('/create-organiser')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                navigate('/create-organiser');
-              }
-            }}
-          >
-            Create your Organiser account
-          </span>
-        </div>
 
         <p className="auth-footer">
           © 2024 Vision PME (Gala Management System). All rights reserved.

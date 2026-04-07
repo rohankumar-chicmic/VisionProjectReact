@@ -58,7 +58,14 @@ export const organiserStep2Schema = z.object({
 
 // Organiser Registration - Step 3
 export const organiserStep3Schema = z.object({
-  govtId: z.any().refine((val) => val, 'Government ID is required'),
+  govtId: z
+    .any()
+    .refine(
+      (val) =>
+        val instanceof File ||
+        (typeof val === 'string' && val.trim().length > 0),
+      'Government ID is required'
+    ),
 });
 
 // Combined Schema for Organiser Registration

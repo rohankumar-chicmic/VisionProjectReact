@@ -9,6 +9,37 @@ export interface JuryMember {
   domainOfExpertise: string;
 }
 
+export interface JurySummaryData {
+  assignedApplicationsCount: number;
+  pendingReviewsCount: number;
+  completedReviewsCount: number;
+}
+
+export interface AssignedGrant {
+  name: string;
+  gala: string;
+  applicants: number;
+  status: string;
+}
+
+export interface EvaluationQueueItem {
+  id: string;
+  applicant: string;
+  grant: string;
+  deadline: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface JuryDashboardResponse {
+  success: boolean;
+  message: string;
+  data: {
+    summary: JurySummaryData;
+    assignedPrograms: AssignedGrant[];
+    evaluationQueue: EvaluationQueueItem[];
+  };
+}
+
 export interface JuryResponse {
   success: boolean;
   message: string;
@@ -65,6 +96,13 @@ export const JuryApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Jury'],
     }),
+    juryDashboard: build.query<JuryDashboardResponse, void>({
+      query: () => ({
+        url: '/api/v1/jury/dashboard/summary',
+        method: 'GET',
+      }),
+      providesTags: ['JuryDashboard'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -74,4 +112,5 @@ export const {
   useCreateJuryMutation,
   useUpdateJuryMutation,
   useDeleteJuryMutation,
+  useJuryDashboardQuery,
 } = JuryApi;

@@ -1,31 +1,13 @@
 import { AlertCircle, ArrowRight, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { EvaluationQueueItem } from '../../../../../Services/Api/module/JuryApi';
 
-function EvaluationQueue() {
+interface EvaluationQueueProps {
+  data: EvaluationQueueItem[];
+}
+
+function EvaluationQueue({ data }: EvaluationQueueProps) {
   const navigate = useNavigate();
-  const queue = [
-    {
-      id: 'APP-45230',
-      applicant: 'Northwind Labs',
-      grant: 'Innovation Technology Grant',
-      deadline: 'Due today',
-      priority: 'high',
-    },
-    {
-      id: 'APP-45231',
-      applicant: 'Blue Cedar Studio',
-      grant: 'Community Impact Grant',
-      deadline: 'Due tomorrow',
-      priority: 'medium',
-    },
-    {
-      id: 'APP-45232',
-      applicant: 'Solar Bridge Co.',
-      grant: 'Sustainability Excellence Grant',
-      deadline: 'Due in 2 days',
-      priority: 'low',
-    },
-  ];
 
   return (
     <section className="dashboard-section evaluation-queue">
@@ -37,7 +19,7 @@ function EvaluationQueue() {
       </div>
 
       <div className="queue-stack">
-        {queue.map((item) => (
+        {data?.map((item) => (
           <div key={item.id} className="queue-item">
             <div className="item-main">
               <div className="applicant-info">

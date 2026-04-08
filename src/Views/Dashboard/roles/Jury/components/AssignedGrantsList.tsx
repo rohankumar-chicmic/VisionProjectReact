@@ -1,28 +1,13 @@
 import { ArrowRight, Calendar, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { AssignedGrant } from '../../../../../Services/Api/module/JuryApi';
 
-function AssignedGrantsList() {
+interface AssignedGrantsListProps {
+  data: AssignedGrant[];
+}
+
+function AssignedGrantsList({ data }: AssignedGrantsListProps) {
   const navigate = useNavigate();
-  const grants = [
-    {
-      name: 'Innovation Technology Grant',
-      gala: 'Gala Spring Summit',
-      applicants: 14,
-      status: 'Scoring open',
-    },
-    {
-      name: 'Community Impact Grant',
-      gala: 'Gala Founders Night',
-      applicants: 9,
-      status: 'Review briefing',
-    },
-    {
-      name: 'Sustainability Excellence Grant',
-      gala: 'Gala Green Awards',
-      applicants: 6,
-      status: 'Consensus pending',
-    },
-  ];
 
   return (
     <section className="dashboard-section assigned-grants">
@@ -34,7 +19,7 @@ function AssignedGrantsList() {
       </div>
 
       <div className="grants-stack">
-        {grants.map((grant) => (
+        {data?.map((grant) => (
           <div key={grant.name} className="grant-list-item">
             <div className="grant-info">
               <h4>{grant.name}</h4>

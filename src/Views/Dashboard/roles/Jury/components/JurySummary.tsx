@@ -1,17 +1,27 @@
 import { CheckCircle2, Clock, ListTodo } from 'lucide-react';
+import { JurySummaryData } from '../../../../../Services/Api/module/JuryApi';
 
-function JurySummary() {
+interface JurySummaryProps {
+  data: JurySummaryData;
+}
+
+function JurySummary({ data }: JurySummaryProps) {
   const stats = [
     {
       label: 'Assigned Applications',
-      value: '12',
+      value: (data?.assignedApplicationsCount ?? 0).toString().padStart(2, '0'),
       icon: ListTodo,
       color: '#3b82f6',
     },
-    { label: 'Pending Reviews', value: '08', icon: Clock, color: '#f59e0b' },
+    {
+      label: 'Pending Reviews',
+      value: (data?.pendingReviewsCount ?? 0).toString().padStart(2, '0'),
+      icon: Clock,
+      color: '#f59e0b',
+    },
     {
       label: 'Completed Reviews',
-      value: '04',
+      value: (data?.completedReviewsCount ?? 0).toString().padStart(2, '0'),
       icon: CheckCircle2,
       color: '#00ce86',
     },

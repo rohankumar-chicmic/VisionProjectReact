@@ -77,6 +77,7 @@ const api = createApi({
     'Notifications',
     'Announcements',
     'Jury',
+    'JuryDashboard',
   ],
 });
 

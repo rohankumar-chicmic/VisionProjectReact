@@ -2,7 +2,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../../Store';
 import { getRoleLabel, getUserRole, AppRole } from './roles';
 
-export const useCurrentUserRole = () => {
+const useCurrentUserRole = () => {
   const { user, role: storedRole } = useSelector(
     (state: RootState) => state.common
   );
@@ -14,3 +14,5 @@ export const useCurrentUserRole = () => {
     user,
   };
 };
+
+export default useCurrentUserRole;

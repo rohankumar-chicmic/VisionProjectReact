@@ -1,5 +1,5 @@
 /* eslint-disable no-alert */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Award,
@@ -14,7 +14,9 @@ import {
   HelpCircle,
   Briefcase,
   User,
+  AlertTriangle,
 } from 'lucide-react';
+import Modal from '../../Components/Atom/Modal/Modal';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import {
   useGetOrganiserGrantByIdQuery,
@@ -38,6 +40,7 @@ function GrantDetails() {
 
   const [deleteGrant, { isLoading: isDeleting }] =
     useDeleteOrganiserGrantMutation();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const grant = grantResponse?.data;
 
@@ -49,15 +52,12 @@ function GrantDetails() {
   }, [setTitle, setSubtitle, setBackAction, resetHeader, navigate]);
 
   const handleDelete = async () => {
-    if (
-      !id ||
-      !globalThis.confirm('Are you sure you want to delete this grant?')
-    )
-      return;
+    if (!id || isDeleting) return;
 
     try {
       await deleteGrant(id).unwrap();
       showToast.success('Grant deleted successfully');
+      setIsDeleteModalOpen(false);
       navigate('/grants');
     } catch (error) {
       showToast.error(
@@ -107,7 +107,7 @@ function GrantDetails() {
         </div>
         <div className="kpi-grid">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} height={120} borderRadius={20} />
+            <Skeleton key={`skeleton-${i}`} height={120} borderRadius={20} />
           ))}
         </div>
         <div className="details-main-grid">
@@ -127,7 +127,8 @@ function GrantDetails() {
           </div>
           <h2>Oops! Grant not found</h2>
           <p>
-            The grant you are looking for doesn't exist or has been removed.
+            The grant you are looking for doesn&apos;t exist or has been
+            removed.
           </p>
           <button
             type="button"
@@ -155,11 +156,11 @@ function GrantDetails() {
         <button
           type="button"
           className="header-btn btn-danger-soft"
-          onClick={handleDelete}
+          onClick={() => setIsDeleteModalOpen(true)}
           disabled={isDeleting}
         >
           <Trash2 size={18} />
-          <span>Delete</span>
+          <span>Delete Program</span>
         </button>
       </HeaderActions>
 
@@ -237,8 +238,8 @@ function GrantDetails() {
               Eligibility & Requirements
             </h3>
             <div className="requirements-list">
-              {grant.requirements.map((req, index) => (
-                <div key={`${req.text}-${index}`} className="req-item">
+              {grant.requirements.map((req) => (
+                <div key={req.text} className="req-item">
                   <div className="check-box">
                     <CheckCircle2 size={16} />
                   </div>
@@ -262,12 +263,9 @@ function GrantDetails() {
               Application Questionnaire
             </h3>
             <div className="questions-list">
-              {grant.questions.map((q, index) => (
-                <div
-                  key={`${q.questionText}-${index}`}
-                  className="question-item"
-                >
-                  <div className="q-number">{q.order || index + 1}</div>
+              {grant.questions.map((q) => (
+                <div key={q.questionText} className="question-item">
+                  <div className="q-number">{q.order}</div>
                   <div className="q-content">
                     <h4>{q.questionText}</h4>
                     <span className="q-type badge-soft">{q.questionType}</span>
@@ -345,6 +343,53 @@ function GrantDetails() {
           </div>
         </div>
       </div>
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete Grant"
+        subtitle="Are you sure you want to delete this grant program? This action cannot be undone."
+        width="450px"
+        footer={
+          <div className="modal-actions-footer">
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn-danger"
+              style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                fontWeight: 600,
+              }}
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <AlertTriangle
+            size={48}
+            color="#ef4444"
+            style={{ marginBottom: '16px' }}
+          />
+          <p style={{ color: '#4b5563', fontSize: '15px' }}>
+            Warning: This will permanently delete <strong>{grant.name}</strong>{' '}
+            and all associated data.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

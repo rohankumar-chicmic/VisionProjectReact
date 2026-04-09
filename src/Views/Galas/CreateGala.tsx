@@ -74,8 +74,11 @@ const grantSchema = z.object({
   juryCriteria: z.array(z.number().int()),
   questions: z.array(questionSchema),
   additionalRequirements: z.array(requirementSchema),
-  prizeWinners: z.array(z.object({ rank: z.number(), amount: z.number() })).optional(),
+  prizeWinners: z
+    .array(z.object({ rank: z.number(), amount: z.number() }))
+    .optional(),
   juryIds: z.array(z.string()).optional(),
+  id: z.string().optional(),
 });
 
 const galaSchema = z.object({
@@ -213,9 +216,8 @@ function CreateGala() {
           const parsedState = JSON.parse(savedState) as GalaFormValues;
           reset({ ...defaultValues, ...parsedState });
           setImagePreview(parsedState.coverImageUrl || null);
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error('Failed to restore gala draft state', error);
+        } catch (error: unknown) {
+          // Error is handled silenty as it's a non-critical draft restore
         }
       }
 
@@ -298,7 +300,9 @@ function CreateGala() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      void handleUpload(file);
+      handleUpload(file).catch(() => {
+        showToast.error('Image upload failed. Please try again.');
+      });
     }
   };
 
@@ -306,7 +310,9 @@ function CreateGala() {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      void handleUpload(file);
+      handleUpload(file).catch(() => {
+        showToast.error('Image upload failed. Please try again.');
+      });
     }
   };
 
@@ -455,10 +461,13 @@ function CreateGala() {
                 order: requirement.order ?? requirementIndex,
               })
             ),
-            prizeWinners: grant.prizeWinners?.map((pw: any) => ({
-              rank: pw.rank,
-              amount: Number(pw.amount),
-            })) || [],
+            prizeWinners:
+              grant.prizeWinners?.map(
+                (pw: { rank: number; amount: number }) => ({
+                  rank: pw.rank,
+                  amount: Number(pw.amount),
+                })
+              ) || [],
             juryIds: grant.juryIds || [],
           })),
           saveAsDraft: true,
@@ -510,19 +519,12 @@ function CreateGala() {
 
       sessionStorage.removeItem(CREATE_GALA_FORM_SESSION_KEY);
       navigate('/galas');
-    } catch (error) {
-      console.error('Gala submission error:', error);
+    } catch (error: unknown) {
       let errorMessage = '';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (
-        typeof error === 'object' &&
-        error !== null &&
-        'data' in error
-      ) {
+      if (typeof error === 'object' && error !== null && 'data' in error) {
         // Handle RTK Query error responses specifically
         const rtkError = error as {
-          data: { message?: string; errors?: any[] };
+          data: { message?: string; errors?: unknown[] };
         };
         errorMessage =
           rtkError.data.message || 'Validation failed. Please check the form.';
@@ -538,7 +540,9 @@ function CreateGala() {
   };
 
   const submitWithIntent = (intent: SubmitIntent) => {
-    void handleSubmit((data) => submitForm(data, intent))();
+    handleSubmit((data) => submitForm(data, intent))().catch(() => {
+      showToast.error('An error occurred while submitting the form.');
+    });
   };
 
   const getSubmitButtonLabel = (intent: SubmitIntent) => {
@@ -596,15 +600,15 @@ function CreateGala() {
               <div className="form-group">
                 <label id="gala-name-label" htmlFor="gala-name-input">
                   Event Name *
+                  <input
+                    id="gala-name-input"
+                    type="text"
+                    {...register('name')}
+                    placeholder="e.g. Gala Vision Montreal 2026"
+                    className={errors.name ? 'error' : ''}
+                    aria-labelledby="gala-name-label"
+                  />
                 </label>
-                <input
-                  id="gala-name-input"
-                  type="text"
-                  {...register('name')}
-                  placeholder="e.g. Gala Vision Montreal 2026"
-                  className={errors.name ? 'error' : ''}
-                  aria-labelledby="gala-name-label"
-                />
                 {errors.name && (
                   <span className="error-message">{errors.name.message}</span>
                 )}
@@ -613,15 +617,15 @@ function CreateGala() {
               <div className="form-group">
                 <label id="gala-about-label" htmlFor="gala-about-input">
                   About Event *
+                  <textarea
+                    id="gala-about-input"
+                    {...register('about')}
+                    placeholder="The biggest entrepreneurial event of the year..."
+                    rows={4}
+                    className={errors.about ? 'error' : ''}
+                    aria-labelledby="gala-about-label"
+                  />
                 </label>
-                <textarea
-                  id="gala-about-input"
-                  {...register('about')}
-                  placeholder="The biggest entrepreneurial event of the year..."
-                  rows={4}
-                  className={errors.about ? 'error' : ''}
-                  aria-labelledby="gala-about-label"
-                />
                 {errors.about && (
                   <span className="error-message">{errors.about.message}</span>
                 )}
@@ -630,52 +634,51 @@ function CreateGala() {
               <div className="form-group">
                 <label id="gala-cover-label" htmlFor="gala-cover-file">
                   Event Cover Image *
-                </label>
-                <input
-                  id="gala-cover-file"
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                />
-
-                <button
-                  type="button"
-                  id="gala-cover-dropzone"
-                  className={`dropzone-area ${imagePreview ? 'has-image' : ''} ${isUploading ? 'uploading' : ''}`}
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDrop}
-                  aria-labelledby="gala-cover-label"
-                >
-                  {isUploading ? (
-                    <div className="upload-spinner-container">
-                      <RefreshCcw className="animate-spin" size={32} />
-                      <p>Uploading image...</p>
-                    </div>
-                  ) : (
-                    <>
-                      {!imagePreview && (
-                        <div className="upload-placeholder">
-                          <Upload size={32} />
-                          <p>Click to upload or drag and drop</p>
-                          <span>PNG, JPG up to 10MB</span>
-                        </div>
-                      )}
-
-                      {imagePreview && (
-                        <div className="image-preview-container">
-                          <img src={imagePreview} alt="Gala cover preview" />
-                          <div className="image-overlay">
-                            <Upload size={24} />
-                            <span>Change Image</span>
+                  <input
+                    id="gala-cover-file"
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    id="gala-cover-dropzone"
+                    className={`dropzone-area ${imagePreview ? 'has-image' : ''} ${isUploading ? 'uploading' : ''}`}
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleDrop}
+                    aria-labelledby="gala-cover-label"
+                  >
+                    {isUploading ? (
+                      <div className="upload-spinner-container">
+                        <RefreshCcw className="animate-spin" size={32} />
+                        <p>Uploading image...</p>
+                      </div>
+                    ) : (
+                      <>
+                        {!imagePreview && (
+                          <div className="upload-placeholder">
+                            <Upload size={32} />
+                            <p>Click to upload or drag and drop</p>
+                            <span>PNG, JPG up to 10MB</span>
                           </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </button>
+                        )}
+
+                        {imagePreview && (
+                          <div className="image-preview-container">
+                            <img src={imagePreview} alt="Gala cover preview" />
+                            <div className="image-overlay">
+                              <Upload size={24} />
+                              <span>Change Image</span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </button>
+                </label>
 
                 {errors.coverImageUrl && (
                   <span className="error-message">
@@ -749,17 +752,17 @@ function CreateGala() {
                 <div className="form-group">
                   <label id="gala-date-label" htmlFor="gala-event-date">
                     Event Date *
+                    <div className="input-with-icon">
+                      <Calendar size={18} />
+                      <input
+                        id="gala-event-date"
+                        type="date"
+                        {...register('eventDate')}
+                        className={errors.eventDate ? 'error' : ''}
+                        aria-labelledby="gala-date-label"
+                      />
+                    </div>
                   </label>
-                  <div className="input-with-icon">
-                    <Calendar size={18} />
-                    <input
-                      id="gala-event-date"
-                      type="date"
-                      {...register('eventDate')}
-                      className={errors.eventDate ? 'error' : ''}
-                      aria-labelledby="gala-date-label"
-                    />
-                  </div>
                   {errors.eventDate && (
                     <span className="error-message">
                       {errors.eventDate.message}
@@ -770,17 +773,17 @@ function CreateGala() {
                 <div className="form-group">
                   <label id="gala-time-label" htmlFor="gala-event-time">
                     Event Time *
+                    <div className="input-with-icon">
+                      <Clock size={18} />
+                      <input
+                        id="gala-event-time"
+                        type="time"
+                        {...register('eventTime')}
+                        className={errors.eventTime ? 'error' : ''}
+                        aria-labelledby="gala-time-label"
+                      />
+                    </div>
                   </label>
-                  <div className="input-with-icon">
-                    <Clock size={18} />
-                    <input
-                      id="gala-event-time"
-                      type="time"
-                      {...register('eventTime')}
-                      className={errors.eventTime ? 'error' : ''}
-                      aria-labelledby="gala-time-label"
-                    />
-                  </div>
                   {errors.eventTime && (
                     <span className="error-message">
                       {errors.eventTime.message}
@@ -792,18 +795,18 @@ function CreateGala() {
               <div className="form-group">
                 <label id="gala-venue-label" htmlFor="gala-venue-input">
                   Venue / Location *
+                  <div className="input-with-icon">
+                    <MapPin size={18} />
+                    <input
+                      id="gala-venue-input"
+                      type="text"
+                      {...register('venue')}
+                      placeholder="Palais des congres, Montreal"
+                      className={errors.venue ? 'error' : ''}
+                      aria-labelledby="gala-venue-label"
+                    />
+                  </div>
                 </label>
-                <div className="input-with-icon">
-                  <MapPin size={18} />
-                  <input
-                    id="gala-venue-input"
-                    type="text"
-                    {...register('venue')}
-                    placeholder="Palais des congres, Montreal"
-                    className={errors.venue ? 'error' : ''}
-                    aria-labelledby="gala-venue-label"
-                  />
-                </div>
                 {errors.venue && (
                   <span className="error-message">{errors.venue.message}</span>
                 )}
@@ -812,15 +815,15 @@ function CreateGala() {
               <div className="form-group">
                 <label id="gala-city-label" htmlFor="gala-city-input">
                   City / Region *
+                  <input
+                    id="gala-city-input"
+                    type="text"
+                    {...register('city')}
+                    placeholder="Montreal, QC"
+                    className={errors.city ? 'error' : ''}
+                    aria-labelledby="gala-city-label"
+                  />
                 </label>
-                <input
-                  id="gala-city-input"
-                  type="text"
-                  {...register('city')}
-                  placeholder="Montreal, QC"
-                  className={errors.city ? 'error' : ''}
-                  aria-labelledby="gala-city-label"
-                />
                 {errors.city && (
                   <span className="error-message">{errors.city.message}</span>
                 )}
@@ -842,18 +845,18 @@ function CreateGala() {
                     htmlFor="expected-attendees-count"
                   >
                     Expected Attendees *
+                    <div className="input-with-icon">
+                      <Users size={18} />
+                      <input
+                        id="expected-attendees-count"
+                        type="number"
+                        {...register('expectedAttendees')}
+                        placeholder="245"
+                        className={errors.expectedAttendees ? 'error' : ''}
+                        aria-labelledby="attendees-label"
+                      />
+                    </div>
                   </label>
-                  <div className="input-with-icon">
-                    <Users size={18} />
-                    <input
-                      id="expected-attendees-count"
-                      type="number"
-                      {...register('expectedAttendees')}
-                      placeholder="245"
-                      className={errors.expectedAttendees ? 'error' : ''}
-                      aria-labelledby="attendees-label"
-                    />
-                  </div>
                   {errors.expectedAttendees && (
                     <span className="error-message">
                       {errors.expectedAttendees.message}
@@ -864,34 +867,34 @@ function CreateGala() {
                 <div className="form-group">
                   <label id="grants-count-label" htmlFor="number-of-grants">
                     Number of Grants *
+                    <div className="input-with-icon readonly-input">
+                      <Link2 size={18} />
+                      <input
+                        id="number-of-grants"
+                        type="text"
+                        value={grants.length.toString()}
+                        readOnly
+                        aria-labelledby="grants-count-label"
+                      />
+                    </div>
                   </label>
-                  <div className="input-with-icon readonly-input">
-                    <Link2 size={18} />
-                    <input
-                      id="number-of-grants"
-                      type="text"
-                      value={grants.length.toString()}
-                      readOnly
-                      aria-labelledby="grants-count-label"
-                    />
-                  </div>
                 </div>
               </div>
 
               <div className="form-group">
                 <label id="prize-pool-label" htmlFor="total-prize-pool">
                   Total Prize Pool *
+                  <div className="input-with-icon readonly-input">
+                    <Trophy size={18} />
+                    <input
+                      id="total-prize-pool"
+                      type="text"
+                      value={`$ ${totalPrizePool.toLocaleString()} in grants`}
+                      readOnly
+                      aria-labelledby="prize-pool-label"
+                    />
+                  </div>
                 </label>
-                <div className="input-with-icon readonly-input">
-                  <Trophy size={18} />
-                  <input
-                    id="total-prize-pool"
-                    type="text"
-                    value={`$ ${totalPrizePool.toLocaleString()} in grants`}
-                    readOnly
-                    aria-labelledby="prize-pool-label"
-                  />
-                </div>
               </div>
             </div>
           </section>
@@ -986,7 +989,10 @@ function CreateGala() {
 
                   return (
                     <div
-                      key={`${grant.name}-${grant.applicationDeadline}-${index}`}
+                      key={
+                        grant.id ||
+                        `${grant.name}-${grant.applicationDeadline}-${index}`
+                      }
                       className="grant-item-card-premium"
                     >
                       <div className="grant-icon-badge">

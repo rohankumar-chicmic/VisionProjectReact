@@ -1,5 +1,5 @@
 /* eslint-disable no-alert */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Calendar,
@@ -13,7 +13,9 @@ import {
   EyeOff,
   Trash2,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
+import Modal from '../../Components/Atom/Modal/Modal';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import {
   useGetAdminGalaByIdQuery,
@@ -29,7 +31,7 @@ import {
 } from '../../Services/Api/module/Organiser/Gala';
 import Skeleton from '../../Components/Shared/Skeleton';
 import showToast from '../../Shared/Utils/toast';
-import { useCurrentUserRole } from '../../Shared/Auth/useCurrentUserRole';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import { createGrantPlatformTransaction } from '../../Services/WalletConnect';
 import './GalaDetails.scss';
 import DEFAULT_GALA_IMAGE from '../../assets/general-img-landscape.png';
@@ -39,6 +41,7 @@ function GalaDetails() {
   const navigate = useNavigate();
   const { setTitle, setSubtitle, setBackAction } = useHeader();
   const { role } = useCurrentUserRole();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const isAdmin = role === 'admin' || role === 'sub_admin';
   const isOrganiser = role === 'organiser';
 
@@ -76,7 +79,7 @@ function GalaDetails() {
   const gala = response?.data;
   const totalPrizePool =
     gala && 'totalPrizePool' in gala
-      ? (gala as any).totalPrizePool
+      ? (gala as { totalPrizePool: number }).totalPrizePool
       : (gala?.totalGalaValue ?? 0);
 
   useEffect(() => {
@@ -197,11 +200,7 @@ function GalaDetails() {
   };
 
   const handleDelete = async () => {
-    if (
-      !id ||
-      !globalThis.confirm('Are you sure you want to delete this gala?')
-    )
-      return;
+    if (!id || isDeleting) return;
     try {
       if (isAdmin) {
         await deleteAdminGala(id).unwrap();
@@ -209,6 +208,7 @@ function GalaDetails() {
         await deleteOrganiserGala(id).unwrap();
       }
       showToast.success('Gala deleted successfully!');
+      setDeletingId(null);
       navigate('/galas');
     } catch (error) {
       showToast.error(
@@ -263,7 +263,7 @@ function GalaDetails() {
           <button
             type="button"
             className="header-btn btn-danger-soft"
-            onClick={handleDelete}
+            onClick={() => setDeletingId(id ?? null)}
             disabled={isDeleting}
           >
             <Trash2 size={18} />
@@ -464,9 +464,9 @@ function GalaDetails() {
               Evening Program
             </h2>
             <div className="schedule-list">
-              {gala.eveningItems?.map((item, index) => (
+              {gala.eveningItems?.map((item) => (
                 <div
-                  key={`${item.time}-${item.title}-${index}`}
+                  key={`${item.time}-${item.title}`}
                   className="schedule-item"
                 >
                   <span className="item-time">{formatTime(item.time)}</span>
@@ -478,6 +478,65 @@ function GalaDetails() {
           </div>
         </div>
       </div>
+      <Modal
+        isOpen={Boolean(deletingId)}
+        onClose={() => setDeletingId(null)}
+        title="Delete Gala"
+        subtitle="Are you sure you want to delete this gala? All associated data will be permanently removed."
+        width="450px"
+        footer={
+          <div className="modal-actions-footer">
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={() => setDeletingId(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn-danger"
+              style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Gala Permanently'}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              backgroundColor: '#fee2e2',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}
+          >
+            <AlertTriangle size={32} color="#ef4444" />
+          </div>
+          <p style={{ color: '#4b5563', fontSize: '15px', lineHeight: '1.5' }}>
+            Warning: This will permanently delete <strong>{gala.name}</strong>{' '}
+            and all its linked grants and applications.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

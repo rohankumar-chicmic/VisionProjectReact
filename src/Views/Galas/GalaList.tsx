@@ -27,7 +27,7 @@ import {
   usePublishOrganiserGalaMutation,
   useUnpublishOrganiserGalaMutation,
 } from '../../Services/Api/module/Organiser/Gala';
-import { useCurrentUserRole } from '../../Shared/Auth/useCurrentUserRole';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import { GalaGridSkeleton } from './Components/GalaSkeletons';
 import DEFAULT_GALA_IMAGE from '../../assets/general-img-landscape.png';
 import showToast from '../../Shared/Utils/toast';
@@ -192,7 +192,9 @@ function GalaList() {
         if (isAdmin) {
           await publishAdminGala(id).unwrap();
         } else {
-          showToast.info('Please confirm the wallet transaction for your grants.');
+          showToast.info(
+            'Please confirm the wallet transaction for your grants.'
+          );
           const { transactionHash, walletAddress } =
             await createGrantPlatformTransaction();
 

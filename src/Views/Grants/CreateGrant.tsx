@@ -27,7 +27,7 @@ import {
 } from '../../Services/Api/module/Organiser/Grant';
 import { useGetOrganiserGalasQuery } from '../../Services/Api/module/Organiser/Gala';
 import { useGetOrganiserJuriesQuery } from '../../Services/Api/module/Organiser/Jury';
-import { useCurrentUserRole } from '../../Shared/Auth/useCurrentUserRole';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import showToast from '../../Shared/Utils/toast';
 import './CreateGrant.scss';
 
@@ -220,8 +220,8 @@ function CreateGrant() {
               })
             )
         );
-      } catch (error) {
-        console.error('Failed to restore linked grant draft', error);
+      } catch (error: unknown) {
+        // Silently handle draft restore error
       }
 
       return;
@@ -243,14 +243,20 @@ function CreateGrant() {
         grant.questions.map((q, idx) => ({
           ...q,
           id: idx + 1,
-          questionType: q.questionType as any,
+          questionType: q.questionType as
+            | 'LongText'
+            | 'Number'
+            | 'File'
+            | 'ShortText',
         })) || []
       );
       setRequirements(
-        (grant.requirements || []).map((r: any) => ({
-          text: r.text,
-          order: r.order,
-        }))
+        (grant.requirements || []).map(
+          (r: { text: string; order: number }) => ({
+            text: r.text,
+            order: r.order,
+          })
+        )
       );
       setRequireInterview(grant.requireInterview);
       setRequiredFields({
@@ -259,12 +265,14 @@ function CreateGrant() {
         motivationStatement: grant.requireMotivationStatement,
         businessPlan: grant.requireBusinessPlanDocument,
       });
-      setSelectedJuryIds(grant.juries?.map((j: any) => j.id) || []);
+      setSelectedJuryIds(grant.juries?.map((j: { id: string }) => j.id) || []);
       setPrizeWinners(
-        grant.prizeWinners?.map((winner: any) => ({
-          rank: winner.rank,
-          amount: winner.amount.toString(),
-        })) ||
+        grant.prizeWinners?.map(
+          (winner: { rank: number; amount: number | string }) => ({
+            rank: winner.rank,
+            amount: winner.amount.toString(),
+          })
+        ) ||
           Array.from({ length: grant.numberOfPrizes || 0 }, (_, index) => ({
             rank: index + 1,
             amount: grant.prizeAmount.toString(),
@@ -334,7 +342,7 @@ function CreateGrant() {
         ...r,
         order: idx,
       })),
-      galaEventId: isGalaBuilderMode ? undefined : galaEventId,
+      galaEventId,
       juryPanelSize: selectedJuryIds.length,
       prizeWinners: prizeWinners.map((winner) => ({
         rank: winner.rank,
@@ -375,19 +383,21 @@ function CreateGrant() {
         showToast.success('Grant linked to gala successfully.');
         navigate(returnTo);
         return;
-      } catch (error) {
+      } catch (error: unknown) {
         showToast.error('Failed to link grant to the gala draft.');
-        console.error(error);
         return;
       }
     }
 
     try {
       if (isEditMode) {
-        await updateGrant({ ...payload, id: id! } as any).unwrap();
+        await updateGrant({
+          ...payload,
+          id: id!,
+        }).unwrap();
         showToast.success('Grant updated successfully');
       } else {
-        await createGrant(payload as any).unwrap();
+        await createGrant(payload).unwrap();
         showToast.success('Grant created successfully');
       }
       navigate('/grants');
@@ -506,18 +516,21 @@ function CreateGrant() {
             </div>
             <div className="card-body">
               <div className="form-group">
-                <label htmlFor="grant-name">Grant Name *</label>
-                <input
-                  id="grant-name"
-                  type="text"
-                  placeholder="e.g., Innovation Technology Grant"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
+                <label htmlFor="grant-name">
+                  Grant Name *
+                  <input
+                    id="grant-name"
+                    type="text"
+                    placeholder="e.g., Innovation Technology Grant"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </label>
               </div>
 
-                <div className="form-group">
-                  <label htmlFor="associated-gala">Associated Gala *</label>
+              <div className="form-group">
+                <label htmlFor="associated-gala">
+                  Associated Gala *
                   <div className="select-with-info">
                     <select
                       id="associated-gala"
@@ -542,34 +555,39 @@ function CreateGrant() {
                       </span>
                     )}
                   </div>
-                </div>
-
-              <div className="form-group">
-                <label htmlFor="description">Description *</label>
-                <textarea
-                  id="description"
-                  placeholder="For businesses developing innovative technology solutions..."
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
+                </label>
               </div>
 
               <div className="form-group">
-                <label htmlFor="category">Category/Industry *</label>
-                <div className="custom-select">
-                  <select
-                    id="category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                  >
-                    <option value="Technology">Technology</option>
-                    <option value="Environment">Environment</option>
-                    <option value="Social Impact">Social Impact</option>
-                    <option value="Health">Health</option>
-                  </select>
-                  <ChevronDown className="select-arrow" size={18} />
-                </div>
+                <label htmlFor="description">
+                  Description *
+                  <textarea
+                    id="description"
+                    placeholder="For businesses developing innovative technology solutions..."
+                    rows={4}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="category">
+                  Category/Industry *
+                  <div className="custom-select">
+                    <select
+                      id="category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                    >
+                      <option value="Technology">Technology</option>
+                      <option value="Environment">Environment</option>
+                      <option value="Social Impact">Social Impact</option>
+                      <option value="Health">Health</option>
+                    </select>
+                    <ChevronDown className="select-arrow" size={18} />
+                  </div>
+                </label>
               </div>
             </div>
           </section>
@@ -667,45 +685,53 @@ function CreateGrant() {
             <div className="card-body">
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="prize-amount">Prize Amount *</label>
-                  <div className="input-with-icon">
-                    <span className="currency-symbol">$</span>
-                    <input
-                      id="prize-amount"
-                      type="number"
-                      placeholder="5,000"
-                      value={prizeAmount}
-                      onChange={(e) => handlePrizeAmountChange(e.target.value)}
-                    />
-                  </div>
+                  <label htmlFor="prize-amount">
+                    Prize Amount *
+                    <div className="input-with-icon">
+                      <span className="currency-symbol">$</span>
+                      <input
+                        id="prize-amount"
+                        type="number"
+                        placeholder="5,000"
+                        value={prizeAmount}
+                        onChange={(e) =>
+                          handlePrizeAmountChange(e.target.value)
+                        }
+                      />
+                    </div>
+                  </label>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="num-prizes">Number of Prizes *</label>
-                  <div className="input-with-icon">
-                    <Trophy size={18} />
-                    <input
-                      id="num-prizes"
-                      type="number"
-                      min="1"
-                      placeholder="e.g., 3"
-                      value={numberOfPrizes}
-                      onChange={(e) =>
-                        handleNumberOfPrizesChange(e.target.value)
-                      }
-                    />
-                  </div>
+                  <label htmlFor="num-prizes">
+                    Number of Prizes *
+                    <div className="input-with-icon">
+                      <Trophy size={18} />
+                      <input
+                        id="num-prizes"
+                        type="number"
+                        min="1"
+                        placeholder="e.g., 3"
+                        value={numberOfPrizes}
+                        onChange={(e) =>
+                          handleNumberOfPrizesChange(e.target.value)
+                        }
+                      />
+                    </div>
+                  </label>
                 </div>
                 <div className="form-group">
-                  <label htmlFor="deadline">Application Deadline *</label>
-                  <div className="input-with-icon">
-                    <Calendar size={18} />
-                    <input
-                      id="deadline"
-                      type="date"
-                      value={applicationDeadline}
-                      onChange={(e) => setApplicationDeadline(e.target.value)}
-                    />
-                  </div>
+                  <label htmlFor="deadline">
+                    Application Deadline *
+                    <div className="input-with-icon">
+                      <Calendar size={18} />
+                      <input
+                        id="deadline"
+                        type="date"
+                        value={applicationDeadline}
+                        onChange={(e) => setApplicationDeadline(e.target.value)}
+                      />
+                    </div>
+                  </label>
                 </div>
               </div>
 
@@ -728,22 +754,22 @@ function CreateGrant() {
                       <div key={winner.rank} className="prize-winner-item">
                         <label htmlFor={`prize-winner-${winner.rank}`}>
                           Rank {winner.rank}
+                          <div className="input-with-icon">
+                            <span className="currency-symbol">$</span>
+                            <input
+                              id={`prize-winner-${winner.rank}`}
+                              type="number"
+                              min="0"
+                              value={winner.amount}
+                              onChange={(e) =>
+                                handlePrizeWinnerAmountChange(
+                                  winner.rank,
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </div>
                         </label>
-                        <div className="input-with-icon">
-                          <span className="currency-symbol">$</span>
-                          <input
-                            id={`prize-winner-${winner.rank}`}
-                            type="number"
-                            min="0"
-                            value={winner.amount}
-                            onChange={(e) =>
-                              handlePrizeWinnerAmountChange(
-                                winner.rank,
-                                e.target.value
-                              )
-                            }
-                          />
-                        </div>
                       </div>
                     ))
                   ) : (
@@ -807,33 +833,27 @@ function CreateGrant() {
                   <h4>Require Interview</h4>
                   <p>Applicants must schedule an interview</p>
                 </div>
-                <div
+                <button
+                  type="button"
                   className={`toggle-switch ${requireInterview ? 'active' : ''}`}
                   onClick={() => setRequireInterview(!requireInterview)}
-                  onKeyDown={(e) =>
-                    e.key === 'Enter' && setRequireInterview(!requireInterview)
-                  }
                   role="switch"
                   aria-checked={requireInterview}
                   aria-label="Require Interview"
-                  tabIndex={0}
                 >
                   <div className="switch-handle" />
-                </div>
+                </button>
               </div>
 
               <div className="required-fields-section">
                 <h4>Required Application Fields</h4>
                 <div className="checkbox-grid">
-                  <div
+                  <button
+                    type="button"
                     className="checkbox-item"
                     onClick={() => toggleField('companyName')}
-                    onKeyDown={(e) =>
-                      e.key === 'Enter' && toggleField('companyName')
-                    }
                     role="checkbox"
                     aria-checked={requiredFields.companyName}
-                    tabIndex={0}
                   >
                     <div
                       className={`checkbox ${requiredFields.companyName ? 'checked' : ''}`}
@@ -843,16 +863,13 @@ function CreateGrant() {
                       )}
                     </div>
                     <span>Company Name</span>
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type="button"
                     className="checkbox-item"
                     onClick={() => toggleField('industrySelection')}
-                    onKeyDown={(e) =>
-                      e.key === 'Enter' && toggleField('industrySelection')
-                    }
                     role="checkbox"
                     aria-checked={requiredFields.industrySelection}
-                    tabIndex={0}
                   >
                     <div
                       className={`checkbox ${requiredFields.industrySelection ? 'checked' : ''}`}
@@ -862,16 +879,13 @@ function CreateGrant() {
                       )}
                     </div>
                     <span>Industry Selection</span>
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type="button"
                     className="checkbox-item"
                     onClick={() => toggleField('motivationStatement')}
-                    onKeyDown={(e) =>
-                      e.key === 'Enter' && toggleField('motivationStatement')
-                    }
                     role="checkbox"
                     aria-checked={requiredFields.motivationStatement}
-                    tabIndex={0}
                   >
                     <div
                       className={`checkbox ${requiredFields.motivationStatement ? 'checked' : ''}`}
@@ -881,16 +895,13 @@ function CreateGrant() {
                       )}
                     </div>
                     <span>Motivation Statement</span>
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type="button"
                     className="checkbox-item"
                     onClick={() => toggleField('businessPlan')}
-                    onKeyDown={(e) =>
-                      e.key === 'Enter' && toggleField('businessPlan')
-                    }
                     role="checkbox"
                     aria-checked={requiredFields.businessPlan}
-                    tabIndex={0}
                   >
                     <div
                       className={`checkbox ${requiredFields.businessPlan ? 'checked' : ''}`}
@@ -900,7 +911,7 @@ function CreateGrant() {
                       )}
                     </div>
                     <span>Business Plan Document</span>
-                  </div>
+                  </button>
                 </div>
               </div>
             </div>
@@ -916,7 +927,11 @@ function CreateGrant() {
                 <div className="jury-panel-picker">
                   <div className="jury-picker-row">
                     <div className="custom-select">
+                      <label htmlFor="jury-select" className="sr-only">
+                        Select Jury Member
+                      </label>
                       <select
+                        id="jury-select"
                         value={juryIdToAdd}
                         onChange={(e) => setJuryIdToAdd(e.target.value)}
                         disabled={

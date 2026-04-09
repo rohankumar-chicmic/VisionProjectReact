@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import {
   Mail,
   Phone,
@@ -40,7 +40,7 @@ function CreateJuryModal({
   initialValues = null,
 }: Readonly<CreateJuryModalProps>) {
   const {
-    control,
+    register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
@@ -122,23 +122,28 @@ function CreateJuryModal({
         onSubmit={handleSubmit(onFormSubmit)}
       >
         <div className="form-group mb-4">
-          <label htmlFor="fullName">Full Name *</label>
-          <div className="input-with-icon">
-            <User size={16} />
-            <Controller
-              name="fullName"
-              control={control}
-              rules={{ required: 'Full name is required' }}
-              render={({ field }) => (
-                <input
-                  {...field}
-                  id="fullName"
-                  type="text"
-                  placeholder="Enter full name"
-                />
-              )}
-            />
-          </div>
+          <label htmlFor="fullName" className="form-label">
+            Full Name *
+            <div className="input-with-icon">
+              <User size={16} />
+              {(() => {
+                const { name, onChange, onBlur, ref } = register('fullName', {
+                  required: 'Full name is required',
+                });
+                return (
+                  <input
+                    id="fullName"
+                    type="text"
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    ref={ref}
+                    placeholder="Enter full name"
+                  />
+                );
+              })()}
+            </div>
+          </label>
           {errors.fullName && (
             <span className="field-error">{errors.fullName.message}</span>
           )}
@@ -146,51 +151,60 @@ function CreateJuryModal({
 
         <div className="form-row half-grid mb-4">
           <div className="form-group">
-            <label htmlFor="email">Email Address *</label>
-            <div className="input-with-icon">
-              <Mail size={16} />
-              <Controller
-                name="email"
-                control={control}
-                rules={{
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address',
-                  },
-                }}
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    id="email"
-                    type="email"
-                    placeholder="jury@example.com"
-                  />
-                )}
-              />
-            </div>
+            <label htmlFor="email" className="form-label">
+              Email Address *
+              <div className="input-with-icon">
+                <Mail size={16} />
+                {(() => {
+                  const { name, onChange, onBlur, ref } = register('email', {
+                    required: 'Email is required',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Invalid email address',
+                    },
+                  });
+                  return (
+                    <input
+                      id="email"
+                      type="email"
+                      name={name}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      ref={ref}
+                      placeholder="jury@example.com"
+                    />
+                  );
+                })()}
+              </div>
+            </label>
             {errors.email && (
               <span className="field-error">{errors.email.message}</span>
             )}
           </div>
           <div className="form-group">
-            <label htmlFor="phoneNumber">Phone Number *</label>
-            <div className="input-with-icon">
-              <Phone size={16} />
-              <Controller
-                name="phoneNumber"
-                control={control}
-                rules={{ required: 'Phone number is required' }}
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    id="phoneNumber"
-                    type="tel"
-                    placeholder="+1 (555) 000-0000"
-                  />
-                )}
-              />
-            </div>
+            <label htmlFor="phoneNumber" className="form-label">
+              Phone Number *
+              <div className="input-with-icon">
+                <Phone size={16} />
+                {(() => {
+                  const { name, onChange, onBlur, ref } = register(
+                    'phoneNumber',
+                    { required: 'Phone number is required' }
+                  );
+                  return (
+                    <input
+                      id="phoneNumber"
+                      type="tel"
+                      name={name}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      ref={ref}
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  );
+                })()}
+              </div>
+            </label>
             {errors.phoneNumber && (
               <span className="field-error">{errors.phoneNumber.message}</span>
             )}
@@ -198,48 +212,63 @@ function CreateJuryModal({
         </div>
 
         <div className="form-group mb-4">
-          <label htmlFor="companyName">Company Name *</label>
-          <div className="input-with-icon">
-            <Building2 size={16} />
-            <Controller
-              name="companyName"
-              control={control}
-              rules={{ required: 'Company name is required' }}
-              render={({ field }) => (
-                <input
-                  {...field}
-                  id="companyName"
-                  type="text"
-                  placeholder="Enter company name"
-                />
-              )}
-            />
-          </div>
+          <label htmlFor="companyName" className="form-label">
+            Company Name *
+            <div className="input-with-icon">
+              <Building2 size={16} />
+              {(() => {
+                const { name, onChange, onBlur, ref } = register(
+                  'companyName',
+                  { required: 'Company name is required' }
+                );
+                return (
+                  <input
+                    id="companyName"
+                    type="text"
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    ref={ref}
+                    placeholder="Enter company name"
+                  />
+                );
+              })()}
+            </div>
+          </label>
           {errors.companyName && (
             <span className="field-error">{errors.companyName.message}</span>
           )}
         </div>
 
         <div className="form-group mb-4">
-          <label htmlFor="domainOfExpertise">Domain Of Expertise *</label>
-          <div className="input-with-icon">
-            <Briefcase size={16} />
-            <Controller
-              name="domainOfExpertise"
-              control={control}
-              rules={{ required: 'Please select a domain' }}
-              render={({ field }) => (
-                <select {...field} id="domainOfExpertise">
-                  <option value="">Select domain</option>
-                  {INDUSTRY_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              )}
-            />
-          </div>
+          <label htmlFor="domainOfExpertise" className="form-label">
+            Domain Of Expertise *
+            <div className="input-with-icon">
+              <Briefcase size={16} />
+              {(() => {
+                const { name, onChange, onBlur, ref } = register(
+                  'domainOfExpertise',
+                  { required: 'Please select a domain' }
+                );
+                return (
+                  <select
+                    id="domainOfExpertise"
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    ref={ref}
+                  >
+                    <option value="">Select domain</option>
+                    {INDUSTRY_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                );
+              })()}
+            </div>
+          </label>
           {errors.domainOfExpertise && (
             <span className="field-error">
               {errors.domainOfExpertise.message}
@@ -247,34 +276,37 @@ function CreateJuryModal({
           )}
         </div>
 
-        <div className="form-group">
-          <label htmlFor="password">Password *</label>
-          <div className="input-with-icon">
-            <Lock size={16} />
-            <Controller
-              name="password"
-              control={control}
-              rules={{
-                required: 'Password is required',
-                minLength: {
-                  value: 6,
-                  message: 'Password must be at least 8 characters',
-                },
-              }}
-              render={({ field }) => (
-                <input
-                  {...field}
-                  id="password"
-                  type="password"
-                  placeholder={
-                    initialValues
-                      ? 'Leave blank to keep current password'
-                      : 'Set account password'
-                  }
-                />
-              )}
-            />
-          </div>
+        <div className="form-group mb-4">
+          <label htmlFor="password" className="form-label">
+            Password *
+            <div className="input-with-icon">
+              <Lock size={16} />
+              {(() => {
+                const { name, onChange, onBlur, ref } = register('password', {
+                  required: !initialValues && 'Password is required',
+                  minLength: {
+                    value: 8,
+                    message: 'Password must be at least 8 characters',
+                  },
+                });
+                return (
+                  <input
+                    id="password"
+                    type="password"
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    ref={ref}
+                    placeholder={
+                      initialValues
+                        ? 'Leave blank to keep current password'
+                        : 'Set account password'
+                    }
+                  />
+                );
+              })()}
+            </div>
+          </label>
           {errors.password && (
             <span className="field-error">{errors.password.message}</span>
           )}

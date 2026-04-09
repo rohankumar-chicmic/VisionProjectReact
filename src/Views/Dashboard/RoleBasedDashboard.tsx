@@ -3,7 +3,7 @@ import JuryDashboard from './roles/Jury/JuryDashboard';
 import OrganiserDashboard from './roles/Organiser/OrganiserDashboard';
 import SubAdminDashboard from './roles/SubAdmin/SubAdminDashboard';
 import EmptyRoleState from './Components/EmptyRoleState';
-import { useCurrentUserRole } from '../../Shared/Auth/useCurrentUserRole';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import type { AppRole } from '../../Shared/Auth/roles';
 import './Dashboard.scss';
 import './RoleBasedDashboard.scss';

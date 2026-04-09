@@ -29,7 +29,6 @@ function BlockUserModal({
       );
       onClose();
     } catch (error) {
-      console.error('Failed to update block status:', error);
       showToast.error(`Failed to ${isBlocked ? 'unblock' : 'block'} user`);
     }
   };
@@ -97,7 +96,7 @@ function BlockUserModal({
         {!isBlocked && (
           <>
             <div className="form-group no-margin">
-              <label htmlFor="block-message">
+              <label htmlFor="block-message" className="form-label">
                 <span>Message to send to user</span>
                 <p className="field-hint">
                   This message will be sent by email and SMS to the user
@@ -111,7 +110,7 @@ function BlockUserModal({
             </div>
 
             <div className="form-group">
-              <label htmlFor="block-reason">
+              <label htmlFor="block-reason" className="form-label">
                 <span>Reason for block</span>
                 <div className="select-wrapper">
                   <select id="block-reason">

@@ -12,12 +12,11 @@ function AdminDashboard() {
   const { setTitle, setSubtitle, resetHeader } = useHeader();
   const { data: dashboardResponse, isLoading: isStatsLoading } =
     useGetDashboardDataQuery();
-  const { data: galaResponse, isLoading: isGalaLoading } = useGetAdminGalasQuery(
-    {
+  const { data: galaResponse, isLoading: isGalaLoading } =
+    useGetAdminGalasQuery({
       pageNumber: 1,
       pageSize: 4,
-    }
-  );
+    });
   const { data: userResponse, isLoading: isUserLoading } =
     useGetAdminUsersQuery({
       pageNumber: 1,

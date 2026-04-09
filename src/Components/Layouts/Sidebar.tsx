@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useLogoutAdminMutation } from '../../Services/Api/module/AuthApi';
+import { useLogoutAdminMutation } from '../../Services/Api/module/Auth';
 import { clearAuthTokenRedux } from '../../Store/Common';
 import { RootState } from '../../Store';
 import LogoutModal from '../Molecule/LogoutModal/LogoutModal';

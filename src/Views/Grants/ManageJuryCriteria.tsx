@@ -61,21 +61,21 @@ const ManageJuryCriteria: React.FC = () => {
       title: 'Social & Environmental',
       criteria: [
         {
-          id: '5',
+          id: '12',
           name: 'Social Impact',
           description: 'Positive community contribution',
           selected: false,
           scoreRange: '0 - 10',
         },
         {
-          id: '6',
+          id: '13',
           name: 'Environmental Responsibility',
           description: 'Eco-friendly practices',
           selected: false,
           scoreRange: '0 - 10',
         },
         {
-          id: '7',
+          id: '14',
           name: 'Community Engagement',
           description: 'Local involvement and outreach',
           selected: false,
@@ -87,21 +87,21 @@ const ManageJuryCriteria: React.FC = () => {
       title: 'Team & Leadership',
       criteria: [
         {
-          id: '8',
+          id: '5',
           name: 'Team Experience',
           description: 'Relevant skills and background',
           selected: true,
           scoreRange: '0 - 10',
         },
         {
-          id: '9',
+          id: '6',
           name: 'Leadership Quality',
           description: "Founder's vision and drive",
           selected: false,
           scoreRange: '0 - 10',
         },
         {
-          id: '10',
+          id: '7',
           name: 'Team Diversity',
           description: 'Complementary team skills',
           selected: false,
@@ -113,28 +113,28 @@ const ManageJuryCriteria: React.FC = () => {
       title: 'Innovation & Technology',
       criteria: [
         {
-          id: '11',
+          id: '8',
           name: 'Innovation Level',
           description: 'Uniqueness of the solution',
           selected: true,
           scoreRange: '0 - 10',
         },
         {
-          id: '12',
+          id: '9',
           name: 'Technical Feasibility',
           description: 'Can the solution actually be built?',
           selected: false,
           scoreRange: '0 - 10',
         },
         {
-          id: '13',
+          id: '10',
           name: 'Scalability',
           description: 'Growth beyond initial market',
           selected: false,
           scoreRange: '0 - 10',
         },
         {
-          id: '14',
+          id: '11',
           name: 'Competitive Advantage',
           description: 'Differentiation from competitors',
           selected: false,

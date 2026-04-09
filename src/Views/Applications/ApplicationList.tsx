@@ -11,18 +11,26 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
-import { useGetAdminApplicationsQuery } from '../../Services/Api/module/AdminApi';
+import { useGetAdminApplicationsQuery } from '../../Services/Api/module/Admin/Application';
 import Skeleton from '../../Components/Shared/Skeleton';
 import './ApplicationList.scss';
 
 const getStatusDetails = (status: number) => {
   switch (status) {
     case 1:
-      return { label: 'Pending', class: 'pending' };
+      return { label: 'Draft', class: 'draft' };
     case 2:
-      return { label: 'Approved', class: 'approved' };
+      return { label: 'Pending', class: 'pending' };
     case 3:
+      return { label: 'In Review', class: 'in-review' };
+    case 4:
+      return { label: 'Approved', class: 'approved' };
+    case 5:
       return { label: 'Rejected', class: 'rejected' };
+    case 6:
+      return { label: 'Winner', class: 'winner' };
+    case 7:
+      return { label: 'Interview', class: 'interview' };
     default:
       return { label: 'Unknown', class: '' };
   }
@@ -51,13 +59,17 @@ function ApplicationList() {
   const getStatusFromTab = (tab: string) => {
     switch (tab) {
       case 'Pending':
-        return 1;
-      case 'Approved':
         return 2;
-      case 'Rejected':
+      case 'In Review':
         return 3;
-      case 'Past Events':
+      case 'Approved':
         return 4;
+      case 'Rejected':
+        return 5;
+      case 'Winners':
+        return 6;
+      case 'Interview':
+        return 7;
       default:
         return undefined;
     }
@@ -85,9 +97,11 @@ function ApplicationList() {
   const tabs = [
     { label: 'All', count: totalCount },
     { label: 'Pending', count: 43 },
+    { label: 'In Review', count: 12 },
     { label: 'Approved', count: 122 },
     { label: 'Rejected', count: 22 },
-    { label: 'Past Events', count: 15 },
+    { label: 'Interview', count: 8 },
+    { label: 'Winners', count: 5 },
   ];
 
   const getScoreClass = (score: number) => {
@@ -255,7 +269,7 @@ function ApplicationList() {
                       </td>
                       <td>
                         <div className="action-buttons">
-                          {app.status === 1 && (
+                          {app.status === 2 && (
                             <>
                               <button type="button" className="btn-approve">
                                 <CheckCircle2 size={16} />

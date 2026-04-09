@@ -9,8 +9,8 @@ import {
   useLoginJuryMutation,
   useForgotPasswordMutation,
   useRegisterOrganiserMutation,
-} from '../../../Services/Api/module/AuthApi';
-import { useUploadFileMutation } from '../../../Services/Api/module/CommonApi';
+} from '../../../Services/Api/module/Auth';
+import { useUploadFileMutation } from '../../../Services/Api/module/Common';
 import { updateAuthTokenRedux } from '../../../Store/Common';
 import type { AppDispatch } from '../../../Store';
 import {
@@ -103,7 +103,6 @@ export const useLoginForm = () => {
 
             user,
             role: data.role,
-
           })
         );
         // console.log(user);

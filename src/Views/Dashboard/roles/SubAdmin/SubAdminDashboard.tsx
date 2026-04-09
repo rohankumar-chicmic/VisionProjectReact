@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import { useHeader } from '../../../../Shared/Context/HeaderContext';
-import {
-  useGetAdminApplicationsQuery,
-  useGetAdminUserDashboardQuery,
-} from '../../../../Services/Api/module/AdminApi';
+import { useGetAdminUserDashboardQuery } from '../../../../Services/Api/module/Admin/User';
+import { useGetAdminApplicationsQuery } from '../../../../Services/Api/module/Admin/Application';
 import SubAdminSummary from './components/SubAdminSummary';
 import RecentApplicationsTable from './components/RecentApplicationsTable';
 import OperationsPanel from './components/OperationsPanel';
@@ -17,7 +15,9 @@ function SubAdminDashboard() {
 
   useEffect(() => {
     setTitle('Sub Admin Dashboard');
-    setSubtitle('Daily moderation, operational follow-up, and queue visibility');
+    setSubtitle(
+      'Daily moderation, operational follow-up, and queue visibility'
+    );
     return () => resetHeader();
   }, [resetHeader, setSubtitle, setTitle]);
 

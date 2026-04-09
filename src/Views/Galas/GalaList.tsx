@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Search,
-  Filter,
   ArrowUpDown,
   Calendar,
   Clock,
@@ -10,50 +9,136 @@ import {
   Send,
   Trash2,
   EyeOff,
-  Eye,
   Plus,
+  ChevronDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './GalaList.scss';
 import { HeaderActions, useHeader } from '../../Shared/Context/HeaderContext';
 import {
-  useGetGalasQuery,
-  usePublishGalaMutation,
-  useUnpublishGalaMutation,
-  useDeleteGalaMutation,
-} from '../../Services/Api/module/GalaApi';
+  useGetAdminGalasQuery,
+  usePublishAdminGalaMutation,
+  useUnpublishAdminGalaMutation,
+  useDeleteAdminGalaMutation,
+} from '../../Services/Api/module/Admin/Gala';
+import {
+  useDeleteOrganiserGalaMutation,
+  useGetOrganiserGalasQuery,
+  usePublishOrganiserGalaMutation,
+  useUnpublishOrganiserGalaMutation,
+} from '../../Services/Api/module/Organiser/Gala';
+import { useCurrentUserRole } from '../../Shared/Auth/useCurrentUserRole';
 import { GalaGridSkeleton } from './Components/GalaSkeletons';
 import DEFAULT_GALA_IMAGE from '../../assets/general-img-landscape.png';
+import showToast from '../../Shared/Utils/toast';
+import { createGrantPlatformTransaction } from '../../Services/WalletConnect';
+
+type GalaSortOption = 'latest' | 'oldest' | 'name-asc' | 'name-desc';
+
+const PAGE_SIZE = 10;
+const SEARCH_DEBOUNCE_MS = 300;
 
 function GalaList() {
   const { setTitle, setSubtitle, setBackAction } = useHeader();
   const navigate = useNavigate();
-
-  // API State
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [status, setStatus] = useState<number | undefined>(undefined);
+  const [sortOption, setSortOption] = useState<GalaSortOption>('latest');
   const [pageNumber] = useState(1);
 
-  const { data: response, isLoading } = useGetGalasQuery({
-    searchTerm: searchTerm || undefined,
-    status,
-    pageNumber,
-    pageSize: 10,
-  });
+  const { role } = useCurrentUserRole();
+  const isAdmin = role === 'admin' || role === 'sub_admin';
+  const isOrganiser = role === 'organiser';
 
-  const [publishGala, { isLoading: isPublishing }] = usePublishGalaMutation();
-  const [unpublishGala, { isLoading: isUnpublishing }] =
-    useUnpublishGalaMutation();
-  const [deleteGala, { isLoading: isDeleting }] = useDeleteGalaMutation();
+  useEffect(() => {
+    const timer = globalThis.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, SEARCH_DEBOUNCE_MS);
 
-  const galas = response?.data?.items ?? [];
-  const totalCount = response?.data?.totalCount ?? 0;
+    return () => globalThis.clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     setTitle('Gala Management');
-    setSubtitle('Manage and announce your gala events');
+    setSubtitle('Create, edit and manage all galas');
     setBackAction(false);
   }, [setTitle, setSubtitle, setBackAction]);
+
+  const queryParams = useMemo(() => {
+    const sortMap: Record<
+      GalaSortOption,
+      { sortBy: string; sortOrder: string }
+    > = {
+      latest: { sortBy: 'eventDate', sortOrder: 'desc' },
+      oldest: { sortBy: 'eventDate', sortOrder: 'asc' },
+      'name-asc': { sortBy: 'name', sortOrder: 'asc' },
+      'name-desc': { sortBy: 'name', sortOrder: 'desc' },
+    };
+
+    return {
+      searchTerm: debouncedSearchTerm || undefined,
+      status,
+      pageNumber,
+      pageSize: PAGE_SIZE,
+      ...sortMap[sortOption],
+    };
+  }, [debouncedSearchTerm, pageNumber, sortOption, status]);
+
+  const { data: adminResponse, isLoading: isAdminLoading } =
+    useGetAdminGalasQuery(queryParams, { skip: !isAdmin });
+
+  const { data: organiserResponse, isLoading: isOrganiserLoading } =
+    useGetOrganiserGalasQuery(queryParams, { skip: !isOrganiser });
+
+  const response = isAdmin ? adminResponse : organiserResponse;
+  const isLoading = isAdmin ? isAdminLoading : isOrganiserLoading;
+
+  const [publishAdminGala, { isLoading: isPublishingAdmin }] =
+    usePublishAdminGalaMutation();
+  const [publishOrganiserGala, { isLoading: isPublishingOrganiser }] =
+    usePublishOrganiserGalaMutation();
+  const [unpublishAdminGala, { isLoading: isUnpublishingAdmin }] =
+    useUnpublishAdminGalaMutation();
+  const [unpublishOrganiserGala, { isLoading: isUnpublishingOrganiser }] =
+    useUnpublishOrganiserGalaMutation();
+  const [deleteAdminGala, { isLoading: isDeletingAdmin }] =
+    useDeleteAdminGalaMutation();
+  const [deleteOrganiserGala, { isLoading: isDeletingOrganiser }] =
+    useDeleteOrganiserGalaMutation();
+  const isPublishing = isAdmin ? isPublishingAdmin : isPublishingOrganiser;
+  const isUnpublishing = isAdmin
+    ? isUnpublishingAdmin
+    : isUnpublishingOrganiser;
+  const isDeleting = isAdmin ? isDeletingAdmin : isDeletingOrganiser;
+
+  const galas = useMemo(() => {
+    const items = response?.data?.items ?? [];
+
+    return [...items].sort((first, second) => {
+      if (sortOption === 'name-asc') {
+        return first.name.localeCompare(second.name);
+      }
+
+      if (sortOption === 'name-desc') {
+        return second.name.localeCompare(first.name);
+      }
+
+      const firstDate = new Date(first.eventDate).getTime();
+      const secondDate = new Date(second.eventDate).getTime();
+
+      if (Number.isNaN(firstDate) || Number.isNaN(secondDate)) {
+        return 0;
+      }
+
+      return sortOption === 'oldest'
+        ? firstDate - secondDate
+        : secondDate - firstDate;
+    });
+  }, [response?.data?.items, sortOption]);
+
+  const totalCount = response?.data?.totalCount ?? 0;
+  const isEmpty = !isLoading && galas.length === 0;
 
   const formatDate = (dateString: string) => {
     try {
@@ -72,15 +157,15 @@ function GalaList() {
       case 1:
         return { label: 'Draft', class: 'draft' };
       case 2:
-        return { label: 'Active', class: 'active' };
+        return { label: 'Upcoming', class: 'upcoming' };
       case 3:
+        return { label: 'Active', class: 'active' };
+      case 4:
         return { label: 'Completed', class: 'completed' };
       default:
         return { label: 'Unknown', class: 'unknown' };
     }
   };
-
-  const isEmpty = !isLoading && galas.length === 0;
 
   const getGalaImage = (url?: string) => {
     if (url?.startsWith('http')) return url;
@@ -88,28 +173,59 @@ function GalaList() {
   };
 
   const getEmptyMessage = () => {
-    if (!searchTerm) return 'Start by creating your first gala event.';
-    return `No results for "${searchTerm}"`;
+    if (!debouncedSearchTerm) return 'Start by creating your first gala event.';
+    return `No results for "${debouncedSearchTerm}"`;
   };
 
   const handleAction = async (
     id: string,
     action: 'publish' | 'unpublish' | 'delete'
   ) => {
+    const successMessages = {
+      publish: 'Gala published successfully.',
+      unpublish: 'Gala unpublished successfully.',
+      delete: 'Gala deleted successfully.',
+    };
+
     try {
       if (action === 'publish') {
-        await publishGala(id).unwrap();
+        if (isAdmin) {
+          await publishAdminGala(id).unwrap();
+        } else {
+          showToast.info('Please confirm the wallet transaction for your grants.');
+          const { transactionHash, walletAddress } =
+            await createGrantPlatformTransaction();
+
+          await publishOrganiserGala({
+            id,
+            body: {
+              blockchainTransactionHash: transactionHash,
+              organiserWalletAddress: walletAddress,
+            },
+          }).unwrap();
+        }
       } else if (action === 'unpublish') {
-        await unpublishGala(id).unwrap();
-      } else if (action === 'delete') {
+        if (isAdmin) {
+          await unpublishAdminGala(id).unwrap();
+        } else {
+          await unpublishOrganiserGala(id).unwrap();
+        }
+      } else {
         // eslint-disable-next-line no-alert
-        if (globalThis.confirm('Are you sure you want to delete this gala?')) {
-          await deleteGala(id).unwrap();
+        if (!globalThis.confirm('Are you sure you want to delete this gala?')) {
+          return;
+        }
+
+        if (isAdmin) {
+          await deleteAdminGala(id).unwrap();
+        } else {
+          await deleteOrganiserGala(id).unwrap();
         }
       }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(`Failed to ${action} gala:`, err);
+
+      showToast.success(successMessages[action]);
+    } catch {
+      showToast.error(`Unable to ${action} this gala right now.`);
     }
   };
 
@@ -134,9 +250,14 @@ function GalaList() {
       <div className="gala-grid">
         {galas.map((gala) => {
           const statusDisplay = getStatusDisplay(gala.status);
+
           return (
             <div key={gala.id} className="gala-card">
-              <div className="gala-image">
+              <button
+                type="button"
+                className="gala-image"
+                onClick={() => navigate(`/galas/${gala.id}`)}
+              >
                 <img
                   src={getGalaImage(gala.coverImageUrl)}
                   alt={gala.name}
@@ -147,15 +268,24 @@ function GalaList() {
                     }
                   }}
                 />
-                <div className={`status-tag ${statusDisplay.class}`}>
-                  <div className="dot" />
-                  {statusDisplay.label}
-                </div>
-              </div>
+              </button>
 
               <div className="gala-content">
                 <div className="gala-info">
-                  <h3 className="gala-title">{gala.name}</h3>
+                  <div className="gala-top-row">
+                    <button
+                      type="button"
+                      className="gala-title-button"
+                      onClick={() => navigate(`/galas/${gala.id}`)}
+                    >
+                      <h3 className="gala-title">{gala.name}</h3>
+                    </button>
+                    <div className={`status-tag ${statusDisplay.class}`}>
+                      <div className="dot" />
+                      {statusDisplay.label}
+                    </div>
+                  </div>
+
                   <p className="gala-description">{gala.about}</p>
 
                   <div className="gala-meta">
@@ -175,15 +305,6 @@ function GalaList() {
                 </div>
 
                 <div className="gala-actions">
-                  <button
-                    type="button"
-                    className="action-btn view"
-                    onClick={() => navigate(`/galas/${gala.id}`)}
-                  >
-                    <Eye size={16} />
-                    <span>View Details</span>
-                  </button>
-
                   <button
                     type="button"
                     className="action-btn edit"
@@ -208,6 +329,18 @@ function GalaList() {
                   {gala.status === 2 && (
                     <button
                       type="button"
+                      className="action-btn publish"
+                      onClick={() => handleAction(gala.id, 'publish')}
+                      disabled={isPublishing}
+                    >
+                      <Send size={16} />
+                      <span>{isPublishing ? 'Starting...' : 'Go Live'}</span>
+                    </button>
+                  )}
+
+                  {gala.status === 3 && (
+                    <button
+                      type="button"
                       className="action-btn unpublish"
                       onClick={() => handleAction(gala.id, 'unpublish')}
                       disabled={isUnpublishing}
@@ -219,7 +352,7 @@ function GalaList() {
                     </button>
                   )}
 
-                  {gala.status === 3 && (
+                  {gala.status === 4 && (
                     <button
                       type="button"
                       className="action-btn delete"
@@ -263,9 +396,11 @@ function GalaList() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+
           <div className="filter-group">
             <div className="filter-select">
               <select
+                aria-label="Filter galas by status"
                 value={status ?? ''}
                 onChange={(e) =>
                   setStatus(
@@ -275,14 +410,27 @@ function GalaList() {
               >
                 <option value="">All Status</option>
                 <option value="1">Draft</option>
-                <option value="2">Active</option>
-                <option value="3">Completed</option>
+                <option value="2">Upcoming</option>
+                <option value="3">Active</option>
+                <option value="4">Completed</option>
               </select>
-              <Filter size={16} />
+              <ChevronDown size={16} />
             </div>
+
             <div className="filter-select sort">
               <ArrowUpDown size={16} />
-              <span>Sort</span>
+              <select
+                aria-label="Sort galas"
+                value={sortOption}
+                onChange={(e) =>
+                  setSortOption(e.target.value as GalaSortOption)
+                }
+              >
+                <option value="latest">Latest</option>
+                <option value="oldest">Oldest</option>
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+              </select>
             </div>
           </div>
         </div>
@@ -290,10 +438,10 @@ function GalaList() {
 
       {renderContent()}
 
-      {!isLoading && totalCount > 10 && (
+      {!isLoading && totalCount > PAGE_SIZE && (
         <div className="pagination">
           <p>
-            Showing {galas.length} of {totalCount} Galas
+            Showing {galas.length} of {totalCount} galas
           </p>
         </div>
       )}

@@ -12,7 +12,7 @@ import {
   Send,
 } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
-import { useGetAdminUserByIdQuery } from '../../Services/Api/module/AdminApi';
+import { useGetAdminUserByIdQuery } from '../../Services/Api/module/Admin/User';
 import Skeleton from '../../Components/Shared/Skeleton';
 import BlockUserModal from './Components/BlockUserModal';
 import EditUserModal from './Components/EditUserModal';

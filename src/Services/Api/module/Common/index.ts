@@ -40,7 +40,7 @@ export interface FileUploadResponse {
 
 export const commonApi = api.injectEndpoints({
   endpoints: (build) => ({
-    GetDashboardData: build.query<DashboardResponse, void>({
+    getDashboardData: build.query<DashboardResponse, void>({
       query: () => ({
         url: '/api/v1/admin/dashboard/stats',
         method: 'GET',

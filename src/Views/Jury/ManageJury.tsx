@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Search,
   Plus,
@@ -10,64 +10,49 @@ import {
   Edit2,
   Trash2,
   UserPlus,
+  Loader2,
 } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import Table, { Column } from '../../Components/Atom/Table/Table';
 import CreateJuryModal from './Components/CreateJuryModal';
+import {
+  useCreateOrganiserJuryMutation,
+  useDeleteOrganiserJuryMutation,
+  useGetOrganiserJuriesQuery,
+  useUpdateOrganiserJuryMutation,
+  type CreateOrganiserJuryRequest,
+  type OrganiserJuryMember,
+} from '../../Services/Api/module/Organiser/Jury';
+import showToast from '../../Shared/Utils/toast';
 import './ManageJury.scss';
-
-export interface JuryMember {
-  id: string;
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  companyName: string;
-  industryType: string;
-  password?: string;
-  createdAt: string;
-}
-
-const MOCK_JURY: JuryMember[] = [
-  {
-    id: '1',
-    fullName: 'Alex Rivera',
-    email: 'alex.rivera@techventure.com',
-    phoneNumber: '+1 (555) 0123',
-    companyName: 'TechVenture Partners',
-    industryType: 'Technology',
-    createdAt: '2024-03-15T10:00:00Z',
-  },
-  {
-    id: '2',
-    fullName: 'Sarah Chen',
-    email: 'sarah.c@healthinnovate.org',
-    phoneNumber: '+1 (555) 0456',
-    companyName: 'HealthInnovate',
-    industryType: 'Health',
-    createdAt: '2024-03-18T14:30:00Z',
-  },
-  {
-    id: '3',
-    fullName: 'Marcus Thorne',
-    email: 'm.thorne@buildright.net',
-    phoneNumber: '+1 (555) 0890',
-    companyName: 'BuildRight Construction',
-    industryType: 'Construction',
-    createdAt: '2024-03-20T09:15:00Z',
-  },
-];
 
 function ManageJury() {
   const { setTitle, setSubtitle, resetHeader } = useHeader();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [juryList, setJuryList] = useState<JuryMember[]>(MOCK_JURY);
+  const [editingJury, setEditingJury] = useState<OrganiserJuryMember | null>(
+    null
+  );
+  const {
+    data: juryResponse,
+    isLoading,
+    isFetching,
+  } = useGetOrganiserJuriesQuery();
+  const [createJury] = useCreateOrganiserJuryMutation();
+  const [updateJury] = useUpdateOrganiserJuryMutation();
+  const [deleteJury, { isLoading: isDeleting }] =
+    useDeleteOrganiserJuryMutation();
 
-  useMemo(() => {
+  useEffect(() => {
     setTitle('Manage Jury');
     setSubtitle('View and manage jury members for your programs');
     return () => resetHeader();
   }, [setTitle, setSubtitle, resetHeader]);
+
+  const juryList = useMemo(
+    () => juryResponse?.data ?? [],
+    [juryResponse?.data]
+  );
 
   const filteredJury = useMemo(() => {
     return juryList.filter(
@@ -78,27 +63,64 @@ function ManageJury() {
     );
   }, [juryList, searchTerm]);
 
-  const handleCreateJury = (newJury: Omit<JuryMember, 'id' | 'createdAt'>) => {
-    const member: JuryMember = {
-      ...newJury,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-    };
-    setJuryList((prev) => [member, ...prev]);
-    setIsModalOpen(false);
+  const handleCreateOrUpdateJury = async (
+    juryData: CreateOrganiserJuryRequest
+  ) => {
+    try {
+      if (editingJury) {
+        const payload = {
+          id: editingJury.id,
+          ...juryData,
+          password: juryData.password || 'unchanged-password',
+        };
+        await updateJury(payload).unwrap();
+        showToast.success('Jury member updated successfully');
+      } else {
+        await createJury(juryData).unwrap();
+        showToast.success('Jury member created successfully');
+      }
+
+      setIsModalOpen(false);
+      setEditingJury(null);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to save jury member';
+      showToast.error(message);
+    }
   };
 
-  const columns: Column<JuryMember>[] = [
+  const handleDeleteJury = async (juryId: string) => {
+    if (
+      isDeleting ||
+      !globalThis.confirm('Are you sure you want to delete this jury member?')
+    ) {
+      return;
+    }
+
+    try {
+      await deleteJury(juryId).unwrap();
+      showToast.success('Jury member deleted successfully');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to delete jury member';
+      showToast.error(message);
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingJury(null);
+    setIsModalOpen(true);
+  };
+
+  const columns: Column<OrganiserJuryMember>[] = [
     {
       header: 'Jury Member',
       accessor: (jury) => (
         <div className="jury-user-cell">
-          <div className="avatar-circle">
-            {jury.fullName.charAt(0)}
-          </div>
+          <div className="avatar-circle">{jury.fullName.charAt(0)}</div>
           <div className="user-details">
             <span className="name">{jury.fullName}</span>
-            <span className="date">Added {new Date(jury.createdAt).toLocaleDateString()}</span>
+            <span className="date">{jury.domainOfExpertise}</span>
           </div>
         </div>
       ),
@@ -128,19 +150,33 @@ function ManageJury() {
           </div>
           <div className="industry-badge">
             <Briefcase size={12} />
-            <span>{jury.industryType}</span>
+            <span>{jury.domainOfExpertise}</span>
           </div>
         </div>
       ),
     },
     {
       header: 'Actions',
-      accessor: () => (
+      accessor: (jury) => (
         <div className="table-actions">
-          <button type="button" className="action-btn edit" title="Edit">
+          <button
+            type="button"
+            className="action-btn edit"
+            title="Edit"
+            onClick={() => {
+              setEditingJury(jury);
+              setIsModalOpen(true);
+            }}
+          >
             <Edit2 size={16} />
           </button>
-          <button type="button" className="action-btn delete" title="Delete">
+          <button
+            type="button"
+            className="action-btn delete"
+            title="Delete"
+            onClick={() => handleDeleteJury(jury.id)}
+            disabled={isDeleting}
+          >
             <Trash2 size={16} />
           </button>
           <button type="button" className="action-btn more">
@@ -157,7 +193,7 @@ function ManageJury() {
         <button
           type="button"
           className="header-btn btn-primary"
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
         >
           <UserPlus size={18} />
           <span>Invite New Jury</span>
@@ -190,18 +226,29 @@ function ManageJury() {
         </div>
 
         <div className="table-wrapper">
-          <Table<JuryMember>
+          {isFetching && !juryList.length ? (
+            <div className="jury-loading-state">
+              <Loader2 className="spin" size={22} />
+              <span>Loading jury members...</span>
+            </div>
+          ) : (
+            <Table<OrganiserJuryMember>
             columns={columns}
             data={filteredJury}
-            isLoading={false}
+            isLoading={isLoading}
           />
+          )}
         </div>
       </div>
 
       <CreateJuryModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleCreateJury}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingJury(null);
+        }}
+        onSubmit={handleCreateOrUpdateJury}
+        initialValues={editingJury}
       />
     </div>
   );

@@ -3,7 +3,9 @@ import type { RootState } from '../../Store';
 import { getRoleLabel, getUserRole, AppRole } from './roles';
 
 export const useCurrentUserRole = () => {
-  const { user, role: storedRole } = useSelector((state: RootState) => state.common);
+  const { user, role: storedRole } = useSelector(
+    (state: RootState) => state.common
+  );
   const role = (storedRole || getUserRole(user)) as AppRole;
 
   return {

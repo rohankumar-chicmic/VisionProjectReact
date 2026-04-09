@@ -1,6 +1,6 @@
 import { Slash, ChevronDown, RefreshCcw } from 'lucide-react';
 import Modal from '../../../Components/Atom/Modal/Modal';
-import { useBlockUserMutation } from '../../../Services/Api/module/AdminApi';
+import { useBlockUserMutation } from '../../../Services/Api/module/Admin/User';
 import showToast from '../../../Shared/Utils/toast';
 import './UserModals.scss';
 
@@ -29,6 +29,7 @@ function BlockUserModal({
       );
       onClose();
     } catch (error) {
+      console.error('Failed to update block status:', error);
       showToast.error(`Failed to ${isBlocked ? 'unblock' : 'block'} user`);
     }
   };

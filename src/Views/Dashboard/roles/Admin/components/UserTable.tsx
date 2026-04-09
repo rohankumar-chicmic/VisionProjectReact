@@ -1,5 +1,5 @@
 import Table, { type Column } from '../../../../../Components/Atom/Table/Table';
-import type { AdminUser } from '../../../../../Services/Api/module/AdminApi';
+import type { AdminUser } from '../../../../../Services/Api/module/Admin/User';
 
 interface UserTableProps {
   data: AdminUser[];

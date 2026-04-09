@@ -170,7 +170,6 @@ function Login() {
           </div>
         )}
 
-
         <p className="auth-footer">
           © 2024 Vision PME (Gala Management System). All rights reserved.
         </p>

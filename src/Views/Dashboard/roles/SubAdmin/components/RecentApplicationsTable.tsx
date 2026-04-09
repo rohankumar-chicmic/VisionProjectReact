@@ -1,5 +1,5 @@
 import Table, { type Column } from '../../../../../Components/Atom/Table/Table';
-import type { AdminApplication } from '../../../../../Services/Api/module/AdminApi';
+import type { AdminApplication } from '../../../../../Services/Api/module/Admin/Application';
 
 interface RecentApplicationsTableProps {
   data: AdminApplication[];
@@ -12,7 +12,8 @@ const columns: Column<AdminApplication>[] = [
   { header: 'Grant', accessor: 'grantName' },
   {
     header: 'Score',
-    accessor: (item) => (item.juryScore ? item.juryScore.toFixed(1) : 'Pending'),
+    accessor: (item) =>
+      item.juryScore ? item.juryScore.toFixed(1) : 'Pending',
   },
 ];
 

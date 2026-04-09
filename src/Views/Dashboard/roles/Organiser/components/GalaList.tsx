@@ -1,5 +1,5 @@
 import Table, { type Column } from '../../../../../Components/Atom/Table/Table';
-import type { GalaItem } from '../../../../../Services/Api/module/GalaApi';
+import type { GalaItem } from '../../../../../Services/Api/module/Organiser/Gala';
 
 interface OrganiserGalaListProps {
   data: GalaItem[];
@@ -10,7 +10,10 @@ const columns: Column<GalaItem>[] = [
   { header: 'Gala', accessor: 'name' },
   {
     header: 'Venue',
-    accessor: (item) => `${item.venue}${item.city ? `, ${item.city}` : ''}`,
+    accessor: (item) => {
+      const cityPrefix = item.city ? `, ${item.city}` : '';
+      return `${item.venue}${cityPrefix}`;
+    },
   },
   {
     header: 'Date',
@@ -18,7 +21,7 @@ const columns: Column<GalaItem>[] = [
   },
   {
     header: 'Prize Pool',
-    accessor: (item) => `$${item.totalPrizePool.toLocaleString()}`,
+    accessor: (item) => `$${(item.totalGalaValue ?? 0).toLocaleString()}`,
   },
 ];
 

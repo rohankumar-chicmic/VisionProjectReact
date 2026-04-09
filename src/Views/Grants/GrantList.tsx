@@ -18,14 +18,20 @@ import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import KpiCard from '../../Components/Shared/KpiCard';
 import {
-  useGetGrantsQuery,
-  useGetGrantsSummaryQuery,
-  useDeleteGrantMutation,
-} from '../../Services/Api/module/GrantsApi';
+  useGetAdminGrantsQuery,
+  useGetAdminGrantsSummaryQuery,
+  useDeleteAdminGrantMutation,
+} from '../../Services/Api/module/Admin/Grant';
 import { KpiSkeleton } from '../Dashboard/Components/DashboardSkeletons';
 import { GrantGridSkeleton } from './Components/GrantSkeletons';
 import showToast from '../../Shared/Utils/toast';
 import './GrantList.scss';
+import {
+  useDeleteOrganiserGrantMutation,
+  useGetOrganiserGrantsQuery,
+  useGetOrganiserGrantSummaryQuery,
+} from '../../Services/Api/module/Organiser/Grant';
+import { useCurrentUserRole } from '../../Shared/Auth/useCurrentUserRole';
 
 // Simple EyeOff fallback
 function EyeOff({ size }: Readonly<{ size: number }>) {
@@ -49,6 +55,9 @@ function EyeOff({ size }: Readonly<{ size: number }>) {
 function GrantList() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
+  const { role } = useCurrentUserRole();
+  const isAdmin = role === 'admin' || role === 'sub_admin';
+  const isOrganiser = role === 'organiser';
 
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,31 +66,70 @@ function GrantList() {
   );
   const [page] = useState(1);
 
-  const {
-    data: grantsResponse,
-    isLoading: isGridLoading,
-    isError,
-    refetch,
-  } = useGetGrantsQuery({
-    search: searchTerm || undefined,
-    status: statusFilter,
-    page,
-    pageSize: 20,
-  });
+  const queryParams = useMemo(
+    () => ({
+      search: searchTerm || undefined,
+      status: statusFilter,
+      page,
+      pageSize: 20,
+    }),
+    [page, searchTerm, statusFilter]
+  );
 
-  const { data: summaryResponse, isLoading: isSummaryLoading } =
-    useGetGrantsSummaryQuery();
-  const [deleteGrant, { isLoading: isDeleting }] = useDeleteGrantMutation();
+  const {
+    data: adminGrantsResponse,
+    isLoading: isAdminGridLoading,
+    isError: isAdminError,
+    refetch: refetchAdminGrants,
+  } = useGetAdminGrantsQuery(queryParams, { skip: !isAdmin });
+
+  const {
+    data: organiserGrantsResponse,
+    isLoading: isOrganiserGridLoading,
+    isError: isOrganiserError,
+    refetch: refetchOrganiserGrants,
+  } = useGetOrganiserGrantsQuery(queryParams, { skip: !isOrganiser });
+
+  const { data: adminSummaryResponse, isLoading: isAdminSummaryLoading } =
+    useGetAdminGrantsSummaryQuery(undefined, { skip: !isAdmin });
+
+  const {
+    data: organiserSummaryResponse,
+    isLoading: isOrganiserSummaryLoading,
+  } = useGetOrganiserGrantSummaryQuery(undefined, { skip: !isOrganiser });
+
+  const [deleteGrant, { isLoading: isDeleting }] =
+    useDeleteAdminGrantMutation();
+  const [deleteOrganiserGrant, { isLoading: isDeletingOrganiserGrant }] =
+    useDeleteOrganiserGrantMutation();
+
+  const grantsResponse = isAdmin
+    ? adminGrantsResponse
+    : organiserGrantsResponse;
+  const isGridLoading = isAdmin ? isAdminGridLoading : isOrganiserGridLoading;
+  const isError = isAdmin ? isAdminError : isOrganiserError;
+  const refetch = isAdmin ? refetchAdminGrants : refetchOrganiserGrants;
+  const summaryResponse = isAdmin
+    ? adminSummaryResponse
+    : organiserSummaryResponse;
+  const isSummaryLoading = isAdmin
+    ? isAdminSummaryLoading
+    : isOrganiserSummaryLoading;
+  const isDeletingGrant = isAdmin ? isDeleting : isDeletingOrganiserGrant;
 
   const handleDeleteGrant = async (id: string) => {
     if (
       !globalThis.confirm('Are you sure you want to delete this grant?') ||
-      isDeleting
+      isDeletingGrant
     )
       return;
 
     try {
-      await deleteGrant(id).unwrap();
+      if (isAdmin) {
+        await deleteGrant(id).unwrap();
+      } else {
+        await deleteOrganiserGrant(id).unwrap();
+      }
       showToast.success('Grant deleted successfully');
     } catch (error) {
       showToast.error(
@@ -92,24 +140,28 @@ function GrantList() {
 
   useEffect(() => {
     setTitle('Grant Management');
-    setSubtitle('Create and manage grant programs');
+    setSubtitle(
+      isOrganiser
+        ? 'Create and manage your grant programs'
+        : 'Create and manage grant programs'
+    );
     setBackAction(false);
     return () => resetHeader();
-  }, [setTitle, setSubtitle, setBackAction, resetHeader]);
+  }, [isOrganiser, setTitle, setSubtitle, setBackAction, resetHeader]);
 
   // Status mapping helper
   const getStatusLabel = (status: number) => {
     switch (status) {
       case 1:
-        return 'Active';
-      case 2:
-        return 'Closing Soon';
-      case 3:
-        return 'Closed';
-      case 4:
         return 'Draft';
+      case 2:
+        return 'Upcoming';
+      case 3:
+        return 'Active';
+      case 4:
+        return 'Completed';
       case 5:
-        return 'Archived';
+        return 'Closed';
       default:
         return 'Unknown';
     }
@@ -166,7 +218,7 @@ function GrantList() {
   }, [summaryResponse]);
 
   const renderCardActions = (grant: (typeof grants)[0]) => {
-    if (grant.status === 3) {
+    if (grant.status === 4 || grant.status === 5) {
       return (
         <>
           <button type="button" className="action-btn reopen">
@@ -177,7 +229,7 @@ function GrantList() {
             type="button"
             className="action-btn delete"
             onClick={() => handleDeleteGrant(grant.id)}
-            disabled={isDeleting}
+            disabled={isDeletingGrant}
           >
             <Trash2 size={16} />
             <span>Delete</span>
@@ -186,7 +238,7 @@ function GrantList() {
       );
     }
 
-    if (grant.status === 4) {
+    if (grant.status === 1) {
       return (
         <>
           <button
@@ -201,7 +253,7 @@ function GrantList() {
             type="button"
             className="action-btn delete"
             onClick={() => handleDeleteGrant(grant.id)}
-            disabled={isDeleting}
+            disabled={isDeletingGrant}
           >
             <Trash2 size={16} />
             <span>Delete</span>
@@ -232,7 +284,7 @@ function GrantList() {
           type="button"
           className="action-btn delete"
           onClick={() => handleDeleteGrant(grant.id)}
-          disabled={isDeleting}
+          disabled={isDeletingGrant}
         >
           <Trash2 size={16} />
           <span>Delete</span>
@@ -263,13 +315,18 @@ function GrantList() {
       <div className="grants-grid">
         {grants.map((grant) => (
           <div key={grant.id} className="grant-card">
-            <div className="card-header">
-              <h3 className="grant-title">{grant.name}</h3>
-              <span className={`status-badge ${getStatusClass(grant.status)}`}>
-                {getStatusLabel(grant.status)}
-              </span>
-            </div>
-            <p className="grant-description">{grant.description}</p>
+            <div
+              className="card-clickable-area"
+              onClick={() => navigate(`/grants/${grant.id}`)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="card-header">
+                <h3 className="grant-title">{grant.name}</h3>
+                <span className={`status-badge ${getStatusClass(grant.status)}`}>
+                  {getStatusLabel(grant.status)}
+                </span>
+              </div>
+              <p className="grant-description">{grant.description}</p>
 
             <div className="grant-meta">
               <div className="meta-item">
@@ -304,6 +361,7 @@ function GrantList() {
               </div>
             </div>
 
+            </div>
             <div className="card-actions">{renderCardActions(grant)}</div>
           </div>
         ))}
@@ -375,11 +433,11 @@ function GrantList() {
             }
           >
             <option value="">All Status</option>
-            <option value="1">Active</option>
-            <option value="2">Closing Soon</option>
-            <option value="3">Closed</option>
-            <option value="4">Draft</option>
-            <option value="5">Archived</option>
+            <option value="1">Draft</option>
+            <option value="2">Upcoming</option>
+            <option value="3">Active</option>
+            <option value="4">Completed</option>
+            <option value="5">Closed</option>
           </select>
           <button type="button" className="sort-btn">
             <ArrowUpDown size={16} />

@@ -13,17 +13,21 @@ import {
   Settings2,
   Loader2,
 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import RequirementsModal from './Components/RequirementsModal';
 import {
-  useCreateGrantMutation,
-  useGetGrantByIdQuery,
-  useUpdateGrantMutation,
   GrantQuestion,
   GrantAdditionalRequirement,
-} from '../../Services/Api/module/GrantsApi';
-import { useGetGalasQuery } from '../../Services/Api/module/GalaApi';
+} from '../../Services/Api/module/Admin/Grant';
+import {
+  useCreateOrganiserGrantMutation,
+  useGetOrganiserGrantByIdQuery,
+  useUpdateOrganiserGrantMutation,
+} from '../../Services/Api/module/Organiser/Grant';
+import { useGetOrganiserGalasQuery } from '../../Services/Api/module/Organiser/Gala';
+import { useGetOrganiserJuriesQuery } from '../../Services/Api/module/Organiser/Jury';
+import { useCurrentUserRole } from '../../Shared/Auth/useCurrentUserRole';
 import showToast from '../../Shared/Utils/toast';
 import './CreateGrant.scss';
 
@@ -31,18 +35,38 @@ interface Question extends GrantQuestion {
   id: number;
 }
 
+interface PrizeWinnerInput {
+  rank: number;
+  amount: string;
+}
+
+const CREATE_GALA_FORM_SESSION_KEY = 'create_gala_form_state';
+
 function CreateGrant() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const isGalaBuilderMode = searchParams.get('mode') === 'gala-builder';
+  const draftIndex = searchParams.get('draftIndex');
+  const returnTo = searchParams.get('returnTo') || '/galas/create';
   const isEditMode = Boolean(id);
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
+  const { role } = useCurrentUserRole();
+  const isOrganiser = role === 'organiser';
 
   // API Hooks
-  const { data: galasResponse } = useGetGalasQuery({});
+  const { data: galasResponse } = useGetOrganiserGalasQuery(
+    { status: 1, pageSize: 100 },
+    { skip: !isOrganiser }
+  );
+  const { data: organiserJuriesResponse, isLoading: isLoadingJuries } =
+    useGetOrganiserJuriesQuery(undefined, { skip: !isOrganiser });
   const { data: grantResponse, isLoading: isFetchingGrant } =
-    useGetGrantByIdQuery(id!, { skip: !isEditMode });
-  const [createGrant, { isLoading: isCreating }] = useCreateGrantMutation();
-  const [updateGrant, { isLoading: isUpdating }] = useUpdateGrantMutation();
+    useGetOrganiserGrantByIdQuery(id ?? '', { skip: !id });
+  const [createGrant, { isLoading: isCreating }] =
+    useCreateOrganiserGrantMutation();
+  const [updateGrant, { isLoading: isUpdating }] =
+    useUpdateOrganiserGrantMutation();
 
   const galas = useMemo(
     () => galasResponse?.data?.items || [],
@@ -57,7 +81,8 @@ function CreateGrant() {
   const [prizeAmount, setPrizeAmount] = useState<string>('');
   const [numberOfPrizes, setNumberOfPrizes] = useState<string>('');
   const [applicationDeadline, setApplicationDeadline] = useState('');
-  const [status, setStatus] = useState(4); // Default to Draft
+  const [status, setStatus] = useState(1); // Default to Draft
+  const [prizeWinners, setPrizeWinners] = useState<PrizeWinnerInput[]>([]);
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isReqModalOpen, setIsReqModalOpen] = useState(false);
@@ -73,10 +98,135 @@ function CreateGrant() {
     businessPlan: false,
   });
 
-  const [juryCriteria] = useState<number[]>([1, 2, 8, 11]);
+  const normalizePrizeWinners = (
+    count: number,
+    baseAmount: string
+  ): PrizeWinnerInput[] => {
+    const next = prizeWinners.slice(0, Math.max(0, count));
+    const defaultAmount = baseAmount || '0';
+    while (next.length < count) {
+      next.push({ rank: next.length + 1, amount: defaultAmount });
+    }
+    return next.map((item, index) => ({
+      ...item,
+      rank: index + 1,
+    }));
+  };
+
+  const handlePrizeAmountChange = (value: string) => {
+    setPrizeAmount(value);
+    setPrizeWinners((prev) =>
+      prev.map((winner) => ({
+        ...winner,
+        amount: winner.amount === prizeAmount ? value : winner.amount,
+      }))
+    );
+  };
+
+  const handleNumberOfPrizesChange = (value: string) => {
+    setNumberOfPrizes(value);
+    const count = Number(value) || 0;
+    setPrizeWinners(normalizePrizeWinners(count, prizeAmount));
+  };
+
+  const handlePrizeWinnerAmountChange = (rank: number, amount: string) => {
+    setPrizeWinners((current) =>
+      current.map((winner) =>
+        winner.rank === rank ? { ...winner, amount } : winner
+      )
+    );
+  };
+
+  const [juryCriteria] = useState<number[]>([1, 2, 5, 8]);
+  const [selectedJuryIds, setSelectedJuryIds] = useState<string[]>([]);
+  const [juryIdToAdd, setJuryIdToAdd] = useState('');
+
+  const organiserJuries = useMemo(
+    () => organiserJuriesResponse?.data ?? [],
+    [organiserJuriesResponse?.data]
+  );
 
   // Sync Data on Edit Mode
   useEffect(() => {
+    if (isGalaBuilderMode) {
+      const savedState = sessionStorage.getItem(CREATE_GALA_FORM_SESSION_KEY);
+
+      if (!savedState) return;
+
+      try {
+        const state = JSON.parse(savedState) as {
+          grants?: Array<{
+            name: string;
+            description: string;
+            category: string;
+            prizeAmount: number;
+            numberOfPrizes: number;
+            applicationDeadline: string;
+            status: number;
+            questions: GrantQuestion[];
+            additionalRequirements: GrantAdditionalRequirement[];
+            requireInterview: boolean;
+            requireCompanyName: boolean;
+            requireIndustrySelection: boolean;
+            requireMotivationStatement: boolean;
+            requireBusinessPlanDocument: boolean;
+            juryCriteria: number[];
+            prizeWinners?: Array<{ rank: number; amount: number }>;
+            juryIds?: string[];
+          }>;
+        };
+
+        const existingGrant =
+          draftIndex === null ? undefined : state.grants?.[Number(draftIndex)];
+
+        if (!existingGrant) return;
+
+        setName(existingGrant.name);
+        setDescription(existingGrant.description);
+        setCategory(existingGrant.category);
+        setPrizeAmount(existingGrant.prizeAmount.toString());
+        setNumberOfPrizes(existingGrant.numberOfPrizes.toString());
+        setApplicationDeadline(
+          new Date(existingGrant.applicationDeadline)
+            .toISOString()
+            .split('T')[0]
+        );
+        setStatus(existingGrant.status);
+        setQuestions(
+          existingGrant.questions.map((question, index) => ({
+            ...question,
+            id: index + 1,
+          }))
+        );
+        setRequirements(existingGrant.additionalRequirements || []);
+        setRequireInterview(existingGrant.requireInterview);
+        setRequiredFields({
+          companyName: existingGrant.requireCompanyName,
+          industrySelection: existingGrant.requireIndustrySelection,
+          motivationStatement: existingGrant.requireMotivationStatement,
+          businessPlan: existingGrant.requireBusinessPlanDocument,
+        });
+        setSelectedJuryIds(existingGrant.juryIds || []);
+        setPrizeWinners(
+          existingGrant.prizeWinners?.map((winner) => ({
+            rank: winner.rank,
+            amount: winner.amount.toString(),
+          })) ||
+            Array.from(
+              { length: existingGrant.numberOfPrizes || 0 },
+              (_, index) => ({
+                rank: index + 1,
+                amount: existingGrant.prizeAmount.toString(),
+              })
+            )
+        );
+      } catch (error) {
+        console.error('Failed to restore linked grant draft', error);
+      }
+
+      return;
+    }
+
     if (isEditMode && grantResponse?.data) {
       const grant = grantResponse.data;
       setName(grant.name);
@@ -90,9 +240,18 @@ function CreateGrant() {
       );
       setStatus(grant.status);
       setQuestions(
-        grant.questions.map((q, idx) => ({ ...q, id: idx + 1 })) || []
+        grant.questions.map((q, idx) => ({
+          ...q,
+          id: idx + 1,
+          questionType: q.questionType as any,
+        })) || []
       );
-      setRequirements(grant.additionalRequirements || []);
+      setRequirements(
+        (grant.requirements || []).map((r: any) => ({
+          text: r.text,
+          order: r.order,
+        }))
+      );
       setRequireInterview(grant.requireInterview);
       setRequiredFields({
         companyName: grant.requireCompanyName,
@@ -100,8 +259,19 @@ function CreateGrant() {
         motivationStatement: grant.requireMotivationStatement,
         businessPlan: grant.requireBusinessPlanDocument,
       });
+      setSelectedJuryIds(grant.juries?.map((j: any) => j.id) || []);
+      setPrizeWinners(
+        grant.prizeWinners?.map((winner: any) => ({
+          rank: winner.rank,
+          amount: winner.amount.toString(),
+        })) ||
+          Array.from({ length: grant.numberOfPrizes || 0 }, (_, index) => ({
+            rank: index + 1,
+            amount: grant.prizeAmount.toString(),
+          }))
+      );
     }
-  }, [isEditMode, grantResponse]);
+  }, [draftIndex, grantResponse, isEditMode, isGalaBuilderMode]);
 
   useEffect(() => {
     setTitle(isEditMode ? 'Edit Grant' : 'Create Grant');
@@ -110,9 +280,12 @@ function CreateGrant() {
         ? `Editing ${name || 'Grant'}`
         : 'Set up Grant details and eligibility criteria'
     );
-    setBackAction(true, () => navigate('/grants'));
+    setBackAction(true, () =>
+      navigate(isGalaBuilderMode ? returnTo : '/grants')
+    );
     return () => resetHeader();
   }, [
+    isGalaBuilderMode,
     setTitle,
     setSubtitle,
     setBackAction,
@@ -120,10 +293,19 @@ function CreateGrant() {
     navigate,
     isEditMode,
     name,
+    returnTo,
   ]);
 
-  const handleSave = async (isPublishing = false) => {
-    if (!name || !galaEventId || !description || !prizeAmount) {
+  const handleSave = async (isPublishingParam: boolean = false) => {
+    const isPublishing = isPublishingParam;
+    if (
+      !name ||
+      (!isGalaBuilderMode && !galaEventId) ||
+      !description ||
+      !prizeAmount ||
+      !numberOfPrizes ||
+      !applicationDeadline
+    ) {
       showToast.error('Please fill in all required fields');
       return;
     }
@@ -131,7 +313,6 @@ function CreateGrant() {
     const payload = {
       id,
       name,
-      galaEventId,
       description,
       category,
       prizeAmount: Number(prizeAmount),
@@ -141,7 +322,7 @@ function CreateGrant() {
       questions: questions.map((q, idx) => ({
         questionText: q.questionText,
         questionType: q.questionType,
-        order: idx,
+        order: q.order ?? idx,
       })),
       requireInterview,
       requireCompanyName: requiredFields.companyName,
@@ -153,20 +334,67 @@ function CreateGrant() {
         ...r,
         order: idx,
       })),
+      galaEventId: isGalaBuilderMode ? undefined : galaEventId,
+      juryPanelSize: selectedJuryIds.length,
+      prizeWinners: prizeWinners.map((winner) => ({
+        rank: winner.rank,
+        amount: Number(winner.amount),
+      })),
+      juryIds: selectedJuryIds,
     };
+
+    if (isGalaBuilderMode) {
+      try {
+        const savedState = sessionStorage.getItem(CREATE_GALA_FORM_SESSION_KEY);
+
+        if (!savedState) {
+          showToast.error('No gala draft was found to link this grant.');
+          return;
+        }
+
+        const state = JSON.parse(savedState) as { grants?: unknown[] };
+        const nextGrants = [...(state.grants || [])];
+        const linkedGrant = {
+          ...payload,
+          galaEventId: '',
+        };
+
+        if (draftIndex === null) {
+          nextGrants.push(linkedGrant);
+        } else {
+          nextGrants[Number(draftIndex)] = linkedGrant;
+        }
+
+        sessionStorage.setItem(
+          CREATE_GALA_FORM_SESSION_KEY,
+          JSON.stringify({
+            ...state,
+            grants: nextGrants,
+          })
+        );
+        showToast.success('Grant linked to gala successfully.');
+        navigate(returnTo);
+        return;
+      } catch (error) {
+        showToast.error('Failed to link grant to the gala draft.');
+        console.error(error);
+        return;
+      }
+    }
 
     try {
       if (isEditMode) {
-        await updateGrant(payload).unwrap();
+        await updateGrant({ ...payload, id: id! } as any).unwrap();
         showToast.success('Grant updated successfully');
       } else {
-        await createGrant(payload).unwrap();
+        await createGrant(payload as any).unwrap();
         showToast.success('Grant created successfully');
       }
       navigate('/grants');
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as { data?: { message?: string }; message?: string };
       showToast.error(
-        error instanceof Error ? error.message : 'Failed to save grant'
+        err?.data?.message || err?.message || 'Failed to save grant'
       );
     }
   };
@@ -179,7 +407,7 @@ function CreateGrant() {
       {
         id: newId,
         questionText: 'New Question',
-        questionType: 'Short Text',
+        questionType: 'ShortText',
         order: questions.length,
       },
     ]);
@@ -191,6 +419,31 @@ function CreateGrant() {
 
   const toggleField = (field: keyof typeof requiredFields) => {
     setRequiredFields((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const availableJuries = useMemo(
+    () => organiserJuries.filter((jury) => !selectedJuryIds.includes(jury.id)),
+    [organiserJuries, selectedJuryIds]
+  );
+
+  const selectedJuries = useMemo(
+    () => organiserJuries.filter((jury) => selectedJuryIds.includes(jury.id)),
+    [organiserJuries, selectedJuryIds]
+  );
+
+  const handleAddJury = () => {
+    if (!juryIdToAdd) return;
+
+    setSelectedJuryIds((current) =>
+      current.includes(juryIdToAdd) ? current : [...current, juryIdToAdd]
+    );
+    setJuryIdToAdd('');
+  };
+
+  const handleRemoveJury = (juryId: string) => {
+    setSelectedJuryIds((current) =>
+      current.filter((idValue) => idValue !== juryId)
+    );
   };
 
   if (isFetchingGrant) {
@@ -263,32 +516,33 @@ function CreateGrant() {
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="associated-gala">Associated Gala *</label>
-                <div className="select-with-info">
-                  <select
-                    id="associated-gala"
-                    value={galaEventId}
-                    onChange={(e) => setGalaEventId(e.target.value)}
-                  >
-                    <option value="">Select a Gala</option>
-                    {galas.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="select-arrow" size={18} />
-                  {galaEventId && (
-                    <span className="info-text">
-                      {galas.find((g) => g.id === galaEventId)?.city} •{' '}
-                      {new Date(
-                        galas.find((g) => g.id === galaEventId)?.eventDate || ''
-                      ).toLocaleDateString()}
-                    </span>
-                  )}
+                <div className="form-group">
+                  <label htmlFor="associated-gala">Associated Gala *</label>
+                  <div className="select-with-info">
+                    <select
+                      id="associated-gala"
+                      value={galaEventId}
+                      onChange={(e) => setGalaEventId(e.target.value)}
+                    >
+                      <option value="">Select a Gala</option>
+                      {galas.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="select-arrow" size={18} />
+                    {galaEventId && (
+                      <span className="info-text">
+                        {galas.find((g) => g.id === galaEventId)?.city} •{' '}
+                        {new Date(
+                          galas.find((g) => g.id === galaEventId)?.eventDate ||
+                            ''
+                        ).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
 
               <div className="form-group">
                 <label htmlFor="description">Description *</label>
@@ -377,15 +631,17 @@ function CreateGrant() {
                             (item) => item.id === q.id
                           );
                           next[idx].questionType = e.target.value as
-                            | 'Long Text'
-                            | 'File Upload'
-                            | 'Short Text';
+                            | 'LongText'
+                            | 'Number'
+                            | 'File'
+                            | 'ShortText';
                           setQuestions(next);
                         }}
                       >
-                        <option value="Short Text">Short Text</option>
-                        <option value="Long Text">Long Text</option>
-                        <option value="File Upload">File Upload</option>
+                        <option value="ShortText">Short Text</option>
+                        <option value="LongText">Long Text</option>
+                        <option value="Number">Number</option>
+                        <option value="File">File Upload</option>
                       </select>
                       <button
                         type="button"
@@ -419,7 +675,7 @@ function CreateGrant() {
                       type="number"
                       placeholder="5,000"
                       value={prizeAmount}
-                      onChange={(e) => setPrizeAmount(e.target.value)}
+                      onChange={(e) => handlePrizeAmountChange(e.target.value)}
                     />
                   </div>
                 </div>
@@ -430,9 +686,12 @@ function CreateGrant() {
                     <input
                       id="num-prizes"
                       type="number"
+                      min="1"
                       placeholder="e.g., 3"
                       value={numberOfPrizes}
-                      onChange={(e) => setNumberOfPrizes(e.target.value)}
+                      onChange={(e) =>
+                        handleNumberOfPrizesChange(e.target.value)
+                      }
                     />
                   </div>
                 </div>
@@ -456,6 +715,43 @@ function CreateGrant() {
                   Example: 3 prizes means 3 winners will be selected from
                   approved candidates
                 </p>
+              </div>
+
+              <div className="prize-winners-section">
+                <div className="section-heading">
+                  <h4>Prize Winners</h4>
+                  <p>Set amount for each winning rank</p>
+                </div>
+                <div className="prize-winners-grid">
+                  {prizeWinners.length > 0 ? (
+                    prizeWinners.map((winner) => (
+                      <div key={winner.rank} className="prize-winner-item">
+                        <label htmlFor={`prize-winner-${winner.rank}`}>
+                          Rank {winner.rank}
+                        </label>
+                        <div className="input-with-icon">
+                          <span className="currency-symbol">$</span>
+                          <input
+                            id={`prize-winner-${winner.rank}`}
+                            type="number"
+                            min="0"
+                            value={winner.amount}
+                            onChange={(e) =>
+                              handlePrizeWinnerAmountChange(
+                                winner.rank,
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="empty-prize-winners">
+                      Add a number of prizes to configure winner rankings.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </section>
@@ -609,6 +905,78 @@ function CreateGrant() {
               </div>
             </div>
           </section>
+
+          {isOrganiser && (
+            <section className="form-card">
+              <div className="card-header">
+                <h3>Jury Panel</h3>
+                <p>Select organiser jury members who can review this grant</p>
+              </div>
+              <div className="card-body">
+                <div className="jury-panel-picker">
+                  <div className="jury-picker-row">
+                    <div className="custom-select">
+                      <select
+                        value={juryIdToAdd}
+                        onChange={(e) => setJuryIdToAdd(e.target.value)}
+                        disabled={
+                          isLoadingJuries || availableJuries.length === 0
+                        }
+                      >
+                        <option value="">
+                          {isLoadingJuries
+                            ? 'Loading jury members...'
+                            : 'Select a jury member'}
+                        </option>
+                        {availableJuries.map((jury) => (
+                          <option key={jury.id} value={jury.id}>
+                            {jury.fullName} - {jury.domainOfExpertise}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="select-arrow" size={18} />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-add-item btn-primary-lite"
+                      onClick={handleAddJury}
+                      disabled={!juryIdToAdd}
+                    >
+                      <Plus size={16} />
+                      <span>Add Jury</span>
+                    </button>
+                  </div>
+
+                  {selectedJuries.length > 0 ? (
+                    <div className="selected-jury-list">
+                      {selectedJuries.map((jury) => (
+                        <div key={jury.id} className="selected-jury-card">
+                          <div className="jury-copy">
+                            <strong>{jury.fullName}</strong>
+                            <span>
+                              {jury.domainOfExpertise} • {jury.email}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="icon-btn delete"
+                            onClick={() => handleRemoveJury(jury.id)}
+                            aria-label={`Remove ${jury.fullName}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="jury-panel-empty">
+                      No jury members selected yet. Add one from the dropdown.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Jury Criteria */}
           <section className="form-card">

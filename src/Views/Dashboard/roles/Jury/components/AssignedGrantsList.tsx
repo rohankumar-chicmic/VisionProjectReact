@@ -34,9 +34,9 @@ function AssignedGrantsList({ data }: AssignedGrantsListProps) {
             </div>
             <div className="grant-actions">
               <span
-                className={`status-pill ${grant.status.toLowerCase().replace(' ', '-')}`}
+                className={`status-pill ${(grant.status || '').toLowerCase().replace(' ', '-')}`}
               >
-                {grant.status}
+                {grant.status || 'Unknown'}
               </span>
               <button
                 type="button"

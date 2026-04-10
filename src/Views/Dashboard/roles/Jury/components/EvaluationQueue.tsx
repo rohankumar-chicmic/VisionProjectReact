@@ -27,15 +27,15 @@ function EvaluationQueue({ data }: EvaluationQueueProps) {
                   <User size={14} />
                 </div>
                 <div>
-                  <strong>{item.applicant}</strong>
+                  <strong>{item.applicant || 'Unknown Applicant'}</strong>
                   <span>
-                    {item.id} • {item.grant}
+                    {item.id} • {item.grant || 'Unknown Program'}
                   </span>
                 </div>
               </div>
               <div className="item-meta">
-                <span className={`priority-tag ${item.priority}`}>
-                  <AlertCircle size={12} /> {item.deadline}
+                <span className={`priority-tag ${item.priority || 'medium'}`}>
+                  <AlertCircle size={12} /> {item.deadline || 'No Deadline'}
                 </span>
               </div>
             </div>

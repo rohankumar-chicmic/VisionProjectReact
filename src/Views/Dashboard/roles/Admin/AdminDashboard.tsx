@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useHeader } from '../../../../Shared/Context/HeaderContext';
-import { useGetDashboardDataQuery } from '../../../../Services/Api/module/CommonApi';
-import { useGetGalasQuery } from '../../../../Services/Api/module/GalaApi';
-import { useGetAdminUsersQuery } from '../../../../Services/Api/module/AdminApi';
+import { useGetDashboardDataQuery } from '../../../../Services/Api/module/Common';
+import { useGetAdminGalasQuery } from '../../../../Services/Api/module/Admin/Gala';
+import { useGetAdminUsersQuery } from '../../../../Services/Api/module/Admin/User';
 import AdminStats from './components/AdminStats';
 import GalaTable from './components/GalaTable';
 import UserTable from './components/UserTable';
@@ -12,10 +12,11 @@ function AdminDashboard() {
   const { setTitle, setSubtitle, resetHeader } = useHeader();
   const { data: dashboardResponse, isLoading: isStatsLoading } =
     useGetDashboardDataQuery();
-  const { data: galaResponse, isLoading: isGalaLoading } = useGetGalasQuery({
-    pageNumber: 1,
-    pageSize: 4,
-  });
+  const { data: galaResponse, isLoading: isGalaLoading } =
+    useGetAdminGalasQuery({
+      pageNumber: 1,
+      pageSize: 4,
+    });
   const { data: userResponse, isLoading: isUserLoading } =
     useGetAdminUsersQuery({
       pageNumber: 1,

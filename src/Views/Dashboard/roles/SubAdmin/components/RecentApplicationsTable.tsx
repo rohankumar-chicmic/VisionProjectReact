@@ -1,5 +1,5 @@
 import Table, { type Column } from '../../../../../Components/Atom/Table/Table';
-import type { AdminApplication } from '../../../../../Services/Api/module/AdminApi';
+import type { AdminApplication } from '../../../../../Services/Api/module/Admin/Application';
 
 interface RecentApplicationsTableProps {
   data: AdminApplication[];

@@ -10,7 +10,7 @@ import type { RootState } from '../../Store';
 import { API_BASE_URL } from './Constants';
 import { ResponseOptions } from './api.d';
 import { updateAuthTokenRedux, clearAuthTokenRedux } from '../../Store/Common';
-import { AuthResponse } from './module/AuthApi';
+import { AuthResponse } from './module/Auth';
 
 const baseQuery: BaseQueryFn = fetchBaseQuery({
   baseUrl: API_BASE_URL,

@@ -36,7 +36,7 @@ export interface AuthResponse {
   notificationCount: number;
 }
 
-export const userApi = api.injectEndpoints({
+export const authApi = api.injectEndpoints({
   endpoints: (build) => ({
     loginAdmin: build.mutation<AuthResponse, LoginFormValues>({
       query: (body) => ({
@@ -185,4 +185,4 @@ export const {
   useResetPasswordOrganiserMutation,
   useResetPasswordJuryMutation,
   useRegisterOrganiserMutation,
-} = userApi;
+} = authApi;

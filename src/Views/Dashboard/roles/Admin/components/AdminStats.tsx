@@ -12,6 +12,8 @@ interface AdminStatsProps {
 
 const getTrend = (value?: number) =>
   `${(value || 0) >= 0 ? '+' : ''}${value || 0}%`;
+const getTrend = (value?: number) =>
+  `${(value || 0) >= 0 ? '+' : ''}${value || 0}%`;
 
 const getTrendType = (value?: number): 'up' | 'down' =>
   (value || 0) >= 0 ? 'up' : 'down';
@@ -21,7 +23,7 @@ function AdminStats({ isLoading, stats }: Readonly<AdminStatsProps>) {
     {
       icon: <Users size={22} />,
       label: 'Total Users',
-      value: stats?.totalUsers.toLocaleString() || '0',
+      value: (stats?.totalUsers ?? 0).toLocaleString(),
       trend: getTrend(stats?.usersGrowthPercentage),
       trendType: getTrendType(stats?.usersGrowthPercentage),
       color: '#1DB954',
@@ -29,7 +31,7 @@ function AdminStats({ isLoading, stats }: Readonly<AdminStatsProps>) {
     {
       icon: <Calendar size={22} />,
       label: 'Active Galas',
-      value: stats?.activeGalas.toLocaleString() || '0',
+      value: (stats?.activeGalas ?? 0).toLocaleString(),
       trend: getTrend(stats?.galasGrowthPercentage),
       trendType: getTrendType(stats?.galasGrowthPercentage),
       color: '#3B82F6',
@@ -37,7 +39,7 @@ function AdminStats({ isLoading, stats }: Readonly<AdminStatsProps>) {
     {
       icon: <DollarSign size={22} />,
       label: 'Monthly Revenue',
-      value: `$${stats?.monthlyRevenue.toLocaleString() || '0'}`,
+      value: `$${(stats?.monthlyRevenue ?? 0).toLocaleString()}`,
       trend: getTrend(stats?.revenueGrowthPercentage),
       trendType: getTrendType(stats?.revenueGrowthPercentage),
       color: '#F59E0B',
@@ -45,7 +47,7 @@ function AdminStats({ isLoading, stats }: Readonly<AdminStatsProps>) {
     {
       icon: <Award size={22} />,
       label: 'Active Grants',
-      value: stats?.activeGrants.toLocaleString() || '0',
+      value: (stats?.activeGrants ?? 0).toLocaleString(),
       trend: getTrend(stats?.grantsGrowthPercentage),
       trendType: getTrendType(stats?.grantsGrowthPercentage),
       color: '#06B6D4',
@@ -57,6 +59,15 @@ function AdminStats({ isLoading, stats }: Readonly<AdminStatsProps>) {
       {isLoading
         ? [1, 2, 3, 4].map((id) => <KpiSkeleton key={`admin-kpi-${id}`} />)
         : kpis.map((kpi) => (
+            <KpiCard
+              key={`${kpi.label}-${kpi.value}`}
+              icon={kpi.icon}
+              label={kpi.label}
+              value={kpi.value}
+              trend={kpi.trend}
+              trendType={kpi.trendType}
+              color={kpi.color}
+            />
             <KpiCard
               key={`${kpi.label}-${kpi.value}`}
               icon={kpi.icon}

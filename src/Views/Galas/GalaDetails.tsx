@@ -1,5 +1,5 @@
 /* eslint-disable no-alert */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Calendar,
@@ -13,16 +13,26 @@ import {
   EyeOff,
   Trash2,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
+import Modal from '../../Components/Atom/Modal/Modal';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import {
-  useGetGalaByIdQuery,
-  usePublishGalaMutation,
-  useUnpublishGalaMutation,
-  useDeleteGalaMutation,
-} from '../../Services/Api/module/GalaApi';
+  useGetAdminGalaByIdQuery,
+  usePublishAdminGalaMutation,
+  useUnpublishAdminGalaMutation,
+  useDeleteAdminGalaMutation,
+} from '../../Services/Api/module/Admin/Gala';
+import {
+  useDeleteOrganiserGalaMutation,
+  useGetOrganiserGalaByIdQuery,
+  usePublishOrganiserGalaMutation,
+  useUnpublishOrganiserGalaMutation,
+} from '../../Services/Api/module/Organiser/Gala';
 import Skeleton from '../../Components/Shared/Skeleton';
 import showToast from '../../Shared/Utils/toast';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
+import { createGrantPlatformTransaction } from '../../Services/WalletConnect';
 import './GalaDetails.scss';
 import DEFAULT_GALA_IMAGE from '../../assets/general-img-landscape.png';
 
@@ -30,14 +40,47 @@ function GalaDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { setTitle, setSubtitle, setBackAction } = useHeader();
+  const { role } = useCurrentUserRole();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const isAdmin = role === 'admin' || role === 'sub_admin';
+  const isOrganiser = role === 'organiser';
 
-  const { data: response, isLoading, isError } = useGetGalaByIdQuery(id ?? '');
-  const [publishGala, { isLoading: isPublishing }] = usePublishGalaMutation();
-  const [unpublishGala, { isLoading: isUnpublishing }] =
-    useUnpublishGalaMutation();
-  const [deleteGala, { isLoading: isDeleting }] = useDeleteGalaMutation();
+  const {
+    data: adminResponse,
+    isLoading: isAdminLoading,
+    isError: isAdminError,
+  } = useGetAdminGalaByIdQuery(id ?? '', { skip: !isAdmin || !id });
+  const {
+    data: organiserResponse,
+    isLoading: isOrganiserLoading,
+    isError: isOrganiserError,
+  } = useGetOrganiserGalaByIdQuery(id ?? '', { skip: !isOrganiser || !id });
+  const [publishAdminGala, { isLoading: isPublishingAdmin }] =
+    usePublishAdminGalaMutation();
+  const [publishOrganiserGala, { isLoading: isPublishingOrganiser }] =
+    usePublishOrganiserGalaMutation();
+  const [unpublishAdminGala, { isLoading: isUnpublishingAdmin }] =
+    useUnpublishAdminGalaMutation();
+  const [unpublishOrganiserGala, { isLoading: isUnpublishingOrganiser }] =
+    useUnpublishOrganiserGalaMutation();
+  const [deleteAdminGala, { isLoading: isDeletingAdmin }] =
+    useDeleteAdminGalaMutation();
+  const [deleteOrganiserGala, { isLoading: isDeletingOrganiser }] =
+    useDeleteOrganiserGalaMutation();
 
+  const response = isAdmin ? adminResponse : organiserResponse;
+  const isLoading = isAdmin ? isAdminLoading : isOrganiserLoading;
+  const isError = isAdmin ? isAdminError : isOrganiserError;
+  const isPublishing = isAdmin ? isPublishingAdmin : isPublishingOrganiser;
+  const isUnpublishing = isAdmin
+    ? isUnpublishingAdmin
+    : isUnpublishingOrganiser;
+  const isDeleting = isAdmin ? isDeletingAdmin : isDeletingOrganiser;
   const gala = response?.data;
+  const totalPrizePool =
+    gala && 'totalPrizePool' in gala
+      ? (gala as { totalPrizePool: number }).totalPrizePool
+      : (gala?.totalGalaValue ?? 0);
 
   useEffect(() => {
     setTitle('Gala Details');
@@ -74,31 +117,64 @@ function GalaDetails() {
       case 1:
         return { label: 'Draft', class: 'draft' };
       case 2:
-        return { label: 'Active', class: 'active' };
+        return { label: 'Upcoming', class: 'upcoming' };
       case 3:
+        return { label: 'Active', class: 'active' };
+      case 4:
         return { label: 'Completed', class: 'completed' };
       default:
-        return { label: 'Active', class: 'active' };
+        return { label: 'Unknown', class: 'unknown' };
     }
   };
 
   const getApplicationStatus = (status: number) => {
     switch (status) {
-      case 0:
-        return { label: 'Pending', class: 'pending' };
+      case 1:
+        return { label: 'Draft', class: 'draft' };
       case 2:
-        return { label: 'Approved', class: 'approved' };
-      case 3:
-        return { label: 'Rejected', class: 'rejected' };
-      default:
         return { label: 'Pending', class: 'pending' };
+      case 3:
+        return { label: 'In Review', class: 'in-review' };
+      case 4:
+        return { label: 'Approved', class: 'approved' };
+      case 5:
+        return { label: 'Rejected', class: 'rejected' };
+      case 6:
+        return { label: 'Winner', class: 'winner' };
+      case 7:
+        return { label: 'Interview', class: 'interview' };
+      default:
+        return { label: 'Unknown', class: 'unknown' };
     }
   };
 
   const handlePublish = async () => {
-    if (!id) return;
+    const activeGala = gala;
+    if (!id || !activeGala) return;
     try {
-      await publishGala(id).unwrap();
+      if (isAdmin) {
+        await publishAdminGala(id).unwrap();
+      } else {
+        showToast.info(
+          'Please confirm the wallet transaction for your grants.'
+        );
+
+        const totalPrizePoolValue =
+          activeGala.grants?.reduce((acc, grant) => {
+            return acc + (grant.prizeAmount || 0) * (grant.numberOfPrizes || 0);
+          }, 0) || totalPrizePool;
+
+        const { transactionHash, walletAddress } =
+          await createGrantPlatformTransaction(totalPrizePoolValue);
+
+        await publishOrganiserGala({
+          id,
+          body: {
+            blockchainTransactionHash: transactionHash,
+            organiserWalletAddress: walletAddress,
+          },
+        }).unwrap();
+      }
       showToast.success('Gala published successfully!');
     } catch (error) {
       showToast.error(
@@ -110,7 +186,11 @@ function GalaDetails() {
   const handleUnpublish = async () => {
     if (!id) return;
     try {
-      await unpublishGala(id).unwrap();
+      if (isAdmin) {
+        await unpublishAdminGala(id).unwrap();
+      } else {
+        await unpublishOrganiserGala(id).unwrap();
+      }
       showToast.success('Gala unpublished successfully!');
     } catch (error) {
       showToast.error(
@@ -120,14 +200,15 @@ function GalaDetails() {
   };
 
   const handleDelete = async () => {
-    if (
-      !id ||
-      !globalThis.confirm('Are you sure you want to delete this gala?')
-    )
-      return;
+    if (!id || isDeleting) return;
     try {
-      await deleteGala(id).unwrap();
+      if (isAdmin) {
+        await deleteAdminGala(id).unwrap();
+      } else {
+        await deleteOrganiserGala(id).unwrap();
+      }
       showToast.success('Gala deleted successfully!');
+      setDeletingId(null);
       navigate('/galas');
     } catch (error) {
       showToast.error(
@@ -182,7 +263,7 @@ function GalaDetails() {
           <button
             type="button"
             className="header-btn btn-danger-soft"
-            onClick={handleDelete}
+            onClick={() => setDeletingId(id ?? null)}
             disabled={isDeleting}
           >
             <Trash2 size={18} />
@@ -251,7 +332,7 @@ function GalaDetails() {
           </div>
           <div className="stat-info">
             <span className="label">Total Prize Pool</span>
-            <span className="value">{formatCurrency(gala.totalPrizePool)}</span>
+            <span className="value">{formatCurrency(totalPrizePool)}</span>
           </div>
         </div>
         <div className="stat-card attendees">
@@ -383,8 +464,11 @@ function GalaDetails() {
               Evening Program
             </h2>
             <div className="schedule-list">
-              {gala.eveningItems?.map((item, index) => (
-                <div key={item.id ?? index} className="schedule-item">
+              {gala.eveningItems?.map((item) => (
+                <div
+                  key={`${item.time}-${item.title}`}
+                  className="schedule-item"
+                >
                   <span className="item-time">{formatTime(item.time)}</span>
                   <h3 className="item-title">{item.title}</h3>
                   <p className="item-desc">{item.description}</p>
@@ -394,6 +478,65 @@ function GalaDetails() {
           </div>
         </div>
       </div>
+      <Modal
+        isOpen={Boolean(deletingId)}
+        onClose={() => setDeletingId(null)}
+        title="Delete Gala"
+        subtitle="Are you sure you want to delete this gala? All associated data will be permanently removed."
+        width="450px"
+        footer={
+          <div className="modal-actions-footer">
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={() => setDeletingId(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn-danger"
+              style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Gala Permanently'}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              backgroundColor: '#fee2e2',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}
+          >
+            <AlertTriangle size={32} color="#ef4444" />
+          </div>
+          <p style={{ color: '#4b5563', fontSize: '15px', lineHeight: '1.5' }}>
+            Warning: This will permanently delete <strong>{gala.name}</strong>{' '}
+            and all its linked grants and applications.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

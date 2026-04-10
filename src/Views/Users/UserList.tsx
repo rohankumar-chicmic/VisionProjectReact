@@ -22,7 +22,7 @@ import {
   useGetAdminUserDashboardQuery,
   useGetAdminUsersQuery,
   AdminUser,
-} from '../../Services/Api/module/AdminApi';
+} from '../../Services/Api/module/Admin/User';
 import './UserList.scss';
 import Skeleton from '../../Components/Shared/Skeleton';
 
@@ -210,7 +210,7 @@ function UserList() {
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
   };
 
   const kpis = [
@@ -335,7 +335,17 @@ function UserList() {
             <Skeleton height={140} />
           </>
         ) : (
-          kpis.map((kpi) => <KpiCard key={kpi.id} {...kpi} />)
+          kpis.map((kpi) => (
+            <KpiCard
+              key={kpi.id}
+              icon={kpi.icon}
+              label={kpi.label}
+              value={kpi.value}
+              trend={kpi.trend}
+              trendType={kpi.trendType}
+              color={kpi.color}
+            />
+          ))
         )}
       </div>
 

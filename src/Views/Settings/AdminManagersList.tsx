@@ -13,7 +13,7 @@ import {
 import {
   useGetAdminManagersQuery,
   useDeleteAdminManagerMutation,
-} from '../../Services/Api/module/AdminApi';
+} from '../../Services/Api/module/Admin/User';
 import { HeaderActions, useHeader } from '../../Shared/Context/HeaderContext';
 import AdminManagerModal from './Components/AdminManagerModal';
 import { AdminManagersTableSkeleton } from './Components/AdminManagersSkeleton';

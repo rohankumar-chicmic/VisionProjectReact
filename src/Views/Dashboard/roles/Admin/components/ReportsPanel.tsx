@@ -1,4 +1,4 @@
-import type { DashboardData } from '../../../../../Services/Api/module/CommonApi';
+import type { DashboardData } from '../../../../../Services/Api/module/Common';
 
 interface ReportsPanelProps {
   stats?: DashboardData;

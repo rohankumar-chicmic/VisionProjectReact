@@ -3,7 +3,7 @@ import KpiCard, {
   type KpiCardProps,
 } from '../../../../../Components/Shared/KpiCard';
 import { KpiSkeleton } from '../../../Components/DashboardSkeletons';
-import type { UserDashboardData } from '../../../../../Services/Api/module/AdminApi';
+import type { UserDashboardData } from '../../../../../Services/Api/module/Admin/User';
 
 interface SubAdminSummaryProps {
   isLoading: boolean;

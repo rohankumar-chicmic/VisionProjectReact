@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   Mail,
@@ -8,10 +8,12 @@ import {
   User,
   Loader2,
   Lock,
-  Eye,
-  EyeOff,
 } from 'lucide-react';
 import Modal from '../../../Components/Atom/Modal/Modal';
+import type {
+  CreateOrganiserJuryRequest,
+  OrganiserJuryMember,
+} from '../../../Services/Api/module/Organiser/Jury';
 import './CreateJuryModal.scss';
 
 export interface JuryFormData {
@@ -27,8 +29,8 @@ export interface JuryFormData {
 interface CreateJuryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: JuryFormData) => void;
-  initialData?: JuryFormData | null;
+  onSubmit: (data: CreateOrganiserJuryRequest) => void | Promise<void>;
+  initialValues?: OrganiserJuryMember | null;
 }
 
 const INDUSTRY_OPTIONS = [
@@ -45,16 +47,14 @@ function CreateJuryModal({
   isOpen,
   onClose,
   onSubmit,
-  initialData = null,
-}: CreateJuryModalProps) {
-  const [showPassword, setShowPassword] = useState(false);
-
+  initialValues = null,
+}: Readonly<CreateJuryModalProps>) {
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<JuryFormData>({
+  } = useForm<CreateOrganiserJuryRequest>({
     defaultValues: {
       fullName: '',
       email: '',
@@ -66,31 +66,26 @@ function CreateJuryModal({
   });
 
   useEffect(() => {
-    if (initialData) {
-      reset({
-        ...initialData,
-        password: '', // Don't pre-fill password when editing
-      });
-    } else {
-      reset({
-        fullName: '',
-        email: '',
-        phoneNumber: '',
-        companyName: '',
-        domainOfExpertise: '',
-        password: '',
-      });
-    }
-    setShowPassword(false);
-  }, [initialData, reset, isOpen]);
+    if (!isOpen) return;
+
+    reset({
+      fullName: initialValues?.fullName ?? '',
+      email: initialValues?.email ?? '',
+      phoneNumber: initialValues?.phoneNumber ?? '',
+      companyName: initialValues?.companyName ?? '',
+      domainOfExpertise: initialValues?.domainOfExpertise ?? '',
+      password: '',
+    });
+  }, [initialValues, isOpen, reset]);
 
   const handleModalClose = () => {
     reset();
     onClose();
   };
 
-  const onFormSubmit = (data: JuryFormData) => {
-    onSubmit(data);
+  const onFormSubmit = async (data: CreateOrganiserJuryRequest) => {
+    await onSubmit(data);
+    reset();
   };
 
   const footer = (
@@ -112,9 +107,7 @@ function CreateJuryModal({
         {isSubmitting ? (
           <Loader2 className="spinner" size={18} />
         ) : (
-          <span>
-            {initialData ? 'Update Jury Member' : 'Invite Jury Member'}
-          </span>
+          <span>{initialValues ? 'Save Changes' : 'Invite Jury Member'}</span>
         )}
       </button>
     </div>
@@ -124,10 +117,10 @@ function CreateJuryModal({
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
-      title={initialData ? 'Edit Jury Member' : 'Invite New Jury Member'}
+      title={initialValues ? 'Edit Jury Member' : 'Invite New Jury Member'}
       subtitle={
-        initialData
-          ? 'Update the details of this jury member'
+        initialValues
+          ? 'Update this jury member profile for your programmes'
           : 'Add a jury member to help review and score grant applications'
       }
       width="550px"
@@ -139,22 +132,26 @@ function CreateJuryModal({
         onSubmit={handleSubmit(onFormSubmit)}
       >
         <div className="form-group mb-4">
-          <label htmlFor="fullName" className="label-text">
+          <label htmlFor="fullName" className="form-label">
             Full Name *
             <div className="input-with-icon">
-              <User size={16} className="input-icon" />
-              <input
-                id="fullName"
-                type="text"
-                placeholder="Enter full name"
-                name={
-                  register('fullName', { required: 'Full name is required' })
-                    .name
-                }
-                onBlur={register('fullName').onBlur}
-                onChange={register('fullName').onChange}
-                ref={register('fullName').ref}
-              />
+              <User size={16} />
+              {(() => {
+                const { name, onChange, onBlur, ref } = register('fullName', {
+                  required: 'Full name is required',
+                });
+                return (
+                  <input
+                    id="fullName"
+                    type="text"
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    ref={ref}
+                    placeholder="Enter full name"
+                  />
+                );
+              })()}
             </div>
           </label>
           {errors.fullName && (
@@ -164,27 +161,30 @@ function CreateJuryModal({
 
         <div className="form-row half-grid mb-4">
           <div className="form-group">
-            <label htmlFor="email" className="label-text">
+            <label htmlFor="email" className="form-label">
               Email Address *
               <div className="input-with-icon">
-                <Mail size={16} className="input-icon" />
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="jury@example.com"
-                  name={
-                    register('email', {
-                      required: 'Email is required',
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Invalid email address',
-                      },
-                    }).name
-                  }
-                  onBlur={register('email').onBlur}
-                  onChange={register('email').onChange}
-                  ref={register('email').ref}
-                />
+                <Mail size={16} />
+                {(() => {
+                  const { name, onChange, onBlur, ref } = register('email', {
+                    required: 'Email is required',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Invalid email address',
+                    },
+                  });
+                  return (
+                    <input
+                      id="email"
+                      type="email"
+                      name={name}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      ref={ref}
+                      placeholder="jury@example.com"
+                    />
+                  );
+                })()}
               </div>
             </label>
             {errors.email && (
@@ -192,23 +192,27 @@ function CreateJuryModal({
             )}
           </div>
           <div className="form-group">
-            <label htmlFor="phoneNumber" className="label-text">
+            <label htmlFor="phoneNumber" className="form-label">
               Phone Number *
               <div className="input-with-icon">
-                <Phone size={16} className="input-icon" />
-                <input
-                  id="phoneNumber"
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
-                  name={
-                    register('phoneNumber', {
-                      required: 'Phone number is required',
-                    }).name
-                  }
-                  onBlur={register('phoneNumber').onBlur}
-                  onChange={register('phoneNumber').onChange}
-                  ref={register('phoneNumber').ref}
-                />
+                <Phone size={16} />
+                {(() => {
+                  const { name, onChange, onBlur, ref } = register(
+                    'phoneNumber',
+                    { required: 'Phone number is required' }
+                  );
+                  return (
+                    <input
+                      id="phoneNumber"
+                      type="tel"
+                      name={name}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      ref={ref}
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  );
+                })()}
               </div>
             </label>
             {errors.phoneNumber && (
@@ -218,23 +222,27 @@ function CreateJuryModal({
         </div>
 
         <div className="form-group mb-4">
-          <label htmlFor="companyName" className="label-text">
+          <label htmlFor="companyName" className="form-label">
             Company Name *
             <div className="input-with-icon">
-              <Building2 size={16} className="input-icon" />
-              <input
-                id="companyName"
-                type="text"
-                placeholder="Enter company name"
-                name={
-                  register('companyName', {
-                    required: 'Company name is required',
-                  }).name
-                }
-                onBlur={register('companyName').onBlur}
-                onChange={register('companyName').onChange}
-                ref={register('companyName').ref}
-              />
+              <Building2 size={16} />
+              {(() => {
+                const { name, onChange, onBlur, ref } = register(
+                  'companyName',
+                  { required: 'Company name is required' }
+                );
+                return (
+                  <input
+                    id="companyName"
+                    type="text"
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    ref={ref}
+                    placeholder="Enter company name"
+                  />
+                );
+              })()}
             </div>
           </label>
           {errors.companyName && (
@@ -243,28 +251,32 @@ function CreateJuryModal({
         </div>
 
         <div className="form-group mb-4">
-          <label htmlFor="domainOfExpertise" className="label-text">
-            Industry Type *
+          <label htmlFor="domainOfExpertise" className="form-label">
+            Domain Of Expertise *
             <div className="input-with-icon">
-              <Briefcase size={16} className="input-icon" />
-              <select
-                id="domainOfExpertise"
-                name={
-                  register('domainOfExpertise', {
-                    required: 'Please select an industry',
-                  }).name
-                }
-                onBlur={register('domainOfExpertise').onBlur}
-                onChange={register('domainOfExpertise').onChange}
-                ref={register('domainOfExpertise').ref}
-              >
-                <option value="">Select Industry</option>
-                {INDUSTRY_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <Briefcase size={16} />
+              {(() => {
+                const { name, onChange, onBlur, ref } = register(
+                  'domainOfExpertise',
+                  { required: 'Please select a domain' }
+                );
+                return (
+                  <select
+                    id="domainOfExpertise"
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    ref={ref}
+                  >
+                    <option value="">Select domain</option>
+                    {INDUSTRY_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                );
+              })()}
             </div>
           </label>
           {errors.domainOfExpertise && (
@@ -274,44 +286,41 @@ function CreateJuryModal({
           )}
         </div>
 
-        {!initialData && (
-          <div className="form-group">
-            <label htmlFor="password" className="label-text">
-              Password *
-              <div className="input-with-icon">
-                <Lock size={16} className="input-icon" />
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Set account password"
-                  name={
-                    register('password', {
-                      required: 'Password is required',
-                      minLength: {
-                        value: 6,
-                        message: 'Password must be at least 6 characters',
-                      },
-                    }).name
-                  }
-                  onBlur={register('password').onBlur}
-                  onChange={register('password').onChange}
-                  ref={register('password').ref}
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </label>
-            {errors.password && (
-              <span className="field-error">{errors.password.message}</span>
-            )}
-          </div>
-        )}
+        <div className="form-group mb-4">
+          <label htmlFor="password" className="form-label">
+            Password *
+            <div className="input-with-icon">
+              <Lock size={16} />
+              {(() => {
+                const { name, onChange, onBlur, ref } = register('password', {
+                  required: !initialValues && 'Password is required',
+                  minLength: {
+                    value: 8,
+                    message: 'Password must be at least 8 characters',
+                  },
+                });
+                return (
+                  <input
+                    id="password"
+                    type="password"
+                    name={name}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    ref={ref}
+                    placeholder={
+                      initialValues
+                        ? 'Leave blank to keep current password'
+                        : 'Set account password'
+                    }
+                  />
+                );
+              })()}
+            </div>
+          </label>
+          {errors.password && (
+            <span className="field-error">{errors.password.message}</span>
+          )}
+        </div>
       </form>
     </Modal>
   );

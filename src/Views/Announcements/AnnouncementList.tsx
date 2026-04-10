@@ -16,7 +16,7 @@ import {
   useUpdateAnnouncementMutation,
   useDeleteAnnouncementMutation,
   AnnouncementItem,
-} from '../../Services/Api/module/AdminApi';
+} from '../../Services/Api/module/Admin/Announcement';
 import './AnnouncementList.scss';
 
 const AUDIENCE_MAP = [

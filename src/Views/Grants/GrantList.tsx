@@ -13,19 +13,27 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import Modal from '../../Components/Atom/Modal/Modal';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import KpiCard from '../../Components/Shared/KpiCard';
 import {
-  useGetGrantsQuery,
-  useGetGrantsSummaryQuery,
-  useDeleteGrantMutation,
-} from '../../Services/Api/module/GrantsApi';
+  useGetAdminGrantsQuery,
+  useGetAdminGrantsSummaryQuery,
+  useDeleteAdminGrantMutation,
+} from '../../Services/Api/module/Admin/Grant';
 import { KpiSkeleton } from '../Dashboard/Components/DashboardSkeletons';
 import { GrantGridSkeleton } from './Components/GrantSkeletons';
 import showToast from '../../Shared/Utils/toast';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import './GrantList.scss';
+import {
+  useDeleteOrganiserGrantMutation,
+  useGetOrganiserGrantsQuery,
+  useGetOrganiserGrantSummaryQuery,
+} from '../../Services/Api/module/Organiser/Grant';
 
 // Simple EyeOff fallback
 function EyeOff({ size }: Readonly<{ size: number }>) {
@@ -49,6 +57,10 @@ function EyeOff({ size }: Readonly<{ size: number }>) {
 function GrantList() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
+  const { role } = useCurrentUserRole();
+  const isAdmin = role === 'admin' || role === 'sub_admin';
+  const isOrganiser = role === 'organiser';
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,32 +69,68 @@ function GrantList() {
   );
   const [page] = useState(1);
 
+  const queryParams = useMemo(
+    () => ({
+      search: searchTerm || undefined,
+      status: statusFilter,
+      page,
+      pageSize: 20,
+    }),
+    [page, searchTerm, statusFilter]
+  );
+
   const {
-    data: grantsResponse,
-    isLoading: isGridLoading,
-    isError,
-    refetch,
-  } = useGetGrantsQuery({
-    search: searchTerm || undefined,
-    status: statusFilter,
-    page,
-    pageSize: 20,
-  });
+    data: adminGrantsResponse,
+    isLoading: isAdminGridLoading,
+    isError: isAdminError,
+    refetch: refetchAdminGrants,
+  } = useGetAdminGrantsQuery(queryParams, { skip: !isAdmin });
 
-  const { data: summaryResponse, isLoading: isSummaryLoading } =
-    useGetGrantsSummaryQuery();
-  const [deleteGrant, { isLoading: isDeleting }] = useDeleteGrantMutation();
+  const {
+    data: organiserGrantsResponse,
+    isLoading: isOrganiserGridLoading,
+    isError: isOrganiserError,
+    refetch: refetchOrganiserGrants,
+  } = useGetOrganiserGrantsQuery(queryParams, { skip: !isOrganiser });
 
-  const handleDeleteGrant = async (id: string) => {
-    if (
-      !globalThis.confirm('Are you sure you want to delete this grant?') ||
-      isDeleting
-    )
-      return;
+  const { data: adminSummaryResponse, isLoading: isAdminSummaryLoading } =
+    useGetAdminGrantsSummaryQuery(undefined, { skip: !isAdmin });
+
+  const {
+    data: organiserSummaryResponse,
+    isLoading: isOrganiserSummaryLoading,
+  } = useGetOrganiserGrantSummaryQuery(undefined, { skip: !isOrganiser });
+
+  const [deleteGrant, { isLoading: isDeleting }] =
+    useDeleteAdminGrantMutation();
+  const [deleteOrganiserGrant, { isLoading: isDeletingOrganiserGrant }] =
+    useDeleteOrganiserGrantMutation();
+
+  const grantsResponse = isAdmin
+    ? adminGrantsResponse
+    : organiserGrantsResponse;
+  const isGridLoading = isAdmin ? isAdminGridLoading : isOrganiserGridLoading;
+  const isError = isAdmin ? isAdminError : isOrganiserError;
+  const refetch = isAdmin ? refetchAdminGrants : refetchOrganiserGrants;
+  const summaryResponse = isAdmin
+    ? adminSummaryResponse
+    : organiserSummaryResponse;
+  const isSummaryLoading = isAdmin
+    ? isAdminSummaryLoading
+    : isOrganiserSummaryLoading;
+  const isDeletingGrant = isAdmin ? isDeleting : isDeletingOrganiserGrant;
+
+  const handleDeleteGrant = async () => {
+    if (!deletingId || isDeletingGrant) return;
 
     try {
-      await deleteGrant(id).unwrap();
+      if (isAdmin) {
+        await deleteGrant(deletingId).unwrap();
+      } else {
+        await deleteOrganiserGrant(deletingId).unwrap();
+      }
       showToast.success('Grant deleted successfully');
+      setDeletingId(null);
     } catch (error) {
       showToast.error(
         error instanceof Error ? error.message : 'Failed to delete grant'
@@ -92,24 +140,28 @@ function GrantList() {
 
   useEffect(() => {
     setTitle('Grant Management');
-    setSubtitle('Create and manage grant programs');
+    setSubtitle(
+      isOrganiser
+        ? 'Create and manage your grant programs'
+        : 'Create and manage grant programs'
+    );
     setBackAction(false);
     return () => resetHeader();
-  }, [setTitle, setSubtitle, setBackAction, resetHeader]);
+  }, [isOrganiser, setTitle, setSubtitle, setBackAction, resetHeader]);
 
   // Status mapping helper
   const getStatusLabel = (status: number) => {
     switch (status) {
       case 1:
-        return 'Active';
-      case 2:
-        return 'Closing Soon';
-      case 3:
-        return 'Closed';
-      case 4:
         return 'Draft';
+      case 2:
+        return 'Upcoming';
+      case 3:
+        return 'Active';
+      case 4:
+        return 'Completed';
       case 5:
-        return 'Archived';
+        return 'Closed';
       default:
         return 'Unknown';
     }
@@ -166,7 +218,7 @@ function GrantList() {
   }, [summaryResponse]);
 
   const renderCardActions = (grant: (typeof grants)[0]) => {
-    if (grant.status === 3) {
+    if (grant.status === 4 || grant.status === 5) {
       return (
         <>
           <button type="button" className="action-btn reopen">
@@ -176,8 +228,8 @@ function GrantList() {
           <button
             type="button"
             className="action-btn delete"
-            onClick={() => handleDeleteGrant(grant.id)}
-            disabled={isDeleting}
+            onClick={() => setDeletingId(grant.id)}
+            disabled={isDeletingGrant}
           >
             <Trash2 size={16} />
             <span>Delete</span>
@@ -186,7 +238,7 @@ function GrantList() {
       );
     }
 
-    if (grant.status === 4) {
+    if (grant.status === 1) {
       return (
         <>
           <button
@@ -200,8 +252,8 @@ function GrantList() {
           <button
             type="button"
             className="action-btn delete"
-            onClick={() => handleDeleteGrant(grant.id)}
-            disabled={isDeleting}
+            onClick={() => setDeletingId(grant.id)}
+            disabled={isDeletingGrant}
           >
             <Trash2 size={16} />
             <span>Delete</span>
@@ -231,8 +283,8 @@ function GrantList() {
         <button
           type="button"
           className="action-btn delete"
-          onClick={() => handleDeleteGrant(grant.id)}
-          disabled={isDeleting}
+          onClick={() => setDeletingId(grant.id)}
+          disabled={isDeletingGrant}
         >
           <Trash2 size={16} />
           <span>Delete</span>
@@ -263,47 +315,59 @@ function GrantList() {
       <div className="grants-grid">
         {grants.map((grant) => (
           <div key={grant.id} className="grant-card">
-            <div className="card-header">
-              <h3 className="grant-title">{grant.name}</h3>
-              <span className={`status-badge ${getStatusClass(grant.status)}`}>
-                {getStatusLabel(grant.status)}
-              </span>
-            </div>
-            <p className="grant-description">{grant.description}</p>
-
-            <div className="grant-meta">
-              <div className="meta-item">
-                <DollarSign size={16} />
-                <span className="label">Award Amount</span>
-                <span className="value">
-                  ${grant.prizeAmount.toLocaleString()}
+            <Link
+              to={`/grants/${grant.id}`}
+              className="card-clickable-area"
+              style={{
+                cursor: 'pointer',
+                textDecoration: 'none',
+                display: 'block',
+                color: 'inherit',
+              }}
+            >
+              <div className="card-header">
+                <h3 className="grant-title">{grant.name}</h3>
+                <span
+                  className={`status-badge ${getStatusClass(grant.status)}`}
+                >
+                  {getStatusLabel(grant.status)}
                 </span>
               </div>
-              <div className="meta-item">
-                <Calendar size={16} />
-                <span className="label">Deadline</span>
-                <span className="value">
-                  {new Date(grant.applicationDeadline).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="meta-item">
-                <Users size={16} />
-                <span className="label">Applicants</span>
-                <span className="value">{grant.applicantCount} applied</span>
-              </div>
-            </div>
+              <p className="grant-description">{grant.description}</p>
 
-            <div className="eligibility-section">
-              <span className="section-title">Eligibility Criteria</span>
-              <div className="criteria-chips">
-                {grant.eligibilityCriteria.map((chip) => (
-                  <span key={chip} className="chip">
-                    {chip}
+              <div className="grant-meta">
+                <div className="meta-item">
+                  <DollarSign size={16} />
+                  <span className="label">Award Amount</span>
+                  <span className="value">
+                    ${grant.prizeAmount.toLocaleString()}
                   </span>
-                ))}
+                </div>
+                <div className="meta-item">
+                  <Calendar size={16} />
+                  <span className="label">Deadline</span>
+                  <span className="value">
+                    {new Date(grant.applicationDeadline).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="meta-item">
+                  <Users size={16} />
+                  <span className="label">Applicants</span>
+                  <span className="value">{grant.applicantCount} applied</span>
+                </div>
               </div>
-            </div>
 
+              <div className="eligibility-section">
+                <span className="section-title">Eligibility Criteria</span>
+                <div className="criteria-chips">
+                  {grant.eligibilityCriteria.map((chip) => (
+                    <span key={chip} className="chip">
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Link>
             <div className="card-actions">{renderCardActions(grant)}</div>
           </div>
         ))}
@@ -339,7 +403,9 @@ function GrantList() {
 
       <div className="kpi-grid">
         {isSummaryLoading
-          ? [1, 2, 3, 4].map((i) => <KpiSkeleton key={i} />)
+          ? [1, 2, 3, 4].map((idVal) => (
+              <KpiSkeleton key={`skeleton-${idVal}`} />
+            ))
           : kpis.map((kpi) => (
               <KpiCard
                 key={kpi.label}
@@ -375,11 +441,11 @@ function GrantList() {
             }
           >
             <option value="">All Status</option>
-            <option value="1">Active</option>
-            <option value="2">Closing Soon</option>
-            <option value="3">Closed</option>
-            <option value="4">Draft</option>
-            <option value="5">Archived</option>
+            <option value="1">Draft</option>
+            <option value="2">Upcoming</option>
+            <option value="3">Active</option>
+            <option value="4">Completed</option>
+            <option value="5">Closed</option>
           </select>
           <button type="button" className="sort-btn">
             <ArrowUpDown size={16} />
@@ -389,6 +455,60 @@ function GrantList() {
       </div>
 
       {renderMainContent()}
+
+      <Modal
+        isOpen={Boolean(deletingId)}
+        onClose={() => setDeletingId(null)}
+        title="Delete Grant"
+        subtitle="Are you sure you want to delete this grant program? This action cannot be undone."
+        width="450px"
+        footer={
+          <div className="modal-actions-footer">
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={() => setDeletingId(null)}
+              disabled={isDeletingGrant}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn-confirm-delete"
+              style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                fontWeight: 600,
+              }}
+              onClick={handleDeleteGrant}
+              disabled={isDeletingGrant}
+            >
+              {isDeletingGrant ? 'Deleting...' : 'Delete Grant'}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <AlertTriangle
+            size={48}
+            color="#ef4444"
+            style={{ marginBottom: '16px' }}
+          />
+          <p style={{ color: '#4b5563', fontSize: '15px' }}>
+            Warning: This will permanently delete the grant program
+            {deletingId && (
+              <>
+                {' '}
+                <strong>{grants.find((g) => g.id === deletingId)?.name}</strong>
+              </>
+            )}{' '}
+            and all associated applications.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

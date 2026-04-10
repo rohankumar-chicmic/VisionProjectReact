@@ -12,6 +12,7 @@ import { RootState } from '../../Store';
 import LogoutModal from '../Molecule/LogoutModal/LogoutModal';
 import { SIDEBAR_CONFIG } from './sidebarConfig';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import './Sidebar.scss';
 
 import logo from '../../assets/logo.png';

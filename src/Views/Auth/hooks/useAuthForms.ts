@@ -14,8 +14,8 @@ import {
   useResetPasswordOrganiserMutation,
   useResetPasswordJuryMutation,
   useRegisterOrganiserMutation,
-} from '../../../Services/Api/module/AuthApi';
-import { useUploadFileMutation } from '../../../Services/Api/module/CommonApi';
+} from '../../../Services/Api/module/Auth';
+import { useUploadFileMutation } from '../../../Services/Api/module/Common';
 import { updateAuthTokenRedux } from '../../../Store/Common';
 import type { AppDispatch } from '../../../Store';
 import {

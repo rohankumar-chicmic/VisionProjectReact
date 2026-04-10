@@ -80,6 +80,19 @@
       overflow-x: auto;
     }
 
+    .jury-loading-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 120px;
+      color: #64748b;
+
+      .spin {
+        animation: jury-spin 1s linear infinite;
+      }
+    }
+
     .jury-user-cell {
       display: flex;
       align-items: center;
@@ -166,6 +179,11 @@
         cursor: pointer;
         transition: all 0.2s;
         background-color: transparent;
+
+        &:disabled {
+          cursor: not-allowed;
+          opacity: 0.5;
+        }
 
         &.edit { color: #3b82f6; &:hover { background-color: #eff6ff; } }
         &.delete { color: #ef4444; &:hover { background-color: #fef2f2; } }

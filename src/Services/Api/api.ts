@@ -79,6 +79,8 @@ const api = createApi({
     'OrganiserGalas',
     'OrganiserGrants',
     'OrganiserJuries',
+    'OrganiserApplications',
+    'JuryApplications',
   ],
 });
 

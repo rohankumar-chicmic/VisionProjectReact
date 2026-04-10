@@ -13,6 +13,7 @@ import KpiCard, {
 } from '../../../../../Components/Shared/KpiCard';
 import { OrganiserGalaSummaryData } from '../../../../../Services/Api/module/Organiser/Gala';
 import { OrganiserGrantSummaryData } from '../../../../../Services/Api/module/Organiser/Grant';
+import formatNumberWithUnits from '../../../../../Shared/Utils/numbers';
 
 interface DashboardStatsProps {
   galaSummary: OrganiserGalaSummaryData | null | undefined;
@@ -69,7 +70,7 @@ function DashboardStats({
     {
       icon: <Trophy size={22} />,
       label: 'Total Prize Pool',
-      value: `$${grantSummary?.totalFundAmount.toLocaleString() ?? '0'}`,
+      value: `$${formatNumberWithUnits(grantSummary?.totalFundAmount)}`,
       color: '#F59E0B', // Amber
     },
   ];

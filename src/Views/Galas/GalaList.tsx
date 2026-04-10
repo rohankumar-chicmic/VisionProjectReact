@@ -8,7 +8,6 @@ import {
   Edit3,
   Send,
   Trash2,
-  EyeOff,
   Plus,
   ChevronDown,
 } from 'lucide-react';
@@ -18,14 +17,12 @@ import { HeaderActions, useHeader } from '../../Shared/Context/HeaderContext';
 import {
   useGetAdminGalasQuery,
   usePublishAdminGalaMutation,
-  useUnpublishAdminGalaMutation,
   useDeleteAdminGalaMutation,
 } from '../../Services/Api/module/Admin/Gala';
 import {
   useDeleteOrganiserGalaMutation,
   useGetOrganiserGalasQuery,
   usePublishOrganiserGalaMutation,
-  useUnpublishOrganiserGalaMutation,
 } from '../../Services/Api/module/Organiser/Gala';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import { GalaGridSkeleton } from './Components/GalaSkeletons';
@@ -98,18 +95,11 @@ function GalaList() {
     usePublishAdminGalaMutation();
   const [publishOrganiserGala, { isLoading: isPublishingOrganiser }] =
     usePublishOrganiserGalaMutation();
-  const [unpublishAdminGala, { isLoading: isUnpublishingAdmin }] =
-    useUnpublishAdminGalaMutation();
-  const [unpublishOrganiserGala, { isLoading: isUnpublishingOrganiser }] =
-    useUnpublishOrganiserGalaMutation();
   const [deleteAdminGala, { isLoading: isDeletingAdmin }] =
     useDeleteAdminGalaMutation();
   const [deleteOrganiserGala, { isLoading: isDeletingOrganiser }] =
     useDeleteOrganiserGalaMutation();
   const isPublishing = isAdmin ? isPublishingAdmin : isPublishingOrganiser;
-  const isUnpublishing = isAdmin
-    ? isUnpublishingAdmin
-    : isUnpublishingOrganiser;
   const isDeleting = isAdmin ? isDeletingAdmin : isDeletingOrganiser;
 
   const galas = useMemo(() => {
@@ -177,13 +167,9 @@ function GalaList() {
     return `No results for "${debouncedSearchTerm}"`;
   };
 
-  const handleAction = async (
-    id: string,
-    action: 'publish' | 'unpublish' | 'delete'
-  ) => {
+  const handleAction = async (id: string, action: 'publish' | 'delete') => {
     const successMessages = {
       publish: 'Gala published successfully.',
-      unpublish: 'Gala unpublished successfully.',
       delete: 'Gala deleted successfully.',
     };
 
@@ -205,12 +191,6 @@ function GalaList() {
               organiserWalletAddress: walletAddress,
             },
           }).unwrap();
-        }
-      } else if (action === 'unpublish') {
-        if (isAdmin) {
-          await unpublishAdminGala(id).unwrap();
-        } else {
-          await unpublishOrganiserGala(id).unwrap();
         }
       } else {
         // eslint-disable-next-line no-alert
@@ -307,64 +287,40 @@ function GalaList() {
                 </div>
 
                 <div className="gala-actions">
+                  {gala.status === 1 && (
+                    <>
+                      <button
+                        type="button"
+                        className="action-btn edit"
+                        onClick={() => navigate(`/galas/edit/${gala.id}`)}
+                      >
+                        <Edit3 size={16} />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="action-btn publish"
+                        onClick={() => handleAction(gala.id, 'publish')}
+                        disabled={isPublishing}
+                      >
+                        <Send size={16} />
+                        <span>
+                          {isPublishing ? 'Publishing...' : 'Publish'}
+                        </span>
+                      </button>
+                    </>
+                  )}
+
                   <button
                     type="button"
-                    className="action-btn edit"
-                    onClick={() => navigate(`/galas/edit/${gala.id}`)}
+                    className="action-btn delete"
+                    onClick={() => handleAction(gala.id, 'delete')}
+                    disabled={isDeleting}
                   >
-                    <Edit3 size={16} />
-                    <span>Edit</span>
+                    <Trash2 size={16} />
+                    <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
                   </button>
-
-                  {gala.status === 1 && (
-                    <button
-                      type="button"
-                      className="action-btn publish"
-                      onClick={() => handleAction(gala.id, 'publish')}
-                      disabled={isPublishing}
-                    >
-                      <Send size={16} />
-                      <span>{isPublishing ? 'Publishing...' : 'Publish'}</span>
-                    </button>
-                  )}
-
-                  {gala.status === 2 && (
-                    <button
-                      type="button"
-                      className="action-btn publish"
-                      onClick={() => handleAction(gala.id, 'publish')}
-                      disabled={isPublishing}
-                    >
-                      <Send size={16} />
-                      <span>{isPublishing ? 'Starting...' : 'Go Live'}</span>
-                    </button>
-                  )}
-
-                  {gala.status === 3 && (
-                    <button
-                      type="button"
-                      className="action-btn unpublish"
-                      onClick={() => handleAction(gala.id, 'unpublish')}
-                      disabled={isUnpublishing}
-                    >
-                      <EyeOff size={16} />
-                      <span>
-                        {isUnpublishing ? 'Unpublishing...' : 'Unpublish'}
-                      </span>
-                    </button>
-                  )}
-
-                  {gala.status === 4 && (
-                    <button
-                      type="button"
-                      className="action-btn delete"
-                      onClick={() => handleAction(gala.id, 'delete')}
-                      disabled={isDeleting}
-                    >
-                      <Trash2 size={16} />
-                      <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
-                    </button>
-                  )}
                 </div>
               </div>
             </div>

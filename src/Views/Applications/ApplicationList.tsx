@@ -12,6 +12,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import { useGetAdminApplicationsQuery } from '../../Services/Api/module/Admin/Application';
+import { useGetOrganiserApplicationsQuery } from '../../Services/Api/module/Organiser/Application';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import Skeleton from '../../Components/Shared/Skeleton';
 import './ApplicationList.scss';
 
@@ -75,17 +77,29 @@ function ApplicationList() {
     }
   };
 
-  const { data: appResponse, isLoading: isAppsLoading } =
-    useGetAdminApplicationsQuery({
-      searchTerm: debouncedSearch || undefined,
-      status: getStatusFromTab(activeTab),
-      pageNumber,
-      pageSize,
-    });
+  const { role } = useCurrentUserRole();
+  const isAdmin = role === 'admin' || role === 'sub_admin';
+  const isOrganiser = role === 'organiser';
 
-  const applications = appResponse?.data?.items || [];
-  const totalCount = appResponse?.data?.totalCount || 0;
-  const totalPages = appResponse?.data?.totalPages || 0;
+  const queryParams = {
+    searchTerm: debouncedSearch || undefined,
+    status: getStatusFromTab(activeTab),
+    pageNumber,
+    pageSize,
+  };
+
+  const { data: adminResponse, isLoading: isAdminLoading } =
+    useGetAdminApplicationsQuery(queryParams, { skip: !isAdmin });
+
+  const { data: organiserResponse, isLoading: isOrganiserLoading } =
+    useGetOrganiserApplicationsQuery(queryParams, { skip: !isOrganiser });
+
+  const response = isAdmin ? adminResponse : organiserResponse;
+  const isAppsLoading = isAdmin ? isAdminLoading : isOrganiserLoading;
+
+  const applications = response?.data?.items || [];
+  const totalCount = response?.data?.totalCount || 0;
+  const totalPages = response?.data?.totalPages || 0;
 
   useEffect(() => {
     setTitle('Application Management');

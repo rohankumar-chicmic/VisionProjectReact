@@ -1,45 +1,25 @@
 import api from '../../../api';
 
-export interface AdminApplication {
-  id: string;
-  applicantName: string;
-  applicantEmail: string;
-  applicantAvatarUrl: string | null;
-  galaName: string;
-  grantName: string;
-  appliedDate: string;
-  juryScore: number;
-  status: number;
+export interface CriterionScore {
+  criteriaKey: string;
+  criteriaName: string;
+  criteriaCategory: string;
+  score: number;
 }
 
-export interface AdminApplicationData {
-  items: AdminApplication[];
-  pageNumber: number;
-  totalPages: number;
-  totalCount: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
+export interface EvaluationRequest {
+  applicationId: string;
+  scores: CriterionScore[];
+  overallScore: number;
+  comment: string;
+  personalNote: string;
 }
 
-export interface AdminApplicationListResponse {
-  success: boolean;
-  message: string;
-  data: AdminApplicationData;
-  errors: unknown;
-  notificationCount: number;
+export interface InterviewCompletionRequest {
+  markCompleted: boolean;
 }
 
-export interface AdminApplicationParams {
-  searchTerm?: string;
-  galaId?: string;
-  grantId?: string;
-  status?: number;
-  sortBy?: string;
-  sortOrder?: string;
-  pageNumber?: number;
-  pageSize?: number;
-}
-
+// Interfaces for response data (placeholders based on common patterns)
 export interface JuryPanelMember {
   jurorName: string;
   score: number | null;
@@ -54,7 +34,7 @@ export interface JuryPanelSummary {
   suggestedClass: string | null;
 }
 
-export interface AdminApplicationDetail {
+export interface JuryApplicationDetail {
   id: string;
   applicationId: string;
   userId: string;
@@ -99,50 +79,70 @@ export interface AdminApplicationDetail {
   juryPanelSummary: JuryPanelSummary;
 }
 
-export interface AdminApplicationDetailResponse {
+export interface ApiResponse<T> {
   success: boolean;
   message: string;
-  data: AdminApplicationDetail;
+  data: T;
   errors: unknown;
-  notificationCount: number;
 }
 
-export const adminApplicationApi = api.injectEndpoints({
+export const juryApplicationApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getAdminApplications: build.query<
-      AdminApplicationListResponse,
-      AdminApplicationParams
-    >({
-      query: (params) => ({
-        url: '/api/v1/admin/applications',
-        method: 'GET',
-        params,
-      }),
-      providesTags: ['Admins'],
-    }),
-    getAdminApplicationById: build.query<
-      AdminApplicationDetailResponse,
+    getJuryApplicationById: build.query<
+      ApiResponse<JuryApplicationDetail>,
       string
     >({
       query: (id) => ({
-        url: `/api/v1/admin/applications/${id}`,
+        url: `/api/v1/jury/applications/${id}`,
         method: 'GET',
       }),
-      providesTags: (_result, _error, id) => [{ type: 'Admins', id }],
+      providesTags: (_result, _error, id) => [{ type: 'JuryApplications', id }],
     }),
-    downloadAdminApplicationAvatar: build.query<Blob, string>({
-      query: (id) => ({
-        url: `/api/v1/admin/applications/${id}/applicant-avatar`,
-        method: 'GET',
-        responseHandler: (response) => response.blob(),
+
+    markInterviewCompleted: build.mutation<
+      ApiResponse<void>,
+      { id: string; body: InterviewCompletionRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/jury/applications/${id}/interview-completion`,
+        method: 'POST',
+        body,
       }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'JuryApplications', id },
+      ],
+    }),
+
+    startReview: build.mutation<ApiResponse<void>, string>({
+      query: (id) => ({
+        url: `/api/v1/jury/applications/${id}/start-review`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'JuryApplications', id },
+      ],
+    }),
+
+    submitEvaluation: build.mutation<
+      ApiResponse<void>,
+      { id: string; body: EvaluationRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/v1/jury/applications/${id}/evaluation`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'JuryApplications', id },
+      ],
     }),
   }),
   overrideExisting: false,
 });
 
 export const {
-  useGetAdminApplicationsQuery,
-  useGetAdminApplicationByIdQuery,
-  useLazyDownloadAdminApplicationAvatarQuery,
-} = adminApplicationApi;
+  useGetJuryApplicationByIdQuery,
+  useMarkInterviewCompletedMutation,
+  useStartReviewMutation,
+  useSubmitEvaluationMutation,
+} = juryApplicationApi;

@@ -1,6 +1,6 @@
 import api from '../../../api';
 
-export interface AdminApplication {
+export interface OrganiserApplication {
   id: string;
   applicantName: string;
   applicantEmail: string;
@@ -12,8 +12,8 @@ export interface AdminApplication {
   status: number;
 }
 
-export interface AdminApplicationData {
-  items: AdminApplication[];
+export interface OrganiserApplicationData {
+  items: OrganiserApplication[];
   pageNumber: number;
   totalPages: number;
   totalCount: number;
@@ -21,15 +21,15 @@ export interface AdminApplicationData {
   hasNextPage: boolean;
 }
 
-export interface AdminApplicationListResponse {
+export interface OrganiserApplicationListResponse {
   success: boolean;
   message: string;
-  data: AdminApplicationData;
+  data: OrganiserApplicationData;
   errors: unknown;
   notificationCount: number;
 }
 
-export interface AdminApplicationParams {
+export interface OrganiserApplicationParams {
   searchTerm?: string;
   galaId?: string;
   grantId?: string;
@@ -54,7 +54,7 @@ export interface JuryPanelSummary {
   suggestedClass: string | null;
 }
 
-export interface AdminApplicationDetail {
+export interface OrganiserApplicationDetail {
   id: string;
   applicationId: string;
   userId: string;
@@ -99,40 +99,42 @@ export interface AdminApplicationDetail {
   juryPanelSummary: JuryPanelSummary;
 }
 
-export interface AdminApplicationDetailResponse {
+export interface OrganiserApplicationDetailResponse {
   success: boolean;
   message: string;
-  data: AdminApplicationDetail;
+  data: OrganiserApplicationDetail;
   errors: unknown;
   notificationCount: number;
 }
 
-export const adminApplicationApi = api.injectEndpoints({
+export const organiserApplicationApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getAdminApplications: build.query<
-      AdminApplicationListResponse,
-      AdminApplicationParams
+    getOrganiserApplications: build.query<
+      OrganiserApplicationListResponse,
+      OrganiserApplicationParams
     >({
       query: (params) => ({
-        url: '/api/v1/admin/applications',
+        url: '/api/v1/organiser/applications',
         method: 'GET',
         params,
       }),
-      providesTags: ['Admins'],
+      providesTags: ['OrganiserApplications'],
     }),
-    getAdminApplicationById: build.query<
-      AdminApplicationDetailResponse,
+    getOrganiserApplicationById: build.query<
+      OrganiserApplicationDetailResponse,
       string
     >({
       query: (id) => ({
-        url: `/api/v1/admin/applications/${id}`,
+        url: `/api/v1/organiser/applications/${id}`,
         method: 'GET',
       }),
-      providesTags: (_result, _error, id) => [{ type: 'Admins', id }],
+      providesTags: (_result, _error, id) => [
+        { type: 'OrganiserApplications', id },
+      ],
     }),
-    downloadAdminApplicationAvatar: build.query<Blob, string>({
+    downloadOrganiserApplicationAvatar: build.query<Blob, string>({
       query: (id) => ({
-        url: `/api/v1/admin/applications/${id}/applicant-avatar`,
+        url: `/api/v1/organiser/applications/${id}/applicant-avatar`,
         method: 'GET',
         responseHandler: (response) => response.blob(),
       }),
@@ -142,7 +144,7 @@ export const adminApplicationApi = api.injectEndpoints({
 });
 
 export const {
-  useGetAdminApplicationsQuery,
-  useGetAdminApplicationByIdQuery,
-  useLazyDownloadAdminApplicationAvatarQuery,
-} = adminApplicationApi;
+  useGetOrganiserApplicationsQuery,
+  useGetOrganiserApplicationByIdQuery,
+  useLazyDownloadOrganiserApplicationAvatarQuery,
+} = organiserApplicationApi;

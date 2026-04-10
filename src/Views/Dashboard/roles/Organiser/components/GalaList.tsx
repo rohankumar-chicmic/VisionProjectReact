@@ -1,5 +1,6 @@
 import Table, { type Column } from '../../../../../Components/Atom/Table/Table';
 import type { GalaItem } from '../../../../../Services/Api/module/Organiser/Gala';
+import formatNumberWithUnits from '../../../../../Shared/Utils/numbers';
 
 interface OrganiserGalaListProps {
   data: GalaItem[];
@@ -21,7 +22,7 @@ const columns: Column<GalaItem>[] = [
   },
   {
     header: 'Prize Pool',
-    accessor: (item) => `$${(item.totalGalaValue ?? 0).toLocaleString()}`,
+    accessor: (item) => `$${formatNumberWithUnits(item.totalGalaValue)}`,
   },
 ];
 

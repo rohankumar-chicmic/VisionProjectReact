@@ -10,7 +10,6 @@ import {
   ExternalLink,
   ClipboardList,
   CheckCircle,
-  EyeOff,
   Trash2,
   Users,
   AlertTriangle,
@@ -20,14 +19,12 @@ import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import {
   useGetAdminGalaByIdQuery,
   usePublishAdminGalaMutation,
-  useUnpublishAdminGalaMutation,
   useDeleteAdminGalaMutation,
 } from '../../Services/Api/module/Admin/Gala';
 import {
   useDeleteOrganiserGalaMutation,
   useGetOrganiserGalaByIdQuery,
   usePublishOrganiserGalaMutation,
-  useUnpublishOrganiserGalaMutation,
 } from '../../Services/Api/module/Organiser/Gala';
 import Skeleton from '../../Components/Shared/Skeleton';
 import showToast from '../../Shared/Utils/toast';
@@ -59,10 +56,6 @@ function GalaDetails() {
     usePublishAdminGalaMutation();
   const [publishOrganiserGala, { isLoading: isPublishingOrganiser }] =
     usePublishOrganiserGalaMutation();
-  const [unpublishAdminGala, { isLoading: isUnpublishingAdmin }] =
-    useUnpublishAdminGalaMutation();
-  const [unpublishOrganiserGala, { isLoading: isUnpublishingOrganiser }] =
-    useUnpublishOrganiserGalaMutation();
   const [deleteAdminGala, { isLoading: isDeletingAdmin }] =
     useDeleteAdminGalaMutation();
   const [deleteOrganiserGala, { isLoading: isDeletingOrganiser }] =
@@ -72,9 +65,6 @@ function GalaDetails() {
   const isLoading = isAdmin ? isAdminLoading : isOrganiserLoading;
   const isError = isAdmin ? isAdminError : isOrganiserError;
   const isPublishing = isAdmin ? isPublishingAdmin : isPublishingOrganiser;
-  const isUnpublishing = isAdmin
-    ? isUnpublishingAdmin
-    : isUnpublishingOrganiser;
   const isDeleting = isAdmin ? isDeletingAdmin : isDeletingOrganiser;
   const gala = response?.data;
   const totalPrizePool =
@@ -183,22 +173,6 @@ function GalaDetails() {
     }
   };
 
-  const handleUnpublish = async () => {
-    if (!id) return;
-    try {
-      if (isAdmin) {
-        await unpublishAdminGala(id).unwrap();
-      } else {
-        await unpublishOrganiserGala(id).unwrap();
-      }
-      showToast.success('Gala unpublished successfully!');
-    } catch (error) {
-      showToast.error(
-        error instanceof Error ? error.message : 'Failed to unpublish gala'
-      );
-    }
-  };
-
   const handleDelete = async () => {
     if (!id || isDeleting) return;
     try {
@@ -269,34 +243,28 @@ function GalaDetails() {
             <Trash2 size={18} />
             Delete
           </button>
-          {gala.status === 2 ? (
-            <button
-              type="button"
-              className="header-btn btn-warning"
-              onClick={handleUnpublish}
-              disabled={isUnpublishing}
-            >
-              <EyeOff size={18} />
-              Unpublish
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="header-btn btn-primary"
-              onClick={handlePublish}
-              disabled={isPublishing}
-            >
-              <CheckCircle size={18} />
-              Publish Gala
-            </button>
+
+          {gala.status === 1 && (
+            <>
+              <button
+                type="button"
+                className="header-btn btn-primary"
+                onClick={handlePublish}
+                disabled={isPublishing}
+              >
+                <CheckCircle size={18} />
+                Publish Gala
+              </button>
+
+              <button
+                type="button"
+                className="header-btn btn-outline"
+                onClick={() => navigate(`/galas/edit/${id}`)}
+              >
+                Edit Gala
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            className="header-btn btn-outline"
-            onClick={() => navigate(`/galas/edit/${id}`)}
-          >
-            Edit Gala
-          </button>
         </div>
       </HeaderActions>
 

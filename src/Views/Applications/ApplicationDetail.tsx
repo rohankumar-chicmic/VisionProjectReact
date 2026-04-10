@@ -13,6 +13,23 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
+import {
+  useGetAdminApplicationByIdQuery,
+  AdminApplicationDetail,
+  useLazyDownloadAdminApplicationAvatarQuery,
+  JuryPanelMember,
+} from '../../Services/Api/module/Admin/Application';
+import {
+  useGetOrganiserApplicationByIdQuery,
+  OrganiserApplicationDetail,
+  useLazyDownloadOrganiserApplicationAvatarQuery,
+} from '../../Services/Api/module/Organiser/Application';
+import {
+  useGetJuryApplicationByIdQuery,
+  JuryApplicationDetail,
+} from '../../Services/Api/module/Jury/Application';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
+import Skeleton from '../../Components/Shared/Skeleton';
 import RejectApplicationModal from './Components/RejectApplicationModal';
 import RescheduleInterviewModal from './Components/RescheduleInterviewModal';
 import './ApplicationDetail.scss';
@@ -45,72 +62,203 @@ function JurorCard({
         </div>
         <div className="juror-score-badge">{score.toFixed(1)} / 10</div>
       </div>
-      <div className="criteria-list">
-        {criteria.map((criterion) => (
-          <div key={criterion.label} className="criteria-item">
-            <span className="label">{criterion.label}</span>
-            <div className="score-bar-wrapper">
+      <div className="criteria-ratings">
+        {criteria.map((c) => (
+          <div key={c.label} className="criteria-item">
+            <div className="criteria-label">
+              <span>{c.label}</span>
+              <span className="val">{c.score}/10</span>
+            </div>
+            <div className="progress-bar">
               <div
-                className="score-bar"
-                style={{ width: `${criterion.score * 10}%` }}
+                className="progress-fill"
+                style={{ width: `${c.score * 10}%` }}
               />
             </div>
-            <span className="score">{criterion.score} / 10</span>
           </div>
         ))}
       </div>
-      <div className="juror-comment">
-        <p>&quot;{comment}&ldquo;</p>
-      </div>
+      {comment && (
+        <div className="juror-comment">
+          <p>“{comment}”</p>
+        </div>
+      )}
     </div>
   );
 }
 
-function ApplicationDetail() {
-  const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
-  const navigate = useNavigate();
-  const { id } = useParams();
+const getStatusDetails = (status: string | number) => {
+  const s = typeof status === 'string' ? status.toLowerCase() : status;
+  switch (s) {
+    case 'draft':
+    case 1:
+      return { label: 'Draft', class: 'draft' };
+    case 'pending review':
+    case 'pending':
+    case 2:
+      return { label: 'Pending Review', class: 'pending-review' };
+    case 'in review':
+    case 3:
+      return { label: 'In Review', class: 'in-review' };
+    case 'approved':
+    case 4:
+      return { label: 'Approved', class: 'approved' };
+    case 'rejected':
+    case 5:
+      return { label: 'Rejected', class: 'rejected' };
+    case 'winner':
+    case 6:
+      return { label: 'Winner', class: 'winner' };
+    case 'interview':
+    case 7:
+      return { label: 'Interview', class: 'interview' };
+    default:
+      return { label: status?.toString() || 'Unknown', class: '' };
+  }
+};
 
-  // App State
-  type AppStatus = 'Pending Review' | 'Rejected' | 'Approved';
-  const [status, setStatus] = useState<AppStatus>('Pending Review');
+function ApplicationDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { role } = useCurrentUserRole();
+  const isAdmin = role === 'admin' || role === 'sub_admin';
+  const isOrganiser = role === 'organiser';
+  const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
+
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
-
-  // Notes state
+  const [winnerClass, setWinnerClass] = useState<string | null>(null);
   const [adminNote, setAdminNote] = useState('');
   const [isNoteSaved, setIsNoteSaved] = useState(false);
 
-  // Winner class state
-  const [winnerClass, setWinnerClass] = useState<string | null>(null);
+  const [triggerDownloadAdminAvatar] =
+    useLazyDownloadAdminApplicationAvatarQuery();
+  const [triggerDownloadOrganiserAvatar] =
+    useLazyDownloadOrganiserApplicationAvatarQuery();
+
+  const { data: adminResponse, isLoading: isAdminLoading } =
+    useGetAdminApplicationByIdQuery(id ?? '', { skip: !isAdmin });
+  const { data: organiserResponse, isLoading: isOrganiserLoading } =
+    useGetOrganiserApplicationByIdQuery(id ?? '', { skip: !isOrganiser });
+  const { data: juryResponse, isLoading: isJuryLoading } =
+    useGetJuryApplicationByIdQuery(id ?? '', {
+      skip: isAdmin || isOrganiser,
+    });
+
+  const isLoading = isAdminLoading || isOrganiserLoading || isJuryLoading;
+
+  let applicationData;
+  if (isAdmin) {
+    applicationData = adminResponse?.data;
+  } else if (isOrganiser) {
+    applicationData = organiserResponse?.data;
+  } else {
+    applicationData = juryResponse?.data;
+  }
+
+  const application = applicationData as
+    | AdminApplicationDetail
+    | OrganiserApplicationDetail
+    | JuryApplicationDetail
+    | undefined;
 
   useEffect(() => {
     setTitle('Application Review');
-    setSubtitle('Review and approve grant application');
-    setBackAction(true, () => navigate('/applications'));
+    setSubtitle(`Ref: ${id || 'N/A'}`);
+    setBackAction(true, () => navigate(-1));
     return () => resetHeader();
-  }, [setTitle, setSubtitle, setBackAction, resetHeader, navigate]);
+  }, [setTitle, setSubtitle, setBackAction, resetHeader, id, navigate]);
+
+  useEffect(() => {
+    if (application?.adminNotes) {
+      setAdminNote(application.adminNotes);
+      setIsNoteSaved(true);
+    }
+  }, [application?.adminNotes]);
 
   const handleApprove = () => {
-    setStatus('Approved');
+    // API logic for approve
   };
 
   const handleRejectConfirm = () => {
-    setStatus('Rejected');
+    // API logic for reject
     setIsRejectOpen(false);
   };
 
   const handleRescheduleConfirm = () => {
+    // API logic for reschedule
     setIsRescheduleOpen(false);
   };
 
+  const handleDownloadAvatar = async () => {
+    if (!id || !application) return;
+
+    try {
+      const trigger = isAdmin
+        ? triggerDownloadAdminAvatar
+        : triggerDownloadOrganiserAvatar;
+      const blob = await trigger(id).unwrap();
+
+      if (blob) {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `applicant_${application.applicantDisplayId || id}_avatar.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      // Failed to download avatar
+    }
+  };
+
   const winnerClasses = [
-    { id: 'A', label: 'A - Excellence', bg: '#16a34a' },
-    { id: 'B', label: 'B - Laureat', bg: '#ea580c' },
-    { id: 'C', label: 'C - Mention', bg: '#ca8a04' },
-    { id: 'D', label: 'D - Remplacant', bg: '#2563eb' },
-    { id: 'E', label: 'E - No Way', bg: '#dc2626' },
+    { id: 'excellence', label: 'EXCELLENCE - A', bg: '#16a34a' },
+    { id: 'winner', label: 'WINNER - B', bg: '#2563eb' },
+    { id: 'mention', label: 'MENTION - C', bg: '#eab308' },
+    { id: 'not_selected', label: 'NOT SELECTED', bg: '#ef4444' },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="application-review-page">
+        <div className="skeleton-container" style={{ padding: '24px' }}>
+          <Skeleton height={200} />
+          <div style={{ marginTop: '24px' }}>
+            <Skeleton height={600} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!application) {
+    return (
+      <div className="application-review-page">
+        <div
+          className="error-container"
+          style={{ padding: '40px', textAlign: 'center' }}
+        >
+          <h2>Application Not Found</h2>
+          <p>
+            The application you are looking for does not exist or you do not
+            have permission to view it.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="btn-secondary"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const statusInfo = getStatusDetails(application.status);
 
   return (
     <div className="application-review-page">
@@ -118,21 +266,28 @@ function ApplicationDetail() {
         isOpen={isRejectOpen}
         onClose={() => setIsRejectOpen(false)}
         onConfirm={handleRejectConfirm}
-        applicantInitials="JD"
-        applicantName="John Doe"
-        grantName="Innovation Technology Grant"
-        appId={id || 'APP-45230'}
+        applicantInitials={application.applicantName?.charAt(0) || ''}
+        applicantName={application.applicantName || ''}
+        grantName={application.grantName || ''}
+        appId={application.applicationId || ''}
       />
       <RescheduleInterviewModal
         isOpen={isRescheduleOpen}
         onClose={() => setIsRescheduleOpen(false)}
         onConfirm={handleRescheduleConfirm}
-        currentDate="February 25, 2026 10:30 AM"
-        applicantName="John Doe"
+        currentDate={
+          application.interviewDate
+            ? `${new Date(application.interviewDate).toLocaleDateString()} at ${application.interviewStartTime || ''}`
+            : 'Not set'
+        }
+        applicantName={application.applicantName}
       />
 
       <HeaderActions>
-        {status === 'Pending Review' && (
+        {/* Status Check Refactored for String Safety */}
+        {(application.status === '2' ||
+          application.status === 'Pending' ||
+          application.status === 'Pending Review') && (
           <>
             <button
               type="button"
@@ -152,7 +307,7 @@ function ApplicationDetail() {
             </button>
           </>
         )}
-        {status === 'Approved' && (
+        {(application.status === '4' || application.status === 'Approved') && (
           <div className="winner-class-selection">
             <span className="selection-label">
               APPROVED - Assign Winner Class:
@@ -189,34 +344,54 @@ function ApplicationDetail() {
           <section className="review-card profile-card">
             <div className="card-body">
               <div className="profile-header">
-                <div className="avatar-large">JD</div>
-                <div className="info">
-                  <h3>John Doe</h3>
-                  <p>john.doe@quackpreneur.com</p>
-                  <span className="usr-id"># USR-10234</span>
+                <div className="avatar-large">
+                  {application.applicantName?.charAt(0) || ''}
                 </div>
-                <div
-                  className={`status-badge ${status.toLowerCase().replace(' ', '-')}`}
-                >
-                  {status}
+                <div className="info">
+                  <h3>{application.applicantName || 'Unknown Applicant'}</h3>
+                  <p>{application.applicantEmail || 'No email provided'}</p>
+                  <span className="usr-id">
+                    {application.applicantDisplayId ||
+                      `#USR-${id?.substring(0, 8)}`}
+                  </span>
+                </div>
+                <div className={`status-badge ${statusInfo.class}`}>
+                  {statusInfo.label}
                 </div>
               </div>
               <div className="stats-grid">
                 <div className="stat-item">
                   <span className="label">Applications</span>
-                  <span className="value">3</span>
+                  <span className="value">
+                    {application.applicantGrantApplicationCount || 0}
+                  </span>
                 </div>
                 <div className="stat-item">
                   <span className="label">Approved</span>
-                  <span className="value">0</span>
+                  <span className="value">
+                    {application.applicantApprovedGrantApplicationCount || 0}
+                  </span>
                 </div>
                 <div className="stat-item">
                   <span className="label">Member Since</span>
-                  <span className="value">Jan 2024</span>
+                  <span className="value">
+                    {application.applicantMemberSince
+                      ? new Date(
+                          application.applicantMemberSince
+                        ).toLocaleDateString('en-US', {
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : 'N/A'}
+                  </span>
                 </div>
                 <div className="stat-item">
                   <span className="label">Subscription</span>
-                  <span className="value">Yearly</span>
+                  <span className="value">
+                    {application.applicantSubscriptionPlan === 2
+                      ? 'Premium'
+                      : 'Standard'}
+                  </span>
                 </div>
               </div>
               <div className="profile-actions">
@@ -224,7 +399,11 @@ function ApplicationDetail() {
                   <User size={16} />
                   <span>Open User Profile</span>
                 </button>
-                <button type="button" className="btn-secondary">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={handleDownloadAvatar}
+                >
                   <Download size={16} />
                   <span>Download Profile Photo</span>
                 </button>
@@ -236,33 +415,48 @@ function ApplicationDetail() {
           <section className="review-card">
             <div className="card-header">
               <h3>Grant Details</h3>
-              <span className="submission-date">Submitted on 2/24/2026</span>
+              <span className="submission-date">
+                Submitted on{' '}
+                {application.appliedDate
+                  ? new Date(application.appliedDate).toLocaleDateString()
+                  : 'N/A'}
+              </span>
             </div>
             <div className="card-body">
               <div className="info-list">
                 <div className="info-row">
                   <span className="label">Application ID:</span>
-                  <span className="value">{id || 'APP-45230'}</span>
+                  <span className="value">
+                    {application.applicationId || id}
+                  </span>
                 </div>
                 <div className="info-row">
                   <span className="label">Grant:</span>
                   <span className="value highlight">
-                    Innovation Technology Grant
+                    {application.grantName}
                   </span>
                 </div>
                 <div className="info-row">
                   <span className="label">Gala Event:</span>
                   <span className="value highlight">
-                    Gala Vision Montreal 2026
+                    {application.galaName}
                   </span>
                 </div>
                 <div className="info-row">
                   <span className="label">Prize Amount:</span>
-                  <span className="value amount">$5,000</span>
+                  <span className="value amount">
+                    ${application.grantPrizeAmount?.toLocaleString() || '0'}
+                  </span>
                 </div>
                 <div className="info-row">
                   <span className="label">Deadline:</span>
-                  <span className="value">Mar 31, 2026</span>
+                  <span className="value">
+                    {application.grantApplicationDeadline
+                      ? new Date(
+                          application.grantApplicationDeadline
+                        ).toLocaleDateString()
+                      : 'N/A'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -277,38 +471,33 @@ function ApplicationDetail() {
             <div className="card-body">
               <div className="content-group">
                 <span className="label">Company Name</span>
-                <div className="content-box">Quackpreneur</div>
+                <div className="content-box">{application.companyName}</div>
               </div>
               <div className="content-group">
                 <span className="label">Industry</span>
-                <div className="content-box">
-                  Technology / Software Development
-                </div>
+                <div className="content-box">{application.industry}</div>
               </div>
               <div className="content-group">
                 <span className="label">Motivation Statement</span>
                 <div className="content-box text-content">
-                  I believe our innovative approach to solving real-world
-                  problems through technology deserves recognition. Our platform
-                  has the potential to revolutionize the industry and create
-                  meaningful impact for users worldwide. With this grant, we can
-                  accelerate our development and bring our vision to life
-                  faster.
+                  {application.motivationStatement}
                 </div>
               </div>
-              <div className="content-group">
-                <span className="label">Participation Video</span>
-                <a
-                  href="https://vimeo.com/candidate-video-john-doe"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="video-link"
-                >
-                  <PlayCircle size={18} />
-                  <span>https://vimeo.com/candidate-video-john-doe</span>
-                  <ExternalLink size={14} />
-                </a>
-              </div>
+              {application.videoUrl && (
+                <div className="content-group">
+                  <span className="label">Participation Video</span>
+                  <a
+                    href={application.videoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="video-link"
+                  >
+                    <PlayCircle size={18} />
+                    <span>{application.videoUrl}</span>
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              )}
             </div>
           </section>
 
@@ -327,7 +516,13 @@ function ApplicationDetail() {
                     </div>
                     <div className="text">
                       <span className="label">Interview Date</span>
-                      <span className="value">February 25, 2026</span>
+                      <span className="value">
+                        {application.interviewDate
+                          ? new Date(
+                              application.interviewDate
+                            ).toLocaleDateString()
+                          : 'Not Scheduled'}
+                      </span>
                     </div>
                   </div>
                   <div className="slot-item">
@@ -336,15 +531,20 @@ function ApplicationDetail() {
                     </div>
                     <div className="text">
                       <span className="label">Time Slot</span>
-                      <span className="value">10:30 AM – 11:00 AM</span>
+                      <span className="value">
+                        {application.interviewStartTime || 'Not Set'}
+                      </span>
                     </div>
                   </div>
                 </div>
                 <div className="schedule-footer">
                   <span className="status-text green">
-                    Interview scheduled by applicant
+                    {application.interviewDate
+                      ? 'Interview scheduled'
+                      : 'No interview scheduled yet'}
                   </span>
-                  {status === 'Approved' ? (
+                  {application.status === 'Approved' ||
+                  application.isInterviewCompleted ? (
                     <div className="completed-badge">
                       <Check size={16} />
                       <span>Interview Completed</span>
@@ -359,10 +559,6 @@ function ApplicationDetail() {
                         <Calendar size={16} />
                         <span>Reschedule</span>
                       </button>
-                      <button type="button" className="btn-cancel">
-                        <XCircle size={16} />
-                        <span>Cancel</span>
-                      </button>
                     </div>
                   )}
                 </div>
@@ -371,71 +567,61 @@ function ApplicationDetail() {
           </section>
         </div>
 
-        {/* Right Column: Jury & Admin Context */}
-        <div className="context-column">
-          {/* Jury Panel Selection */}
-          <section className="review-card jury-card">
-            <div className="card-header flex-header">
+        {/* Right Column: Jury & Notes */}
+        <div className="review-column">
+          {/* Jury Panel Scores */}
+          <section className="review-card jury-panel-card">
+            <div className="card-header">
               <div className="header-text">
                 <h3>Jury Panel</h3>
-                <p>3 jurors • criteria-based rating /10</p>
+                <p>
+                  {application.juryPanel?.length || 0} jurors • criteria-based
+                  rating /10
+                </p>
               </div>
               <button
                 type="button"
-                className="btn-primary-lite"
-                onClick={() =>
-                  navigate(`/applications/${id || 'APP-45230'}/jury`)
-                }
+                className="btn-outline"
+                onClick={() => navigate(`/applications/${id}/jury`)}
               >
-                <CheckCircle2 size={16} />
-                <span>Open Jury Page</span>
+                <span>View Full Panel</span>
+                <ExternalLink size={14} />
               </button>
             </div>
             <div className="card-body">
-              <div className="overall-score-panel">
-                <div className="text">
-                  <h4>Overall Jury Score</h4>
-                  <p>Average of all 3 jurors</p>
+              <div className="score-summary-box">
+                <div className="avg-score">
+                  <span className="score-label">OVERALL AVERAGE</span>
+                  <p>Average of all jurors</p>
                 </div>
                 <div className="big-score">
-                  7.8 <span>/ 10</span>
+                  {application.juryPanelSummary?.overallAverageScore &&
+                  application.juryPanelSummary.overallAverageScore > 0
+                    ? application.juryPanelSummary.overallAverageScore.toFixed(
+                        1
+                      )
+                    : '—'}{' '}
+                  <span>/ 10</span>
                 </div>
               </div>
 
               <div className="individual-jurors-list">
-                <JurorCard
-                  name="Marie Lefebvre"
-                  score={8.2}
-                  initials="ML"
-                  criteria={[
-                    { label: 'Business Viability', score: 8 },
-                    { label: 'Innovation Level', score: 9 },
-                    { label: 'Team Experience', score: 7 },
-                  ]}
-                  comment="Very strong pitch, team needs more industry experience."
-                />
-                <JurorCard
-                  name="Paul Dubois"
-                  score={7.5}
-                  initials="PD"
-                  criteria={[
-                    { label: 'Business Viability', score: 7 },
-                    { label: 'Innovation Level', score: 8 },
-                    { label: 'Team Experience', score: 7 },
-                  ]}
-                  comment="Solid concept but market validation could be stronger."
-                />
-                <JurorCard
-                  name="Sophie Caron"
-                  score={7.8}
-                  initials="SC"
-                  criteria={[
-                    { label: 'Business Viability', score: 8 },
-                    { label: 'Innovation Level', score: 7 },
-                    { label: 'Team Experience', score: 9 },
-                  ]}
-                  comment="Excellent team synergy. Would strongly recommend for Excellence class."
-                />
+                {application.juryPanel?.map((juror: JuryPanelMember) => (
+                  <JurorCard
+                    key={juror.jurorName}
+                    name={juror.jurorName}
+                    score={juror.score || 0}
+                    initials={juror.initials}
+                    criteria={juror.criteria}
+                    comment={juror.comment || ''}
+                  />
+                ))}
+                {(!application.juryPanel ||
+                  application.juryPanel.length === 0) && (
+                  <p className="no-scores">
+                    No jury evaluations submitted yet.
+                  </p>
+                )}
               </div>
             </div>
           </section>
@@ -452,13 +638,9 @@ function ApplicationDetail() {
               )}
             </div>
             <div className="card-body">
-              {isNoteSaved && status === 'Approved' ? (
+              {isNoteSaved ? (
                 <>
-                  <div className="saved-note-display">
-                    Strong candidate with innovative technology approach.
-                    Company shows good traction. Recommend for approval after
-                    interview.
-                  </div>
+                  <div className="saved-note-display">{adminNote}</div>
                   <button
                     type="button"
                     className="btn-edit-notes"

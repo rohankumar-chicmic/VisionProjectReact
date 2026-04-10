@@ -51,7 +51,7 @@ function JuryDashboard() {
         </button>
       </HeaderActions>
 
-      <JurySummary data={data.data.summary} />
+      <JurySummary data={data.data} />
 
       <div className="dashboard-grid-two">
         <AssignedGrantsList data={data.data.assignedPrograms} />

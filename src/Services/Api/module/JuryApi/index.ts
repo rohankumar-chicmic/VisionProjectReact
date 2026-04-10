@@ -13,6 +13,9 @@ export interface JurySummaryData {
   assignedApplicationsCount: number;
   pendingReviewsCount: number;
   completedReviewsCount: number;
+  linkedGrantsCount: number;
+  scheduledInterviewsCount: number;
+  pendingEvaluationsCount: number;
 }
 
 export interface AssignedGrant {
@@ -33,8 +36,7 @@ export interface EvaluationQueueItem {
 export interface JuryDashboardResponse {
   success: boolean;
   message: string;
-  data: {
-    summary: JurySummaryData;
+  data: JurySummaryData & {
     assignedPrograms: AssignedGrant[];
     evaluationQueue: EvaluationQueueItem[];
   };

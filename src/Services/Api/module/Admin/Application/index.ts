@@ -29,6 +29,22 @@ export interface AdminApplicationListResponse {
   notificationCount: number;
 }
 
+export interface AdminApplicationSummaryData {
+  all: number;
+  pending: number;
+  inReview: number;
+  approved: number;
+  rejected: number;
+  interview: number;
+  winners: number;
+}
+
+export interface AdminApplicationSummaryResponse {
+  success: boolean;
+  message: string;
+  data: AdminApplicationSummaryData;
+}
+
 export interface AdminApplicationParams {
   searchTerm?: string;
   galaId?: string;
@@ -53,8 +69,21 @@ export const adminApplicationApi = api.injectEndpoints({
       }),
       providesTags: ['Admins'],
     }),
+    getAdminApplicationsSummary: build.query<
+      AdminApplicationSummaryResponse,
+      void
+    >({
+      query: () => ({
+        url: '/api/v1/admin/applications/summary',
+        method: 'GET',
+      }),
+      providesTags: ['Admins'],
+    }),
   }),
   overrideExisting: false,
 });
 
-export const { useGetAdminApplicationsQuery } = adminApplicationApi;
+export const {
+  useGetAdminApplicationsQuery,
+  useGetAdminApplicationsSummaryQuery,
+} = adminApplicationApi;

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   Search,
   ChevronDown,
-  Download,
   CheckCircle2,
   XCircle,
   Eye,
@@ -11,7 +10,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import { useGetAdminApplicationsQuery } from '../../Services/Api/module/Admin/Application';
+import { useGetAssignedApplicationsQuery } from '../../Services/Api/module/JuryApi/index';
 import Skeleton from '../../Components/Shared/Skeleton';
 import './ApplicationList.scss';
 
@@ -31,6 +32,10 @@ const getStatusDetails = (status: number) => {
       return { label: 'Winner', class: 'winner' };
     case 7:
       return { label: 'Interview', class: 'interview' };
+    case 8:
+      return { label: 'Evaluated', class: 'evaluated' };
+    case 9:
+      return { label: 'Interview Completed', class: 'interview-completed' };
     default:
       return { label: 'Unknown', class: '' };
   }
@@ -39,6 +44,8 @@ const getStatusDetails = (status: number) => {
 function ApplicationList() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
+  const { role } = useCurrentUserRole();
+  const isJury = role === 'jury';
 
   // State for filters and pagination
   const [activeTab, setActiveTab] = useState('All');
@@ -70,22 +77,57 @@ function ApplicationList() {
         return 6;
       case 'Interview':
         return 7;
+      case 'Evaluated':
+        return 8;
+      case 'Interview Completed':
+        return 9;
       default:
         return undefined;
     }
   };
 
   const { data: appResponse, isLoading: isAppsLoading } =
-    useGetAdminApplicationsQuery({
-      searchTerm: debouncedSearch || undefined,
-      status: getStatusFromTab(activeTab),
-      pageNumber,
-      pageSize,
-    });
+    useGetAdminApplicationsQuery(
+      {
+        searchTerm: debouncedSearch || undefined,
+        status: getStatusFromTab(activeTab),
+        pageNumber,
+        pageSize,
+      },
+      { skip: isJury }
+    );
 
-  const applications = appResponse?.data?.items || [];
-  const totalCount = appResponse?.data?.totalCount || 0;
-  const totalPages = appResponse?.data?.totalPages || 0;
+  const { data: juryAppResponse, isLoading: isJuryAppsLoading } =
+    useGetAssignedApplicationsQuery(
+      {
+        searchTerm: debouncedSearch || undefined,
+        status: getStatusFromTab(activeTab),
+        pageNumber,
+        pageSize: 100,
+      },
+      { skip: !isJury }
+    );
+
+  useEffect(() => {
+    if (isJury && juryAppResponse?.data) {
+      console.log(
+        '[ApplicationList] Jury Apps Response:',
+        juryAppResponse.data
+      );
+    }
+  }, [isJury, juryAppResponse]);
+
+  const applications = isJury
+    ? juryAppResponse?.data || []
+    : appResponse?.data?.items || [];
+
+  const totalCount = isJury
+    ? juryAppResponse?.data?.length || 0
+    : appResponse?.data?.totalCount || 0;
+
+  const totalPages = isJury
+    ? Math.ceil(totalCount / pageSize)
+    : appResponse?.data?.totalPages || 0;
 
   useEffect(() => {
     setTitle('Application Management');
@@ -95,13 +137,15 @@ function ApplicationList() {
   }, [setTitle, setSubtitle, setBackAction, resetHeader]);
 
   const tabs = [
-    { label: 'All', count: totalCount },
-    { label: 'Pending', count: 43 },
-    { label: 'In Review', count: 12 },
-    { label: 'Approved', count: 122 },
-    { label: 'Rejected', count: 22 },
-    { label: 'Interview', count: 8 },
-    { label: 'Winners', count: 5 },
+    { label: 'All' },
+    { label: 'Pending' },
+    { label: 'In Review' },
+    { label: 'Approved' },
+    { label: 'Rejected' },
+    { label: 'Interview' },
+    { label: 'Evaluated' },
+    { label: 'Interview Completed' },
+    { label: 'Winners' },
   ];
 
   const getScoreClass = (score: number) => {
@@ -113,12 +157,7 @@ function ApplicationList() {
 
   return (
     <div className="application-list-page">
-      <HeaderActions>
-        <button type="button" className="header-btn btn-outline">
-          <Download size={18} />
-          <span>Export CSV</span>
-        </button>
-      </HeaderActions>
+      <HeaderActions>{null}</HeaderActions>
 
       <div className="list-container-card">
         <div className="filters-ecosystem">
@@ -143,7 +182,7 @@ function ApplicationList() {
                     setPageNumber(1);
                   }}
                 >
-                  {tab.label} ({tab.count})
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -219,19 +258,25 @@ function ApplicationList() {
               )}
 
               {!isAppsLoading &&
+                !isJuryAppsLoading &&
                 applications.length > 0 &&
-                applications.map((app) => {
+                applications.map((app: any) => {
                   const statusInfo = getStatusDetails(app.status);
+                  const displayScore = isJury
+                    ? app.totalJuryScore
+                    : app.juryScore;
+                  const appliedDate = isJury
+                    ? app.submittedAt
+                    : app.appliedDate;
+                  const avatarUrl = app.applicantAvatarUrl;
+
                   return (
                     <tr key={app.id}>
                       <td>
                         <div className="applicant-cell">
                           <div className="avatar">
-                            {app.applicantAvatarUrl ? (
-                              <img
-                                src={app.applicantAvatarUrl}
-                                alt="Applicant"
-                              />
+                            {avatarUrl ? (
+                              <img src={avatarUrl} alt="Applicant" />
                             ) : (
                               <span>{app.applicantName.charAt(0)}</span>
                             )}
@@ -245,19 +290,21 @@ function ApplicationList() {
                       <td>{app.galaName}</td>
                       <td>{app.grantName}</td>
                       <td>
-                        {new Date(app.appliedDate).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: '2-digit',
-                          year: 'numeric',
-                        })}
+                        {appliedDate
+                          ? new Date(appliedDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: '2-digit',
+                            year: 'numeric',
+                          })
+                          : '—'}
                       </td>
                       <td>
                         <div className="score-cell">
                           <span
-                            className={`score-value ${getScoreClass(app.juryScore)}`}
+                            className={`score-value ${getScoreClass(displayScore || 0)}`}
                           >
-                            {app.juryScore > 0
-                              ? `${app.juryScore.toFixed(1)} / 10`
+                            {displayScore > 0
+                              ? `${displayScore.toFixed(1)} / 10`
                               : '—'}
                           </span>
                         </div>
@@ -269,7 +316,7 @@ function ApplicationList() {
                       </td>
                       <td>
                         <div className="action-buttons">
-                          {app.status === 2 && (
+                          {app.status === 2 && !isJury && (
                             <>
                               <button type="button" className="btn-approve">
                                 <CheckCircle2 size={16} />
@@ -284,7 +331,13 @@ function ApplicationList() {
                           <button
                             type="button"
                             className="btn-view"
-                            onClick={() => navigate(`/applications/${app.id}`)}
+                            onClick={() =>
+                              navigate(
+                                isJury
+                                  ? `/jury/review/${app.id}`
+                                  : `/applications/${app.id}`
+                              )
+                            }
                           >
                             <Eye size={18} />
                           </button>
@@ -294,13 +347,15 @@ function ApplicationList() {
                   );
                 })}
 
-              {!isAppsLoading && applications.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="empty-state">
-                    No applications found.
-                  </td>
-                </tr>
-              )}
+              {!isAppsLoading &&
+                !isJuryAppsLoading &&
+                applications.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="empty-state">
+                      No applications found.
+                    </td>
+                  </tr>
+                )}
             </tbody>
           </table>
         </div>

@@ -156,6 +156,33 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
     }
 
+    &.urgent:not(.rejected) {
+      border-color: #fca5a5;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.08);
+      
+      .deadline.high-priority {
+        color: #ef4444;
+      }
+    }
+
+    &.rejected {
+      opacity: 0.95;
+      background: #fafafa;
+      border-color: #f1f5f9;
+      
+      .card-main {
+        filter: grayscale(0.5);
+      }
+      
+      .action-btn {
+        background: #f1f5f9;
+        color: #94a3b8;
+        border-color: #e2e8f0;
+        cursor: not-allowed;
+        &:hover { transform: none; box-shadow: none; }
+      }
+    }
+
     .card-top {
       display: flex;
       justify-content: space-between;
@@ -181,8 +208,15 @@
         }
 
         &.pending {
-          background-color: #f1f5f9;
-          color: #475569;
+          background: #fffbeb;
+          color: #b45309;
+          border: 1px solid #fde68a;
+        }
+      
+        &.rejected {
+          background: #fef2f2;
+          color: #b91c1c;
+          border: 1px solid #fca5a5;
         }
       }
 

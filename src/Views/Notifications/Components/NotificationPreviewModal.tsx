@@ -2,6 +2,7 @@
 import { X, Mail, MessageSquare, Bell, Info, FileText } from 'lucide-react';
 import { NotificationItem } from '../NotificationAutomations';
 import { AutomationFormData } from './AddAutomationModal';
+import useCurrentUserRole from '../../../Shared/Auth/useCurrentUserRole';
 import './NotificationPreviewModal.scss';
 
 interface NotificationPreviewModalProps {
@@ -15,6 +16,7 @@ function NotificationPreviewModal({
   onClose,
   data,
 }: Readonly<NotificationPreviewModalProps>) {
+  const { roleLabel } = useCurrentUserRole();
   if (!isOpen || !data) return null;
 
   const getPreviewContent = () => {
@@ -75,7 +77,7 @@ function NotificationPreviewModal({
                 <div className="logo-placeholder">
                   <div className="logo-icon" />
                 </div>
-                <h3>Vision PME Admin</h3>
+                <h3>Vision PME {roleLabel}</h3>
               </div>
               <div className="mockup-body">
                 <h4>{preview.emailTitle}</h4>

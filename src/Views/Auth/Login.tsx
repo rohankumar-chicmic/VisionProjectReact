@@ -166,7 +166,6 @@ function Login() {
             >
               Create your Organiser account
             </button>
-            </button>
           </div>
         )}
 

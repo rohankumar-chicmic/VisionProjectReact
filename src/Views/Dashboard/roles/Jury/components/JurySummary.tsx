@@ -9,19 +9,19 @@ function JurySummary({ data }: JurySummaryProps) {
   const stats = [
     {
       label: 'Assigned Applications',
-      value: (data?.assignedApplicationsCount ?? 0).toString().padStart(2, '0'),
+      value: (data?.assignedApplicationsCount ?? 0).toString(),
       icon: ListTodo,
       color: '#3b82f6',
     },
     {
       label: 'Pending Reviews',
-      value: (data?.pendingReviewsCount ?? 0).toString().padStart(2, '0'),
+      value: (data?.pendingReviewsCount ?? 0).toString(),
       icon: Clock,
       color: '#f59e0b',
     },
     {
       label: 'Completed Reviews',
-      value: (data?.completedReviewsCount ?? 0).toString().padStart(2, '0'),
+      value: (data?.completedReviewsCount ?? 0).toString(),
       icon: CheckCircle2,
       color: '#00ce86',
     },

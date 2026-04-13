@@ -2,7 +2,7 @@ import { Award, Calendar, DollarSign, Users } from 'lucide-react';
 import KpiCard, {
   type KpiCardProps,
 } from '../../../../../Components/Shared/KpiCard';
-import type { DashboardData } from '../../../../../Services/Api/module/CommonApi';
+import type { DashboardData } from '../../../../../Services/Api/module/Common';
 import { KpiSkeleton } from '../../../Components/DashboardSkeletons';
 
 interface AdminStatsProps {
@@ -10,8 +10,6 @@ interface AdminStatsProps {
   stats?: DashboardData;
 }
 
-const getTrend = (value?: number) =>
-  `${(value || 0) >= 0 ? '+' : ''}${value || 0}%`;
 const getTrend = (value?: number) =>
   `${(value || 0) >= 0 ? '+' : ''}${value || 0}%`;
 
@@ -59,15 +57,6 @@ function AdminStats({ isLoading, stats }: Readonly<AdminStatsProps>) {
       {isLoading
         ? [1, 2, 3, 4].map((id) => <KpiSkeleton key={`admin-kpi-${id}`} />)
         : kpis.map((kpi) => (
-            <KpiCard
-              key={`${kpi.label}-${kpi.value}`}
-              icon={kpi.icon}
-              label={kpi.label}
-              value={kpi.value}
-              trend={kpi.trend}
-              trendType={kpi.trendType}
-              color={kpi.color}
-            />
             <KpiCard
               key={`${kpi.label}-${kpi.value}`}
               icon={kpi.icon}

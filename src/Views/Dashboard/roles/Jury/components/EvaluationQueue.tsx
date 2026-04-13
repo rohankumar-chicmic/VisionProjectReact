@@ -20,29 +20,32 @@ function EvaluationQueue({ data }: EvaluationQueueProps) {
 
       <div className="queue-stack">
         {data?.map((item) => (
-          <div key={item.id} className="queue-item">
+          <div key={item.applicationId} className="queue-item">
             <div className="item-main">
               <div className="applicant-info">
                 <div className="avatar-small">
                   <User size={14} />
                 </div>
                 <div>
-                  <strong>{item.applicant || 'Unknown Applicant'}</strong>
+                  <strong>{item.applicantName || 'Unknown Applicant'}</strong>
                   <span>
-                    {item.id} • {item.grant || 'Unknown Program'}
+                    {item.applicationCode} •{' '}
+                    {item.grantName || 'Unknown Program'}
                   </span>
                 </div>
               </div>
               <div className="item-meta">
-                <span className={`priority-tag ${item.priority || 'medium'}`}>
-                  <AlertCircle size={12} /> {item.deadline || 'No Deadline'}
+                <span
+                  className={`priority-tag ${item.dueLabel?.toLowerCase() || 'medium'}`}
+                >
+                  <AlertCircle size={12} /> {item.dueLabel || 'No Deadline'}
                 </span>
               </div>
             </div>
             <button
               type="button"
               className="action-btn"
-              onClick={() => navigate(`/jury/review/${item.id}`)}
+              onClick={() => navigate(`/jury/review/${item.applicationId}`)}
             >
               Start Review <ArrowRight size={16} />
             </button>

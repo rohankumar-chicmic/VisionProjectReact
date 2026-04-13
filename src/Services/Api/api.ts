@@ -78,6 +78,10 @@ const api = createApi({
     'Announcements',
     'Jury',
     'JuryDashboard',
+    'OrganiserGalas',
+    'OrganiserGrants',
+    'OrganiserJuries',
+    'ApplicationReview',
   ],
 });
 

@@ -6,12 +6,11 @@ import {
   useLogoutAdminMutation,
   useLogoutOrganiserMutation,
   useLogoutJuryMutation,
-} from '../../Services/Api/module/AuthApi';
+} from '../../Services/Api/module/Auth';
 import { clearAuthTokenRedux } from '../../Store/Common';
 import { RootState } from '../../Store';
 import LogoutModal from '../Molecule/LogoutModal/LogoutModal';
 import { SIDEBAR_CONFIG } from './sidebarConfig';
-import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import './Sidebar.scss';
 
@@ -64,7 +63,7 @@ function Sidebar() {
           <div className="logo-icon">
             <img src={logo} alt="" />
           </div>
-          <span className="logo-text">Vision PME Admin</span>
+          <span className="logo-text">Vision PME {roleLabel}</span>
         </div>
 
         <nav className="sidebar-nav">

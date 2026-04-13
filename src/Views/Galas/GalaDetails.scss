@@ -91,7 +91,7 @@
           align-items: center;
           gap: 12px;
 
-          svg { color: var(--primary-color, #00ce86); filter: drop-shadow(0 0 4px rgba(0, 206, 134, 0.5)); }
+          svg { color: var(--primary-color, #00ce86); filter: drop-shadow(0 0 4px rgba(0, 158, 102, 0.5)); }
         }
       }
     }
@@ -407,7 +407,7 @@
     &.btn-primary {
       background: var(--primary-color);
       color: white;
-      box-shadow: 0 4px 12px rgba(0, 206, 134, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 158, 102, 0.2);
     }
     
     &.btn-outline {

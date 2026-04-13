@@ -53,9 +53,9 @@
   padding: 24px;
   border-radius: 18px;
   background:
-    linear-gradient(135deg, rgba(0, 206, 134, 0.1), rgba(15, 23, 42, 0.04)),
+    linear-gradient(135deg, rgba(0, 158, 102, 0.1), rgba(15, 23, 42, 0.04)),
     var(--surface-color);
-  border: 1px solid rgba(0, 206, 134, 0.18);
+  border: 1px solid rgba(0, 158, 102, 0.18);
 
   h3 {
     font-size: 22px;
@@ -239,8 +239,8 @@
   }
 
   &.active {
-    border-color: rgba(0, 206, 134, 0.35);
-    background-color: rgba(0, 206, 134, 0.08);
+    border-color: rgba(0, 158, 102, 0.35);
+    background-color: rgba(0, 158, 102, 0.08);
 
     .step-index {
       background-color: var(--primary-color);
@@ -358,7 +358,7 @@
 
     &:focus {
       border-color: var(--primary-color);
-      box-shadow: 0 0 0 4px rgba(0, 206, 134, 0.12);
+      box-shadow: 0 0 0 4px rgba(0, 158, 102, 0.12);
       background-color: var(--surface-color);
     }
   }

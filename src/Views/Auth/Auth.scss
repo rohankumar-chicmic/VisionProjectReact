@@ -45,7 +45,7 @@
       color: white;
 
       &.with-ring {
-        box-shadow: 0 0 0 10px rgba(0, 206, 134, 0.1);
+        box-shadow: 0 0 0 10px rgba(0, 158, 102, 0.1);
       }
     }
   }
@@ -352,7 +352,7 @@
         &.active {
           background-color: var(--primary-color);
           color: white;
-          box-shadow: 0 4px 12px rgba(0, 206, 134, 0.2);
+          box-shadow: 0 4px 12px rgba(0, 158, 102, 0.2);
         }
       }
     }
@@ -560,7 +560,7 @@
       }
 
       &.current {
-        box-shadow: 0 0 0 4px rgba(0, 206, 134, 0.1);
+        box-shadow: 0 0 0 4px rgba(0, 158, 102, 0.1);
         border-color: #dcfce7;
       }
     }
@@ -650,7 +650,7 @@
       &.active {
         border-color: var(--primary-color);
         background-color: #f0fdf4;
-        box-shadow: 0 4px 12px rgba(0, 206, 134, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 158, 102, 0.1);
 
         span {
           color: var(--primary-color);
@@ -701,7 +701,7 @@
       &:hover:not(:disabled) {
         background-color: var(--primary-hover-color);
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 206, 134, 0.2);
+        box-shadow: 0 4px 12px rgba(0, 158, 102, 0.2);
       }
 
       &:disabled {

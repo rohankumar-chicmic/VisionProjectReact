@@ -7,9 +7,7 @@ export interface JuryMember {
   phoneNumber: string;
   companyName: string;
   domainOfExpertise: string;
-  position?: string;
-  bio?: string;
-  linkedin?: string;
+  createdAt: string;
 }
 
 export interface UpdateJuryProfilePayload {
@@ -17,9 +15,6 @@ export interface UpdateJuryProfilePayload {
   phoneNumber: string;
   companyName: string;
   domainOfExpertise: string;
-  position: string;
-  bio: string;
-  linkedin: string;
 }
 
 export interface JurySummaryData {
@@ -266,17 +261,14 @@ export const JuryApi = api.injectEndpoints({
       }),
       invalidatesTags: ['JuryDashboard', 'ApplicationReview'],
     }),
-    getJuryProfile: build.query<SingleJuryResponse, void>({
+    getJuryProfile: build.query<JuryMember, void>({
       query: () => ({
         url: '/api/v1/jury/profile',
         method: 'GET',
       }),
       providesTags: ['Jury'],
     }),
-    updateJuryProfile: build.mutation<
-      SingleJuryResponse,
-      UpdateJuryProfilePayload
-    >({
+    updateJuryProfile: build.mutation<JuryMember, UpdateJuryProfilePayload>({
       query: (body) => ({
         url: '/api/v1/jury/profile',
         method: 'PUT',

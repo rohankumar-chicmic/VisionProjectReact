@@ -273,7 +273,10 @@ export const JuryApi = api.injectEndpoints({
       }),
       providesTags: ['Jury'],
     }),
-    updateJuryProfile: build.mutation<SingleJuryResponse, UpdateJuryProfilePayload>({
+    updateJuryProfile: build.mutation<
+      SingleJuryResponse,
+      UpdateJuryProfilePayload
+    >({
       query: (body) => ({
         url: '/api/v1/jury/profile',
         method: 'PUT',

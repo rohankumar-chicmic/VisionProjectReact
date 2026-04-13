@@ -20,8 +20,10 @@ import './JuryProfile.scss';
 
 function JuryProfile() {
   const { setTitle, setSubtitle, resetHeader } = useHeader();
-  const { data: profileResponse, isLoading: isProfileLoading } = useGetJuryProfileQuery();
-  const [updateProfile, { isLoading: isUpdating }] = useUpdateJuryProfileMutation();
+  const { data: profileResponse, isLoading: isProfileLoading } =
+    useGetJuryProfileQuery();
+  const [updateProfile, { isLoading: isUpdating }] =
+    useUpdateJuryProfileMutation();
   const [isEditing, setIsEditing] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -128,7 +130,11 @@ function JuryProfile() {
                       onClick={handleSave}
                       disabled={isUpdating}
                     >
-                      {isUpdating ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                      {isUpdating ? (
+                        <Loader2 className="animate-spin" size={18} />
+                      ) : (
+                        <Save size={18} />
+                      )}
                       <span>Save Changes</span>
                     </button>
                   </div>
@@ -149,96 +155,107 @@ function JuryProfile() {
               <div className="modern-form-grid">
                 <div className="field-wrapper span-2">
                   <label htmlFor="fullName">
-                    <div className="icon-bg">
+                    <span className="icon-bg">
                       <User size={14} />
-                    </div>
+                    </span>
                     Full Name
+                    <div className="input-container">
+                      <input
+                        id="fullName"
+                        type="text"
+                        value={formData.fullName}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({ ...formData, fullName: e.target.value })
+                        }
+                        placeholder="Your full legal name"
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="fullName"
-                      type="text"
-                      value={formData.fullName}
-                      disabled={!isEditing}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      placeholder="Your full legal name"
-                    />
-                  </div>
                 </div>
 
                 <div className="field-wrapper">
                   <label htmlFor="email">
-                    <div className="icon-bg">
+                    <span className="icon-bg">
                       <Mail size={14} />
-                    </div>
+                    </span>
                     Email Address
+                    <div className="input-container">
+                      <input
+                        id="email"
+                        type="email"
+                        value={jury?.email || ''}
+                        disabled
+                        placeholder="email@example.com"
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="email"
-                      type="email"
-                      value={jury?.email || ''}
-                      disabled
-                      placeholder="email@example.com"
-                    />
-                  </div>
                 </div>
 
                 <div className="field-wrapper">
                   <label htmlFor="phone">
-                    <div className="icon-bg">
+                    <span className="icon-bg">
                       <Phone size={14} />
-                    </div>
+                    </span>
                     Phone Number
+                    <div className="input-container">
+                      <input
+                        id="phone"
+                        type="text"
+                        value={formData.phone}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        placeholder="+1 234 567 890"
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="phone"
-                      type="text"
-                      value={formData.phone}
-                      disabled={!isEditing}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+1 234 567 890"
-                    />
-                  </div>
                 </div>
 
                 <div className="field-wrapper">
                   <label htmlFor="company">
-                    <div className="icon-bg">
+                    <span className="icon-bg">
                       <Building2 size={14} />
-                    </div>
+                    </span>
                     Organization
+                    <div className="input-container">
+                      <input
+                        id="company"
+                        type="text"
+                        value={formData.company}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({ ...formData, company: e.target.value })
+                        }
+                        placeholder="Current company or institution"
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="company"
-                      type="text"
-                      value={formData.company}
-                      disabled={!isEditing}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      placeholder="Current company or institution"
-                    />
-                  </div>
                 </div>
 
                 <div className="field-wrapper">
                   <label htmlFor="expertise">
-                    <div className="icon-bg">
+                    <span className="icon-bg">
                       <Tags size={14} />
-                    </div>
+                    </span>
                     Specialisation
+                    <div className="input-container">
+                      <input
+                        id="expertise"
+                        type="text"
+                        value={formData.expertise}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            expertise: e.target.value,
+                          })
+                        }
+                        placeholder="AI, Blockchain, Fintech"
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="expertise"
-                      type="text"
-                      value={formData.expertise}
-                      disabled={!isEditing}
-                      onChange={(e) => setFormData({ ...formData, expertise: e.target.value })}
-                      placeholder="AI, Blockchain, Fintech"
-                    />
-                  </div>
                 </div>
               </div>
             </form>

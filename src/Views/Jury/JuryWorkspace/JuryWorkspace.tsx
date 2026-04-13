@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search, ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import {
-  useHeader,
-} from '../../../Shared/Context/HeaderContext';
+import { useHeader } from '../../../Shared/Context/HeaderContext';
 import { useGetAssignedApplicationsQuery } from '../../../Services/Api/module/JuryApi';
 import './JuryWorkspace.scss';
 
@@ -24,15 +22,7 @@ function JuryWorkspace() {
     return () => resetHeader();
   }, [setTitle, setSubtitle, resetHeader]);
 
-  useEffect(() => {
-    if (appsResponse?.data) {
-      console.log('[JuryWorkspace] API Response:', appsResponse.data);
-    }
-  }, [appsResponse]);
-
   const assignments = useMemo(() => appsResponse?.data ?? [], [appsResponse]);
-
-
 
   const filteredAssignments = useMemo(() => {
     return assignments.filter((item) => {
@@ -59,8 +49,6 @@ function JuryWorkspace() {
 
   return (
     <div className="jury-workspace-page">
-
-
       <div className="workspace-container">
         <div className="workspace-filters">
           <div className="search-box">
@@ -88,7 +76,6 @@ function JuryWorkspace() {
               Completed
             </button>
           </div>
-
         </div>
 
         <div className="assignments-grid">
@@ -109,6 +96,13 @@ function JuryWorkspace() {
             };
 
             const shortStatus = getShortStatus();
+
+            let buttonLabel = 'Start Scoring';
+            if (isReviewed) {
+              buttonLabel = 'View Evaluation';
+            } else if (isRejected) {
+              buttonLabel = 'Rejected';
+            }
 
             return (
               <div
@@ -175,11 +169,7 @@ function JuryWorkspace() {
                     onClick={() => navigate(`/jury/review/${item.id}`)}
                     disabled={isRejected}
                   >
-                    {isReviewed
-                      ? 'View Evaluation'
-                      : isRejected
-                        ? 'Rejected'
-                        : 'Start Scoring'}
+                    {buttonLabel}
                     <ArrowRight size={18} />
                   </button>
                 </div>

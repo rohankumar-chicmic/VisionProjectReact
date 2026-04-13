@@ -74,21 +74,14 @@ function JuryReview() {
 
   useEffect(() => {
     if (id) {
-      console.log(`[JuryReview] Initializing review for ID: ${id}`);
       startReview(id)
         .unwrap()
-        .then((res) =>
-          console.log('[JuryReview] Review session started successfully', res)
-        )
-        .catch((err) =>
-          console.error('[JuryReview] Failed to start review session', err)
-        );
+        .catch(() => {});
     }
   }, [id, startReview]);
 
   useEffect(() => {
     if (application) {
-      console.log('[JuryReview] Application data received:', application);
       setTitle('Application Review');
       setSubtitle('Evaluate and score grant application');
       setBackAction(true, () => navigate('/jury/workspace'));
@@ -100,7 +93,6 @@ function JuryReview() {
           initialScores[c.criteriaKey] = c.existingScore || 0;
         });
         setScores(initialScores);
-        console.log('[JuryReview] Initialized criteria scores:', initialScores);
       }
     }
     return () => resetHeader();
@@ -128,13 +120,10 @@ function JuryReview() {
 
   const handleApprove = async () => {
     if (!id) return;
-    console.log('[JuryReview] Approving application...');
     try {
-      const res = await approveApp(id).unwrap();
-      console.log('[JuryReview] Approval successful:', res);
+      await approveApp(id).unwrap();
       toast.success('Application approved for interview phase');
     } catch (error) {
-      console.error('[JuryReview] Approval failed:', error);
       toast.error(
         'Failed to approve application. Please check your connection.'
       );
@@ -147,19 +136,16 @@ function JuryReview() {
     allowReapply: boolean
   ) => {
     if (!id) return;
-    console.log('[JuryReview] Rejecting application with reason:', reason);
     try {
-      const res = await rejectApp({
+      await rejectApp({
         id,
         reason,
         feedback,
         allowReapply,
       }).unwrap();
-      console.log('[JuryReview] Rejection successful:', res);
       toast.success('Application rejected successfully');
       setIsRejectModalOpen(false);
     } catch (error) {
-      console.error('[JuryReview] Rejection failed:', error);
       toast.error('Failed to reject application. Please try again.');
     }
   };
@@ -168,11 +154,6 @@ function JuryReview() {
     if (!application || !id) return;
 
     if (!isApproved && !isInterviewCompleted) {
-      console.warn(
-        `[JuryReview] Attempted submission without prior approval or interview completion (Status: ${
-          application.juryReviewStatus
-        })`
-      );
       setWorkflowModal({
         isOpen: true,
         title: '🔒 Evaluation Required',
@@ -189,13 +170,6 @@ function JuryReview() {
       score: scores[c.criteriaKey] || 0,
     }));
 
-    console.log('[JuryReview] Submitting evaluation payload:', {
-      applicationId: id,
-      scores: payloadScores,
-      overallScore: averageScore,
-      comment,
-    });
-
     try {
       await submitEvaluation({
         applicationId: id,
@@ -205,12 +179,10 @@ function JuryReview() {
         personalNote,
       }).unwrap();
 
-      console.log('[JuryReview] Evaluation submitted successfully');
       setIsSubmitted(true);
       toast.success('Evaluation submitted! Moving back to workspace...');
       setTimeout(() => navigate('/jury/workspace'), 2000);
     } catch (error) {
-      console.error('[JuryReview] Evaluation submission failed:', error);
       toast.error(
         'Failed to submit evaluation. Please review your scores and try again.'
       );
@@ -221,11 +193,6 @@ function JuryReview() {
     if (!application || !id) return;
 
     if (!isApproved) {
-      console.warn(
-        `[JuryReview] Attempted interview toggle without prior approval (Status: ${
-          application.juryReviewStatus
-        })`
-      );
       setWorkflowModal({
         isOpen: true,
         title: '⚠️ Workflow Restriction',
@@ -236,14 +203,12 @@ function JuryReview() {
     }
 
     const newStatus = !application.interviewCompleted;
-    console.log(`[JuryReview] Setting interview status to: ${newStatus}`);
     try {
       await markInterview({ id, markCompleted: newStatus }).unwrap();
       toast.success(
         `Interview successfully marked as ${newStatus ? 'completed' : 'pending'}`
       );
     } catch (err) {
-      console.error('[JuryReview] Interview toggle failed:', err);
       toast.error('Failed to update interview status. Please try again.');
     }
   };
@@ -437,7 +402,10 @@ function JuryReview() {
                     # {application.applicantId?.split('-')[0] || 'USR-CODE'}
                   </span>
                 </div>
-                {isInterviewCompleted && !isSubmitted && !isFinalized && !isWinner ? (
+                {isInterviewCompleted &&
+                !isSubmitted &&
+                !isFinalized &&
+                !isWinner ? (
                   <button
                     type="button"
                     className="header-btn btn-primary"
@@ -731,34 +699,40 @@ function JuryReview() {
             <div className="card-body">
               <div className="feedback-form">
                 <div className="form-group">
-                  <label>Qualitative Feedback</label>
-                  <textarea
-                    placeholder="Provide your professional assessment..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    disabled={
-                      isSubmitted ||
-                      isSubmitting ||
-                      isRejecting ||
-                      isApproving ||
-                      isRejected
-                    }
-                  />
+                  <label htmlFor="qualitativeFeedback">
+                    Qualitative Feedback
+                    <textarea
+                      id="qualitativeFeedback"
+                      placeholder="Provide your professional assessment..."
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      disabled={
+                        isSubmitted ||
+                        isSubmitting ||
+                        isRejecting ||
+                        isApproving ||
+                        isRejected
+                      }
+                    />
+                  </label>
                 </div>
                 <div className="form-group">
-                  <label>Private Notes (Internal)</label>
-                  <textarea
-                    placeholder="Reference notes for jury members..."
-                    value={personalNote}
-                    onChange={(e) => setPersonalNote(e.target.value)}
-                    disabled={
-                      isSubmitted ||
-                      isSubmitting ||
-                      isRejecting ||
-                      isApproving ||
-                      isRejected
-                    }
-                  />
+                  <label htmlFor="privateNotes">
+                    Private Notes (Internal)
+                    <textarea
+                      id="privateNotes"
+                      placeholder="Reference notes for jury members..."
+                      value={personalNote}
+                      onChange={(e) => setPersonalNote(e.target.value)}
+                      disabled={
+                        isSubmitted ||
+                        isSubmitting ||
+                        isRejecting ||
+                        isApproving ||
+                        isRejected
+                      }
+                    />
+                  </label>
                 </div>
               </div>
             </div>

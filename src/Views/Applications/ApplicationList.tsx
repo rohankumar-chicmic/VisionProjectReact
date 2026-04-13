@@ -41,6 +41,20 @@ const getStatusDetails = (status: number) => {
   }
 };
 
+interface ApplicationListItem {
+  id: string;
+  status: number;
+  totalJuryScore?: number | null;
+  juryScore?: number | null;
+  appliedDate?: string | null;
+  submittedAt?: string | null;
+  applicantName: string;
+  applicantEmail: string;
+  applicantAvatarUrl?: string | null;
+  galaName: string;
+  grantName: string;
+}
+
 function ApplicationList() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
@@ -107,15 +121,6 @@ function ApplicationList() {
       },
       { skip: !isJury }
     );
-
-  useEffect(() => {
-    if (isJury && juryAppResponse?.data) {
-      console.log(
-        '[ApplicationList] Jury Apps Response:',
-        juryAppResponse.data
-      );
-    }
-  }, [isJury, juryAppResponse]);
 
   const applications = isJury
     ? juryAppResponse?.data || []
@@ -260,7 +265,7 @@ function ApplicationList() {
               {!isAppsLoading &&
                 !isJuryAppsLoading &&
                 applications.length > 0 &&
-                applications.map((app: any) => {
+                applications.map((app: ApplicationListItem) => {
                   const statusInfo = getStatusDetails(app.status);
                   const displayScore = isJury
                     ? app.totalJuryScore
@@ -292,19 +297,19 @@ function ApplicationList() {
                       <td>
                         {appliedDate
                           ? new Date(appliedDate).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: '2-digit',
-                            year: 'numeric',
-                          })
+                              month: 'short',
+                              day: '2-digit',
+                              year: 'numeric',
+                            })
                           : '—'}
                       </td>
                       <td>
                         <div className="score-cell">
                           <span
-                            className={`score-value ${getScoreClass(displayScore || 0)}`}
+                            className={`score-value ${getScoreClass(displayScore ?? 0)}`}
                           >
-                            {displayScore > 0
-                              ? `${displayScore.toFixed(1)} / 10`
+                            {(displayScore ?? 0) > 0
+                              ? `${(displayScore ?? 0).toFixed(1)} / 10`
                               : '—'}
                           </span>
                         </div>

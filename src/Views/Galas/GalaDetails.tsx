@@ -1,18 +1,21 @@
 /* eslint-disable no-alert */
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Clock,
   MapPin,
   Trophy,
   Info,
-  ExternalLink,
   ClipboardList,
   CheckCircle,
   Trash2,
   Users,
   AlertTriangle,
+  Ticket,
+  Link as LinkIcon,
+  ShieldCheck,
+  Copy,
 } from 'lucide-react';
 import Modal from '../../Components/Atom/Modal/Modal';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
@@ -67,10 +70,7 @@ function GalaDetails() {
   const isPublishing = isAdmin ? isPublishingAdmin : isPublishingOrganiser;
   const isDeleting = isAdmin ? isDeletingAdmin : isDeletingOrganiser;
   const gala = response?.data;
-  const totalPrizePool =
-    gala && 'totalPrizePool' in gala
-      ? (gala as { totalPrizePool: number }).totalPrizePool
-      : (gala?.totalGalaValue ?? 0);
+  const totalPrizePool = gala?.totalGalaValue ?? 0;
 
   useEffect(() => {
     setTitle('Gala Details');
@@ -98,7 +98,8 @@ function GalaDetails() {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -112,27 +113,6 @@ function GalaDetails() {
         return { label: 'Active', class: 'active' };
       case 4:
         return { label: 'Completed', class: 'completed' };
-      default:
-        return { label: 'Unknown', class: 'unknown' };
-    }
-  };
-
-  const getApplicationStatus = (status: number) => {
-    switch (status) {
-      case 1:
-        return { label: 'Draft', class: 'draft' };
-      case 2:
-        return { label: 'Pending', class: 'pending' };
-      case 3:
-        return { label: 'In Review', class: 'in-review' };
-      case 4:
-        return { label: 'Approved', class: 'approved' };
-      case 5:
-        return { label: 'Rejected', class: 'rejected' };
-      case 6:
-        return { label: 'Winner', class: 'winner' };
-      case 7:
-        return { label: 'Interview', class: 'interview' };
       default:
         return { label: 'Unknown', class: 'unknown' };
     }
@@ -232,41 +212,43 @@ function GalaDetails() {
 
   return (
     <div className="gala-details-page">
-      <HeaderActions>
-        <div className="header-actions">
-          <button
-            type="button"
-            className="header-btn btn-danger-soft"
-            onClick={() => setDeletingId(id ?? null)}
-            disabled={isDeleting}
-          >
-            <Trash2 size={18} />
-            Delete
-          </button>
+      {!isAdmin && (
+        <HeaderActions>
+          <div className="header-actions">
+            <button
+              type="button"
+              className="header-btn btn-danger-soft"
+              onClick={() => setDeletingId(id ?? null)}
+              disabled={isDeleting}
+            >
+              <Trash2 size={18} />
+              Delete
+            </button>
 
-          {gala.status === 1 && (
-            <>
-              <button
-                type="button"
-                className="header-btn btn-primary"
-                onClick={handlePublish}
-                disabled={isPublishing}
-              >
-                <CheckCircle size={18} />
-                Publish Gala
-              </button>
+            {gala.status === 1 && (
+              <>
+                <button
+                  type="button"
+                  className="header-btn btn-primary"
+                  onClick={handlePublish}
+                  disabled={isPublishing}
+                >
+                  <CheckCircle size={18} />
+                  Publish Gala
+                </button>
 
-              <button
-                type="button"
-                className="header-btn btn-outline"
-                onClick={() => navigate(`/galas/edit/${id}`)}
-              >
-                Edit Gala
-              </button>
-            </>
-          )}
-        </div>
-      </HeaderActions>
+                <button
+                  type="button"
+                  className="header-btn btn-outline"
+                  onClick={() => navigate(`/galas/edit/${id}`)}
+                >
+                  Edit Gala
+                </button>
+              </>
+            )}
+          </div>
+        </HeaderActions>
+      )}
 
       <div className="gala-hero-banner">
         <img src={gala.coverImageUrl || DEFAULT_GALA_IMAGE} alt={gala.name} />
@@ -276,6 +258,12 @@ function GalaDetails() {
             {status.label}
           </div>
           <h1>{gala.name}</h1>
+          {gala.winnerDecisionMessage && (
+            <div className="status-message">
+              <Trophy size={16} />
+              {gala.winnerDecisionMessage}
+            </div>
+          )}
           <div className="hero-meta">
             <div className="meta-item">
               <Calendar size={20} />
@@ -293,156 +281,211 @@ function GalaDetails() {
         </div>
       </div>
 
-      <div className="stats-strip">
-        <div className="stat-card prize">
+      <div className="stats-container-card">
+        <div className="stat-unit prize">
           <div className="stat-icon">
-            <Trophy size={28} />
+            <Trophy size={22} />
           </div>
           <div className="stat-info">
             <span className="label">Total Prize Pool</span>
             <span className="value">{formatCurrency(totalPrizePool)}</span>
           </div>
         </div>
-        <div className="stat-card attendees">
+        <div className="stat-unit attendees">
           <div className="stat-icon">
-            <Users size={28} />
+            <Users size={22} />
           </div>
           <div className="stat-info">
             <span className="label">Expected Attendees</span>
             <span className="value">{gala.expectedAttendees}</span>
           </div>
         </div>
-        <div className="stat-card applications">
+        <div className="stat-unit applications">
           <div className="stat-icon">
-            <ClipboardList size={28} />
+            <ClipboardList size={22} />
           </div>
           <div className="stat-info">
             <span className="label">Total Applications</span>
             <span className="value">{gala.appliedCount}</span>
           </div>
         </div>
+        <div className="stat-unit ticket">
+          <div className="stat-icon">
+            <Ticket size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Entry Fee</span>
+            <span className="value">
+              {gala.entryFee && gala.entryFee > 0
+                ? formatCurrency(gala.entryFee)
+                : 'Free'}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="details-main-grid">
         <div className="content-column">
-          <div className="card about-section">
-            <h2 className="card-title">
-              <Info size={24} />
-              About this Event
-            </h2>
-            <p className="about-text">{gala.about}</p>
-          </div>
+          <div className="card main-overview-card">
+            <section className="about-section">
+              <h2 className="section-title">
+                <Info size={20} />
+                About this Event
+              </h2>
+              <p className="about-text">{gala.about}</p>
+            </section>
 
-          <div className="card grants-section">
-            <h2 className="card-title">
-              <Trophy size={24} />
-              Featured Grants
-            </h2>
-            {gala.grants?.map((grant) => (
-              <div key={grant.id} className="grant-item">
-                <div className="grant-header">
-                  <h3>{grant.name}</h3>
-                  <span className="badge">{grant.category}</span>
-                </div>
-                <p className="grant-description">{grant.description}</p>
+            <div className="section-divider" />
 
-                <div className="grant-meta-strip">
-                  <div className="meta-box">
-                    <span className="m-label">Prizes</span>
-                    <span className="m-value">{grant.numberOfPrizes}</span>
+            <section className="grants-section">
+              <h2 className="section-title">
+                <Trophy size={20} />
+                Featured Grants
+              </h2>
+              {gala.grants?.map((grant) => (
+                <div
+                  key={grant.id}
+                  className="grant-item clickable"
+                  onClick={() => navigate(`/grants/${grant.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      navigate(`/grants/${grant.id}`);
+                    }
+                  }}
+                >
+                  <div className="grant-header">
+                    <div className="title-group">
+                      <h3>{grant.name}</h3>
+                      <div className="metadata-badges">
+                        <span className="badge category">{grant.category}</span>
+                        {grant.isWinnerDecided && (
+                          <span className="badge winner">Winners Ready</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="view-details-arrow">
+                      <LinkIcon size={20} />
+                    </div>
                   </div>
-                  <div className="meta-box">
-                    <span className="m-label">Amount</span>
-                    <span className="m-value">
-                      {formatCurrency(grant.prizeAmount)}
-                    </span>
-                  </div>
-                  <div className="meta-box">
-                    <span className="m-label">Deadline</span>
-                    <span className="m-value">
-                      {formatDate(grant.applicationDeadline)}
-                    </span>
-                  </div>
-                </div>
+                  <p className="grant-description">{grant.description}</p>
 
-                <div className="app-table-container">
-                  <div className="table-header">
-                    <h4>
-                      <ClipboardList size={20} />
-                      Recent Applications
-                    </h4>
-                  </div>
-                  <div className="table-responsive">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Company</th>
-                          <th>Industry</th>
-                          <th>Submitted</th>
-                          <th>Status</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {grant.applications?.map((app) => {
-                          const appStatus = getApplicationStatus(app.status);
-                          return (
-                            <tr key={app.id}>
-                              <td>
-                                <span className="app-id">
-                                  {app.applicationId}
-                                </span>
-                              </td>
-                              <td>{app.companyName}</td>
-                              <td>{app.industry}</td>
-                              <td>{formatDate(app.submittedAt)}</td>
-                              <td>
-                                <span
-                                  className={`status-pill ${appStatus.class}`}
-                                >
-                                  {appStatus.label}
-                                </span>
-                              </td>
-                              <td>
-                                <Link
-                                  to={`/applications/${app.id}`}
-                                  className="action-link"
-                                  title="View Details"
-                                >
-                                  <ExternalLink size={18} />
-                                </Link>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  <div className="grant-meta-strip">
+                    <div className="meta-box">
+                      <span className="m-label">Award Value</span>
+                      <span className="m-value">
+                        {formatCurrency(grant.prizeAmount)}
+                      </span>
+                    </div>
+                    <div className="meta-box">
+                      <span className="m-label">Winners</span>
+                      <span className="m-value">
+                        {grant.totalWinnerSlots} total
+                      </span>
+                    </div>
+                    <div className="meta-box">
+                      <span className="m-label">Applications</span>
+                      <span className="m-value">
+                        {grant.appliedCount} received
+                      </span>
+                    </div>
+                    <div className="meta-box deadline">
+                      <span className="m-label">Deadline</span>
+                      <span className="m-value">
+                        {formatDate(grant.applicationDeadline)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </section>
           </div>
         </div>
 
         <div className="sidebar-column">
-          <div className="card schedule-section">
-            <h2 className="card-title">
-              <Calendar size={24} />
-              Evening Program
-            </h2>
-            <div className="schedule-list">
-              {gala.eveningItems?.map((item) => (
-                <div
-                  key={`${item.time}-${item.title}`}
-                  className="schedule-item"
-                >
-                  <span className="item-time">{formatTime(item.time)}</span>
-                  <h3 className="item-title">{item.title}</h3>
-                  <p className="item-desc">{item.description}</p>
+          <div className="card sidebar-info-card">
+            <section className="schedule-section">
+              <h2 className="section-title">
+                <Calendar size={20} />
+                Evening Program
+              </h2>
+              <div className="schedule-list">
+                {gala.eveningItems?.map((item) => (
+                  <div
+                    key={`${item.time}-${item.title}`}
+                    className="schedule-item"
+                  >
+                    <span className="item-time">{formatTime(item.time)}</span>
+                    <h3 className="item-title">{item.title}</h3>
+                    <p className="item-desc">{item.description}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="section-divider" />
+
+            <section className="blockchain-section">
+              <h2 className="section-title">
+                <ShieldCheck size={20} />
+                Blockchain Proof
+              </h2>
+              <div className="blockchain-data">
+                <div className="data-grid">
+                  <div className="data-item">
+                    <span className="d-label">Transaction Hash</span>
+                    <div className="d-value-box">
+                      <code title={gala.blockchainTransactionHash ?? undefined}>
+                        {gala.blockchainTransactionHash
+                          ? `${gala.blockchainTransactionHash.substring(0, 10)}...${gala.blockchainTransactionHash.substring(gala.blockchainTransactionHash.length - 8)}`
+                          : 'N/A'}
+                      </code>
+                      {gala.blockchainTransactionHash && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const hash = gala.blockchainTransactionHash;
+                            if (hash) {
+                              navigator.clipboard.writeText(hash);
+                              showToast.success('Hash copied!');
+                            }
+                          }}
+                          className="copy-btn"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="data-item">
+                    <span className="d-label">Organiser Wallet</span>
+                    <div className="d-value-box">
+                      <code title={gala.organiserWalletAddress ?? undefined}>
+                        {gala.organiserWalletAddress
+                          ? `${gala.organiserWalletAddress.substring(0, 10)}...${gala.organiserWalletAddress.substring(gala.organiserWalletAddress.length - 8)}`
+                          : 'N/A'}
+                      </code>
+                      {gala.organiserWalletAddress && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const wallet = gala.organiserWalletAddress;
+                            if (wallet) {
+                              navigator.clipboard.writeText(wallet);
+                              showToast.success('Wallet info copied!');
+                            }
+                          }}
+                          className="copy-btn"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>

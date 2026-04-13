@@ -18,7 +18,7 @@ const columns: Column<GalaItem>[] = [
   },
   {
     header: 'Prize Pool',
-    accessor: (item) => `$${(item.totalPrizePool ?? 0).toLocaleString()}`,
+    accessor: (item) => `$${(item.totalGalaValue ?? 0).toLocaleString()}`,
   },
 ];
 

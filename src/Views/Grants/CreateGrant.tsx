@@ -306,15 +306,21 @@ function CreateGrant() {
 
   const handleSave = async (isPublishingParam: boolean = false) => {
     const isPublishing = isPublishingParam;
-    if (
-      !name ||
-      (!isGalaBuilderMode && !galaEventId) ||
-      !description ||
-      !prizeAmount ||
-      !numberOfPrizes ||
-      !applicationDeadline
-    ) {
-      showToast.error('Please fill in all required fields');
+
+    // Enhanced manual validation with specific feedback
+    const missingFields = [];
+    if (!name) missingFields.push('Grant Name');
+    if (!isGalaBuilderMode && !galaEventId)
+      missingFields.push('Associated Gala');
+    if (!description) missingFields.push('Description');
+    if (!prizeAmount) missingFields.push('Prize Amount');
+    if (!numberOfPrizes) missingFields.push('Number of Prizes');
+    if (!applicationDeadline) missingFields.push('Application Deadline');
+
+    if (missingFields.length > 0) {
+      showToast.error(
+        `Please fill in required fields: ${missingFields.join(', ')}`
+      );
       return;
     }
 

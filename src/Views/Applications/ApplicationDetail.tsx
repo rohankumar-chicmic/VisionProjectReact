@@ -63,7 +63,7 @@ function JurorCard({
         <div className="juror-score-badge">{score.toFixed(1)} / 10</div>
       </div>
       <div className="criteria-ratings">
-        {criteria.map((c) => (
+        {criteria?.map((c) => (
           <div key={c.label} className="criteria-item">
             <div className="criteria-label">
               <span>{c.label}</span>

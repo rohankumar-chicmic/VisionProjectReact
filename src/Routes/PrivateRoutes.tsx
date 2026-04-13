@@ -20,6 +20,7 @@ import AdminSettings from '../Views/Settings/AdminSettings';
 import ManageJuryCriteria from '../Views/Grants/ManageJuryCriteria';
 import AddCustomCriteria from '../Views/Grants/AddCustomCriteria';
 import ManageJury from '../Views/Jury/ManageJury';
+import EventOrganiserList from '../Views/Admin/EventOrganisers/EventOrganiserList';
 
 // eslint-disable-next-line import/prefer-default-export
 export const PRIVATE_ROUTES: Array<CustomRouter> = [
@@ -37,6 +38,11 @@ export const PRIVATE_ROUTES: Array<CustomRouter> = [
     path: '/users/:id',
     element: <UserProfile />,
     title: 'User Profile Details',
+  },
+  {
+    path: '/event-organisers',
+    element: <EventOrganiserList />,
+    title: 'Event Organisers',
   },
   {
     path: '/galas',

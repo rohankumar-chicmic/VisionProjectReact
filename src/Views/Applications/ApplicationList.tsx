@@ -13,8 +13,13 @@ import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import { useGetAdminApplicationsQuery } from '../../Services/Api/module/Admin/Application';
 import { useGetOrganiserApplicationsQuery } from '../../Services/Api/module/Organiser/Application';
+import { useGetAdminGalasQuery } from '../../Services/Api/module/Admin/Gala';
+import { useGetOrganiserGalasQuery } from '../../Services/Api/module/Organiser/Gala';
+import { useGetAdminGrantsQuery } from '../../Services/Api/module/Admin/Grant';
+import { useGetOrganiserGrantsQuery } from '../../Services/Api/module/Organiser/Grant';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import Skeleton from '../../Components/Shared/Skeleton';
+import EmptyState from '../../Components/Shared/EmptyState';
 import './ApplicationList.scss';
 
 const getStatusDetails = (status: number) => {
@@ -47,6 +52,9 @@ function ApplicationList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [pageNumber, setPageNumber] = useState(1);
+  const [selectedGalaId, setSelectedGalaId] = useState<string>('');
+  const [selectedGrantId, setSelectedGrantId] = useState<string>('');
+  const [sortByRating, setSortByRating] = useState<boolean>(false);
   const pageSize = 10;
 
   // Debounce search
@@ -84,6 +92,10 @@ function ApplicationList() {
   const queryParams = {
     searchTerm: debouncedSearch || undefined,
     status: getStatusFromTab(activeTab),
+    galaId: selectedGalaId || undefined,
+    grantId: selectedGrantId || undefined,
+    sortBy: sortByRating ? 'juryScore' : undefined,
+    sortOrder: sortByRating ? 'desc' : undefined,
     pageNumber,
     pageSize,
   };
@@ -94,12 +106,129 @@ function ApplicationList() {
   const { data: organiserResponse, isLoading: isOrganiserLoading } =
     useGetOrganiserApplicationsQuery(queryParams, { skip: !isOrganiser });
 
+  // Parallel queries for status counts
+  const countParams = (status: number) => ({
+    status,
+    pageSize: 1,
+    galaId: selectedGalaId || undefined,
+    grantId: selectedGrantId || undefined,
+  });
+
+  const { data: pendingCountRes } = useGetAdminApplicationsQuery(
+    countParams(2),
+    { skip: !isAdmin }
+  );
+  const { data: inReviewCountRes } = useGetAdminApplicationsQuery(
+    countParams(3),
+    { skip: !isAdmin }
+  );
+  const { data: approvedCountRes } = useGetAdminApplicationsQuery(
+    countParams(4),
+    { skip: !isAdmin }
+  );
+  const { data: rejectedCountRes } = useGetAdminApplicationsQuery(
+    countParams(5),
+    { skip: !isAdmin }
+  );
+  const { data: winnerCountRes } = useGetAdminApplicationsQuery(
+    countParams(6),
+    { skip: !isAdmin }
+  );
+  const { data: interviewCountRes } = useGetAdminApplicationsQuery(
+    countParams(7),
+    { skip: !isAdmin }
+  );
+
+  const { data: orgPendingCountRes } = useGetOrganiserApplicationsQuery(
+    countParams(2),
+    { skip: !isOrganiser }
+  );
+  const { data: orgInReviewCountRes } = useGetOrganiserApplicationsQuery(
+    countParams(3),
+    { skip: !isOrganiser }
+  );
+  const { data: orgApprovedCountRes } = useGetOrganiserApplicationsQuery(
+    countParams(4),
+    { skip: !isOrganiser }
+  );
+  const { data: orgRejectedCountRes } = useGetOrganiserApplicationsQuery(
+    countParams(5),
+    { skip: !isOrganiser }
+  );
+  const { data: orgWinnerCountRes } = useGetOrganiserApplicationsQuery(
+    countParams(6),
+    { skip: !isOrganiser }
+  );
+  const { data: orgInterviewCountRes } = useGetOrganiserApplicationsQuery(
+    countParams(7),
+    { skip: !isOrganiser }
+  );
+
+  // Filter Data Queries
+  const { data: adminGalas } = useGetAdminGalasQuery(
+    { pageSize: 100 },
+    { skip: !isAdmin }
+  );
+  const { data: adminGrants } = useGetAdminGrantsQuery(
+    { pageSize: 100, galaEventId: selectedGalaId || undefined },
+    { skip: !isAdmin }
+  );
+  const { data: orgGalas } = useGetOrganiserGalasQuery(
+    { pageSize: 100 },
+    { skip: !isOrganiser }
+  );
+  const { data: orgGrants } = useGetOrganiserGrantsQuery(
+    { pageSize: 100, galaEventId: selectedGalaId || undefined },
+    { skip: !isOrganiser }
+  );
+
   const response = isAdmin ? adminResponse : organiserResponse;
   const isAppsLoading = isAdmin ? isAdminLoading : isOrganiserLoading;
 
   const applications = response?.data?.items || [];
   const totalCount = response?.data?.totalCount || 0;
   const totalPages = response?.data?.totalPages || 0;
+
+  const galas =
+    (isAdmin ? adminGalas?.data?.items : orgGalas?.data?.items) || [];
+  const grants = (isAdmin ? adminGrants?.data : orgGrants?.data) || [];
+
+  const getStatusCount = (status: number) => {
+    if (isAdmin) {
+      switch (status) {
+        case 2:
+          return pendingCountRes?.data?.totalCount || 0;
+        case 3:
+          return inReviewCountRes?.data?.totalCount || 0;
+        case 4:
+          return approvedCountRes?.data?.totalCount || 0;
+        case 5:
+          return rejectedCountRes?.data?.totalCount || 0;
+        case 6:
+          return winnerCountRes?.data?.totalCount || 0;
+        case 7:
+          return interviewCountRes?.data?.totalCount || 0;
+        default:
+          return 0;
+      }
+    }
+    switch (status) {
+      case 2:
+        return orgPendingCountRes?.data?.totalCount || 0;
+      case 3:
+        return orgInReviewCountRes?.data?.totalCount || 0;
+      case 4:
+        return orgApprovedCountRes?.data?.totalCount || 0;
+      case 5:
+        return orgRejectedCountRes?.data?.totalCount || 0;
+      case 6:
+        return orgWinnerCountRes?.data?.totalCount || 0;
+      case 7:
+        return orgInterviewCountRes?.data?.totalCount || 0;
+      default:
+        return 0;
+    }
+  };
 
   useEffect(() => {
     setTitle('Application Management');
@@ -109,13 +238,13 @@ function ApplicationList() {
   }, [setTitle, setSubtitle, setBackAction, resetHeader]);
 
   const tabs = [
-    { label: 'All', count: totalCount },
-    { label: 'Pending', count: 43 },
-    { label: 'In Review', count: 12 },
-    { label: 'Approved', count: 122 },
-    { label: 'Rejected', count: 22 },
-    { label: 'Interview', count: 8 },
-    { label: 'Winners', count: 5 },
+    { label: 'All', count: activeTab === 'All' ? totalCount : '...' },
+    { label: 'Pending', count: getStatusCount(2) },
+    { label: 'In Review', count: getStatusCount(3) },
+    { label: 'Approved', count: getStatusCount(4) },
+    { label: 'Rejected', count: getStatusCount(5) },
+    { label: 'Interview', count: getStatusCount(7) },
+    { label: 'Winners', count: getStatusCount(6) },
   ];
 
   const getScoreClass = (score: number) => {
@@ -170,14 +299,39 @@ function ApplicationList() {
             </div>
             <div className="filter-dropdowns">
               <div className="filter-select">
-                <select aria-label="Filter by Gala">
-                  <option>All Galas</option>
+                <select
+                  aria-label="Filter by Gala"
+                  value={selectedGalaId}
+                  onChange={(e) => {
+                    setSelectedGalaId(e.target.value);
+                    setSelectedGrantId('');
+                    setPageNumber(1);
+                  }}
+                >
+                  <option value="">All Galas</option>
+                  {galas.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
                 </select>
                 <ChevronDown size={14} />
               </div>
               <div className="filter-select">
-                <select aria-label="Filter by Grant">
-                  <option>All Grants</option>
+                <select
+                  aria-label="Filter by Grant"
+                  value={selectedGrantId}
+                  onChange={(e) => {
+                    setSelectedGrantId(e.target.value);
+                    setPageNumber(1);
+                  }}
+                >
+                  <option value="">All Grants</option>
+                  {grants.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
                 </select>
                 <ChevronDown size={14} />
               </div>
@@ -187,13 +341,20 @@ function ApplicationList() {
                 </select>
                 <ChevronDown size={14} />
               </div>
-              <div className="filter-select rating">
+              <button
+                type="button"
+                className={`filter-select rating ${sortByRating ? 'active' : ''}`}
+                onClick={() => {
+                  setSortByRating(!sortByRating);
+                  setPageNumber(1);
+                }}
+              >
                 <Star size={14} />
-                <select aria-label="Sort by Rating">
-                  <option>Rating: Best First</option>
-                </select>
+                <span>
+                  {sortByRating ? 'Rating: Best First' : 'Default Sort'}
+                </span>
                 <ChevronDown size={14} />
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -310,8 +471,27 @@ function ApplicationList() {
 
               {!isAppsLoading && applications.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="empty-state">
-                    No applications found.
+                  <td colSpan={7}>
+                    <EmptyState
+                      icon={Filter}
+                      title="No applications found"
+                      description={
+                        debouncedSearch
+                          ? `We couldn't find any applications matching "${debouncedSearch}". Try a different term.`
+                          : "It looks like there aren't any applications in this category yet."
+                      }
+                      action={
+                        debouncedSearch ? (
+                          <button
+                            type="button"
+                            className="header-btn btn-outline"
+                            onClick={() => setSearchTerm('')}
+                          >
+                            Clear Search
+                          </button>
+                        ) : undefined
+                      }
+                    />
                   </td>
                 </tr>
               )}

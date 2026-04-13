@@ -4,6 +4,7 @@ import { useGetDashboardDataQuery } from '../../../../Services/Api/module/Common
 import { useGetAdminGalasQuery } from '../../../../Services/Api/module/Admin/Gala';
 import { useGetAdminUsersQuery } from '../../../../Services/Api/module/Admin/User';
 import AdminStats from './components/AdminStats';
+import DashboardCharts from './components/DashboardCharts';
 import GalaTable from './components/GalaTable';
 import UserTable from './components/UserTable';
 import ReportsPanel from './components/ReportsPanel';
@@ -34,6 +35,8 @@ function AdminDashboard() {
   return (
     <div className="dashboard-view role-dashboard">
       <AdminStats isLoading={isStatsLoading} stats={dashboardResponse?.data} />
+
+      <DashboardCharts stats={dashboardResponse?.data} />
 
       <div className="dashboard-grid-two">
         <GalaTable

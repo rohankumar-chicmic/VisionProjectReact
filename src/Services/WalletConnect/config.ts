@@ -1,8 +1,8 @@
 export const WALLET_CONNECT_CONFIG = {
-  mockTokenAddress: '0xba89d4B0513eAdA62671f5db8D6Fef498Ff63331',
+  mockTokenAddress: '0x274c6821487A5C2A64969037a8ae5256822BdD4D',
   grantPlatformImplementationAddress:
-    '0x16F6583595A0935270187c15701861af5281974c',
-  grantPlatformProxyAddress: '0x1e7f5f6Bd0F2D03A6eA77B467C722Be7c53f5452',
+    '0x15903991e3f2C6Af72fe9f81aa37a4E8502E6145',
+  grantPlatformProxyAddress: '0x127B0E32173aaEdA6dFbf4E3Df96D47Dd9d76103',
 } as const;
 
 export const getGrantPlatformProxyAddress = () =>

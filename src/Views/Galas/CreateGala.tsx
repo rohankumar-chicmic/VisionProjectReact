@@ -540,7 +540,22 @@ function CreateGala() {
   };
 
   const submitWithIntent = (intent: SubmitIntent) => {
-    handleSubmit((data) => submitForm(data, intent))().catch(() => {
+    handleSubmit(
+      (data) => submitForm(data, intent),
+      (validationErrors) => {
+        // Find the first error message to show in the toast
+        const errorKeys = Object.keys(validationErrors);
+        if (errorKeys.length > 0) {
+          const firstField = errorKeys[0];
+          const errorObj = validationErrors[
+            firstField as keyof typeof validationErrors
+          ] as { message?: string } | undefined;
+          const message =
+            errorObj?.message || `The ${firstField} field is invalid.`;
+          showToast.error(`Form validation failed: ${message}`);
+        }
+      }
+    )().catch(() => {
       showToast.error('An error occurred while submitting the form.');
     });
   };

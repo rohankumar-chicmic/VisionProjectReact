@@ -1,16 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Search,
-  ArrowUpDown,
-  Calendar,
-  Clock,
-  Users,
-  Edit3,
-  Send,
-  Trash2,
-  Plus,
-  ChevronDown,
-} from 'lucide-react';
+import { Search, ArrowUpDown, ChevronDown, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './GalaList.scss';
 import { HeaderActions, useHeader } from '../../Shared/Context/HeaderContext';
@@ -29,6 +18,7 @@ import { GalaGridSkeleton } from './Components/GalaSkeletons';
 import DEFAULT_GALA_IMAGE from '../../assets/general-img-landscape.png';
 import showToast from '../../Shared/Utils/toast';
 import { createGrantPlatformTransaction } from '../../Services/WalletConnect';
+import EmptyState from '../../Components/Shared/EmptyState';
 
 type GalaSortOption = 'latest' | 'oldest' | 'name-asc' | 'name-desc';
 
@@ -162,11 +152,6 @@ function GalaList() {
     return DEFAULT_GALA_IMAGE;
   };
 
-  const getEmptyMessage = () => {
-    if (!debouncedSearchTerm) return 'Start by creating your first gala event.';
-    return `No results for "${debouncedSearchTerm}"`;
-  };
-
   const handleAction = async (id: string, action: 'publish' | 'delete') => {
     const successMessages = {
       publish: 'Gala published successfully.',
@@ -181,8 +166,17 @@ function GalaList() {
           showToast.info(
             'Please confirm the wallet transaction for your grants.'
           );
+          const galaToPublish = galas.find((g) => g.id === id);
+          const totalPrizePoolValue =
+            galaToPublish?.grants?.reduce((acc, grant) => {
+              return (
+                acc + (grant.prizeAmount || 0) * (grant.numberOfPrizes || 0)
+              );
+            }, 0) ||
+            (galaToPublish?.totalGalaValue ?? 0);
+
           const { transactionHash, walletAddress } =
-            await createGrantPlatformTransaction();
+            await createGrantPlatformTransaction(totalPrizePoolValue);
 
           await publishOrganiserGala({
             id,
@@ -218,13 +212,26 @@ function GalaList() {
 
     if (isEmpty) {
       return (
-        <div className="dashboard-empty">
-          <div className="empty-content">
-            <Search size={48} />
-            <h3>No Galas Found</h3>
-            <p>{getEmptyMessage()}</p>
-          </div>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="No galas found"
+          description={
+            debouncedSearchTerm
+              ? `We couldn't find any gala events matching "${debouncedSearchTerm}".`
+              : "You haven't created any gala events yet. Create your first one to get started!"
+          }
+          action={
+            debouncedSearchTerm ? (
+              <button
+                type="button"
+                className="header-btn btn-outline"
+                onClick={() => setSearchTerm('')}
+              >
+                Clear Search
+              </button>
+            ) : undefined
+          }
+        />
       );
     }
 
@@ -272,56 +279,52 @@ function GalaList() {
 
                   <div className="gala-meta">
                     <div className="meta-item">
-                      <Calendar size={14} />
                       <span>{formatDate(gala.eventDate)}</span>
                     </div>
                     <div className="meta-item">
-                      <Clock size={14} />
                       <span>{gala.eventTime}</span>
                     </div>
                     <div className="meta-item">
-                      <Users size={14} />
                       <span>{gala.appliedCount} Applied</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="gala-actions">
-                  {gala.status === 1 && (
-                    <>
-                      <button
-                        type="button"
-                        className="action-btn edit"
-                        onClick={() => navigate(`/galas/edit/${gala.id}`)}
-                      >
-                        <Edit3 size={16} />
-                        <span>Edit</span>
-                      </button>
+                {!isAdmin && (
+                  <div className="gala-actions">
+                    {gala.status === 1 && (
+                      <>
+                        <button
+                          type="button"
+                          className="action-btn edit"
+                          onClick={() => navigate(`/galas/edit/${gala.id}`)}
+                        >
+                          <span>Edit</span>
+                        </button>
 
-                      <button
-                        type="button"
-                        className="action-btn publish"
-                        onClick={() => handleAction(gala.id, 'publish')}
-                        disabled={isPublishing}
-                      >
-                        <Send size={16} />
-                        <span>
-                          {isPublishing ? 'Publishing...' : 'Publish'}
-                        </span>
-                      </button>
-                    </>
-                  )}
+                        <button
+                          type="button"
+                          className="action-btn publish"
+                          onClick={() => handleAction(gala.id, 'publish')}
+                          disabled={isPublishing}
+                        >
+                          <span>
+                            {isPublishing ? 'Publishing...' : 'Publish'}
+                          </span>
+                        </button>
+                      </>
+                    )}
 
-                  <button
-                    type="button"
-                    className="action-btn delete"
-                    onClick={() => handleAction(gala.id, 'delete')}
-                    disabled={isDeleting}
-                  >
-                    <Trash2 size={16} />
-                    <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      className="action-btn delete"
+                      onClick={() => handleAction(gala.id, 'delete')}
+                      disabled={isDeleting}
+                    >
+                      <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -332,16 +335,18 @@ function GalaList() {
 
   return (
     <div className="gala-management-view">
-      <HeaderActions>
-        <button
-          type="button"
-          className="header-btn btn-primary"
-          onClick={() => navigate('/galas/create')}
-        >
-          <Plus size={18} />
-          <span>Create New Gala</span>
-        </button>
-      </HeaderActions>
+      {!isAdmin && (
+        <HeaderActions>
+          <button
+            type="button"
+            className="header-btn btn-primary"
+            onClick={() => navigate('/galas/create')}
+          >
+            <Plus size={18} />
+            <span>Create New Gala</span>
+          </button>
+        </HeaderActions>
+      )}
 
       <div className="view-header">
         <div className="header-actions">

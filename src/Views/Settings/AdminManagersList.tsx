@@ -252,7 +252,6 @@ function AdminManagersList() {
         <div className="kpi-card">
           <div className="icon-wrap super">
             <Shield size={24} />
-            <span className="badge">Super</span>
           </div>
           <div className="stats-wrap">
             <span className="label">Super Admin</span>
@@ -265,7 +264,6 @@ function AdminManagersList() {
         <div className="kpi-card">
           <div className="icon-wrap sub">
             <Users size={24} />
-            <span className="badge trend green">▲ +0</span>
           </div>
           <div className="stats-wrap">
             <span className="label">Sub Admins</span>

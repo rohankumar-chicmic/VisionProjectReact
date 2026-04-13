@@ -22,6 +22,7 @@ const getEthereumObject = () => {
 const ERC20_ABI = [
   'function approve(address spender, uint256 amount) public returns (bool)',
   'function allowance(address owner, address spender) public view returns (uint256)',
+  'function decimals() public view returns (uint8)',
 ];
 
 export const createGrantPlatformTransaction = async (
@@ -29,8 +30,6 @@ export const createGrantPlatformTransaction = async (
 ): Promise<GrantPlatformTransactionResult> => {
   const proxyAddress = getGrantPlatformProxyAddress();
   const { mockTokenAddress } = WALLET_CONNECT_CONFIG;
-  // Use 6 decimals for USDC/Mock token as requested
-  const decimals = 6;
 
   if (!proxyAddress) {
     throw new Error(
@@ -60,8 +59,13 @@ export const createGrantPlatformTransaction = async (
   if (totalAmount > 0) {
     const tokenContract = new Contract(mockTokenAddress, ERC20_ABI, signer);
 
-    // Convert to token units (6 decimals)
-    const amountToApprove = BigInt(Math.floor(totalAmount * 10 ** decimals));
+    // Fetch decimals dynamically from the contract to ensure accuracy
+    const tokenDecimals = await tokenContract.decimals();
+
+    // Scale the amount correctly based on the token's decimals
+    // Using a simple multiplier for clarity, but ensuring BigInt conversion
+    const multiplier = 10n ** BigInt(tokenDecimals);
+    const amountToApprove = BigInt(Math.floor(totalAmount)) * multiplier;
 
     const approveTx = await tokenContract.approve(
       proxyAddress,

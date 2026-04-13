@@ -15,6 +15,7 @@ import {
   Briefcase,
   User,
   AlertTriangle,
+  Trophy,
 } from 'lucide-react';
 import Modal from '../../Components/Atom/Modal/Modal';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
@@ -24,13 +25,16 @@ import {
 } from '../../Services/Api/module/Organiser/Grant';
 import Skeleton from '../../Components/Shared/Skeleton';
 import showToast from '../../Shared/Utils/toast';
-import KpiCard from '../../Components/Shared/KpiCard';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
+import EmptyState from '../../Components/Shared/EmptyState';
 import './GrantDetails.scss';
 
 function GrantDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
+  const { role } = useCurrentUserRole();
+  const isAdmin = role === 'admin' || role === 'sub_admin';
 
   const {
     data: grantResponse,
@@ -99,20 +103,40 @@ function GrantDetails() {
     }
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
   if (isLoading) {
     return (
       <div className="grant-details-page">
         <div className="skeleton-hero">
-          <Skeleton height={200} borderRadius={24} />
+          <Skeleton height={280} borderRadius={24} />
         </div>
-        <div className="kpi-grid">
+        <div className="stats-container-card">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={`skeleton-${i}`} height={120} borderRadius={20} />
+            <div
+              key={`stat-skeleton-${i}`}
+              style={{ flex: 1, padding: '24px' }}
+            >
+              <Skeleton height={60} borderRadius={12} />
+            </div>
           ))}
         </div>
         <div className="details-main-grid">
-          <Skeleton height={600} borderRadius={24} />
-          <Skeleton height={600} borderRadius={24} />
+          <div className="content-column">
+            <Skeleton height={400} borderRadius={24} />
+            <Skeleton height={300} borderRadius={24} />
+          </div>
+          <div className="sidebar-column">
+            <Skeleton height={400} borderRadius={24} />
+            <Skeleton height={400} borderRadius={24} />
+          </div>
         </div>
       </div>
     );
@@ -142,91 +166,109 @@ function GrantDetails() {
     );
   }
 
+  const statusDisplay = getStatusLabel(grant.status);
+  const statusClass = getStatusClass(grant.status);
+
   return (
     <div className="grant-details-page">
-      <HeaderActions>
-        <button
-          type="button"
-          className="header-btn btn-outline"
-          onClick={() => navigate(`/grants/edit/${id}`)}
-        >
-          <Edit3 size={18} />
-          <span>Edit Program</span>
-        </button>
-        <button
-          type="button"
-          className="header-btn btn-danger-soft"
-          onClick={() => setIsDeleteModalOpen(true)}
-          disabled={isDeleting}
-        >
-          <Trash2 size={18} />
-          <span>Delete Program</span>
-        </button>
-      </HeaderActions>
+      {!isAdmin && (
+        <HeaderActions>
+          <button
+            type="button"
+            className="header-btn btn-outline"
+            onClick={() => navigate(`/grants/edit/${id}`)}
+          >
+            <Edit3 size={18} />
+            <span>Edit Program</span>
+          </button>
+          <button
+            type="button"
+            className="header-btn btn-danger-soft"
+            onClick={() => setIsDeleteModalOpen(true)}
+            disabled={isDeleting}
+          >
+            <Trash2 size={18} />
+            <span>Delete Program</span>
+          </button>
+        </HeaderActions>
+      )}
 
       {/* Hero Section */}
       <section className="grant-hero">
-        <div className="hero-content">
+        <div className="hero-overlay">
           <div className="hero-top">
-            <span className={`status-badge ${getStatusClass(grant.status)}`}>
-              <span className="dot" />
-              {getStatusLabel(grant.status)}
-            </span>
-            <span className="category-chip">{grant.category}</span>
+            <div className={`status-pill ${statusClass}`}>
+              <div className="dot" />
+              {statusDisplay}
+            </div>
+            <div className="category-chip">
+              <Award size={14} />
+              {grant.category}
+            </div>
           </div>
           <h1>{grant.name}</h1>
-          <p className="event-info">
+          <div className="hero-meta">
             <Link to={`/galas/${grant.galaEventId}`} className="gala-link">
-              <Award size={18} />
-              <span>{grant.galaEventName}</span>
-              <ArrowRight size={14} className="hover-arrow" />
+              <div className="link-icon-box">
+                <Trophy size={18} />
+              </div>
+              <div className="link-text">
+                <span className="l-label">Linked Gala Event</span>
+                <span className="l-value">{grant.galaEventName}</span>
+              </div>
+              <ArrowRight size={18} className="hover-arrow" />
             </Link>
-          </p>
+          </div>
         </div>
       </section>
 
-      {/* KPI Stats */}
-      <div className="kpi-grid">
-        <KpiCard
-          label="Total Prize Pool"
-          value={`$${grant.prizeAmount.toLocaleString()}`}
-          trend="+0%"
-          trendType="up"
-          color="#10b981"
-          icon={<DollarSign size={24} />}
-        />
-        <KpiCard
-          label="Prize Slots"
-          value={`${grant.numberOfPrizes} Winners`}
-          trend="+0%"
-          trendType="up"
-          color="#f59e0b"
-          icon={<Award size={24} />}
-        />
-        <KpiCard
-          label="Deadline"
-          value={formatDate(grant.applicationDeadline)}
-          trend="Upcoming"
-          trendType="up"
-          color="#3b82f6"
-          icon={<Calendar size={24} />}
-        />
-        <KpiCard
-          label="Applicant Count"
-          value={`${grant.applicantCount || 0} Applied`}
-          trend="+0%"
-          trendType="up"
-          color="#a855f7"
-          icon={<Users size={24} />}
-        />
+      {/* Stats Container Card */}
+      <div className="stats-container-card">
+        <div className="stat-unit prize">
+          <div className="stat-icon">
+            <DollarSign size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Total Prize Pool</span>
+            <span className="value">{formatCurrency(grant.prizeAmount)}</span>
+          </div>
+        </div>
+        <div className="stat-unit slots">
+          <div className="stat-icon">
+            <Award size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Prize Slots</span>
+            <span className="value">{grant.numberOfPrizes} Winners</span>
+          </div>
+        </div>
+        <div className="stat-unit deadline">
+          <div className="stat-icon">
+            <Calendar size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Application Deadline</span>
+            <span className="value">
+              {formatDate(grant.applicationDeadline)}
+            </span>
+          </div>
+        </div>
+        <div className="stat-unit applicants">
+          <div className="stat-icon">
+            <Users size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Total Applicants</span>
+            <span className="value">{grant.applicantCount || 0}</span>
+          </div>
+        </div>
       </div>
 
       <div className="details-main-grid">
-        {/* Main Content Column */}
         <div className="content-column">
           <div className="card description-card">
             <h3 className="card-title">
-              <Info size={24} />
+              <Info size={22} />
               About the Grant
             </h3>
             <p className="about-text">{grant.description}</p>
@@ -234,7 +276,7 @@ function GrantDetails() {
 
           <div className="card requirements-card">
             <h3 className="card-title">
-              <CheckCircle2 size={24} />
+              <CheckCircle2 size={22} />
               Eligibility & Requirements
             </h3>
             <div className="requirements-list">
@@ -258,17 +300,22 @@ function GrantDetails() {
           </div>
 
           <div className="card questions-card">
-            <h3 className="card-title">
-              <HelpCircle size={24} />
-              Application Questionnaire
-            </h3>
+            <div className="card-header-with-badge">
+              <h3 className="card-title">
+                <HelpCircle size={22} />
+                Questionnaire
+              </h3>
+              <span className="count-badge">
+                {grant.questions.length} Questions
+              </span>
+            </div>
             <div className="questions-list">
               {grant.questions.map((q) => (
                 <div key={q.questionText} className="question-item">
                   <div className="q-number">{q.order}</div>
                   <div className="q-content">
                     <h4>{q.questionText}</h4>
-                    <span className="q-type badge-soft">{q.questionType}</span>
+                    <span className="q-type">{q.questionType}</span>
                   </div>
                 </div>
               ))}
@@ -276,11 +323,10 @@ function GrantDetails() {
           </div>
         </div>
 
-        {/* Sidebar Column */}
         <div className="sidebar-column">
           <div className="card jury-card">
             <h3 className="card-title">
-              <User size={24} />
+              <Users size={22} />
               Jury Panel
             </h3>
             <div className="jury-list">
@@ -297,14 +343,19 @@ function GrantDetails() {
                 </div>
               ))}
               {grant.juries.length === 0 && (
-                <p className="empty-msg">No jury members assigned yet.</p>
+                <EmptyState
+                  icon={Users}
+                  title="No jury assigned"
+                  description="This grant hasn't been assigned to any jury panel members yet."
+                  className="empty-state-mini"
+                />
               )}
             </div>
           </div>
 
-          <div className="card evaluation-card">
+          <div className="card criteria-card">
             <h3 className="card-title">
-              <Briefcase size={24} />
+              <Briefcase size={22} />
               Evaluation Criteria
             </h3>
             <div className="criteria-list">
@@ -322,7 +373,7 @@ function GrantDetails() {
 
           <div className="card prize-pool-card">
             <h3 className="card-title">
-              <DollarSign size={24} />
+              <Trophy size={22} />
               Prize Distribution
             </h3>
             <div className="prize-table">
@@ -333,10 +384,9 @@ function GrantDetails() {
                   <div key={prize.id} className="prize-row">
                     <div className="rank">
                       <span className="rank-num">#{prize.rank}</span>
+                      <span className="rank-label">Rank</span>
                     </div>
-                    <div className="amount">
-                      ${prize.amount.toLocaleString()}
-                    </div>
+                    <div className="amount">{formatCurrency(prize.amount)}</div>
                   </div>
                 ))}
             </div>

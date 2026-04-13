@@ -5,14 +5,9 @@ import {
   ArrowUpDown,
   Award,
   DollarSign,
-  Calendar,
   Users,
   Plus,
-  Edit3,
-  Send,
-  Trash2,
   CheckCircle2,
-  AlertCircle,
   AlertTriangle,
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -34,25 +29,6 @@ import {
   useGetOrganiserGrantsQuery,
   useGetOrganiserGrantSummaryQuery,
 } from '../../Services/Api/module/Organiser/Grant';
-
-// Simple EyeOff fallback
-function EyeOff({ size }: Readonly<{ size: number }>) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
 
 function GrantList() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
@@ -218,11 +194,11 @@ function GrantList() {
   }, [summaryResponse]);
 
   const renderCardActions = (grant: (typeof grants)[0]) => {
+    if (isAdmin) return null;
     if (grant.status === 4 || grant.status === 5) {
       return (
         <>
           <button type="button" className="action-btn reopen">
-            <Send size={16} />
             <span>Reopen</span>
           </button>
           <button
@@ -231,7 +207,6 @@ function GrantList() {
             onClick={() => setDeletingId(grant.id)}
             disabled={isDeletingGrant}
           >
-            <Trash2 size={16} />
             <span>Delete</span>
           </button>
         </>
@@ -246,7 +221,6 @@ function GrantList() {
             className="action-btn edit"
             onClick={() => navigate(`/grants/edit/${grant.id}`)}
           >
-            <Edit3 size={16} />
             <span>Edit</span>
           </button>
           <button
@@ -255,11 +229,9 @@ function GrantList() {
             onClick={() => setDeletingId(grant.id)}
             disabled={isDeletingGrant}
           >
-            <Trash2 size={16} />
             <span>Delete</span>
           </button>
           <button type="button" className="action-btn publish-main">
-            <Send size={16} />
             <span>Publish</span>
           </button>
         </>
@@ -273,11 +245,9 @@ function GrantList() {
           className="action-btn edit"
           onClick={() => navigate(`/grants/edit/${grant.id}`)}
         >
-          <Edit3 size={16} />
           <span>Edit</span>
         </button>
         <button type="button" className="action-btn unpublish">
-          <EyeOff size={16} />
           <span>Unpublish</span>
         </button>
         <button
@@ -286,7 +256,6 @@ function GrantList() {
           onClick={() => setDeletingId(grant.id)}
           disabled={isDeletingGrant}
         >
-          <Trash2 size={16} />
           <span>Delete</span>
         </button>
       </>
@@ -297,11 +266,13 @@ function GrantList() {
     if (isError) {
       return (
         <div className="error-state">
-          <AlertCircle size={48} />
           <h3>Failed to load grants</h3>
-          <p>There was an error connecting to the server.</p>
+          <p>
+            There was an error connecting to the server. Please check your
+            connection and try again.
+          </p>
           <button type="button" className="btn-retry" onClick={() => refetch()}>
-            Retry
+            Retry Connection
           </button>
         </div>
       );
@@ -337,21 +308,18 @@ function GrantList() {
 
               <div className="grant-meta">
                 <div className="meta-item">
-                  <DollarSign size={16} />
                   <span className="label">Award Amount</span>
                   <span className="value">
                     ${grant.prizeAmount.toLocaleString()}
                   </span>
                 </div>
                 <div className="meta-item">
-                  <Calendar size={16} />
                   <span className="label">Deadline</span>
                   <span className="value">
                     {new Date(grant.applicationDeadline).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="meta-item">
-                  <Users size={16} />
                   <span className="label">Applicants</span>
                   <span className="value">{grant.applicantCount} applied</span>
                 </div>
@@ -372,34 +340,38 @@ function GrantList() {
           </div>
         ))}
 
-        <button
-          type="button"
-          className="grant-card add-new-placeholder"
-          onClick={() => navigate('/grants/create')}
-          aria-label="Add new grant"
-        >
-          <div className="plus-icon-box">
-            <Plus size={32} />
-          </div>
-          <h3>Add New Grant</h3>
-          <p>Create a new Grant program</p>
-        </button>
+        {!isAdmin && (
+          <button
+            type="button"
+            className="grant-card add-new-placeholder"
+            onClick={() => navigate('/grants/create')}
+            aria-label="Add new grant"
+          >
+            <div className="plus-icon-box">
+              <Plus size={32} />
+            </div>
+            <h3>Add New Grant</h3>
+            <p>Create a new Grant program</p>
+          </button>
+        )}
       </div>
     );
   };
 
   return (
     <div className="grant-management-page">
-      <HeaderActions>
-        <button
-          type="button"
-          className="header-btn btn-primary"
-          onClick={() => navigate('/grants/create')}
-        >
-          <Plus size={18} />
-          <span>Add New Grant</span>
-        </button>
-      </HeaderActions>
+      {!isAdmin && (
+        <HeaderActions>
+          <button
+            type="button"
+            className="header-btn btn-primary"
+            onClick={() => navigate('/grants/create')}
+          >
+            <Plus size={18} />
+            <span>Add New Grant</span>
+          </button>
+        </HeaderActions>
+      )}
 
       <div className="kpi-grid">
         {isSummaryLoading

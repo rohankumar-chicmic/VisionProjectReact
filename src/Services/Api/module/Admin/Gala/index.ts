@@ -64,6 +64,10 @@ export interface GalaGrantDetail {
   additionalRequirements: GalaRequirement[];
   juryCriteria: GalaJuryCriteria[];
   appliedCount: number;
+  isWinnerDecided: boolean;
+  decidedWinnersCount: number;
+  totalWinnerSlots: number;
+  winnerDecisionMessage: string;
   applications: GalaApplication[];
 }
 
@@ -78,8 +82,17 @@ export interface GalaItem {
   venue: string;
   city: string;
   expectedAttendees: number;
-  totalPrizePool: number;
+  totalGalaValue: number | null;
+  estimatedTicketPrice: number | null;
+  entryFee: number | null;
+  ticketPrice: number | null;
+  publishedAt: string | null;
+  blockchainTransactionHash: string | null;
+  organiserWalletAddress: string | null;
+  canEditTicketPricingInputs: boolean;
   appliedCount: number;
+  allWinnersDecided: boolean;
+  winnerDecisionMessage: string;
   eveningItems: GalaEveningItem[];
   grants: GalaGrantDetail[];
 }

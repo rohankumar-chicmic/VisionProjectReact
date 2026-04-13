@@ -56,8 +56,8 @@ export const adminAnnouncementApi = api.injectEndpoints({
       invalidatesTags: ['Announcements'],
     }),
     updateAnnouncement: build.mutation<unknown, UpdateAnnouncementRequest>({
-      query: ({ id, ...body }) => ({
-        url: `/api/v1/admin/announcements/${id}`,
+      query: (body) => ({
+        url: `/api/v1/admin/announcements/${body.id}`,
         method: 'PUT',
         body,
       }),

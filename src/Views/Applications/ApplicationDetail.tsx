@@ -23,7 +23,7 @@ interface JurorCardProps {
   score: number;
   initials: string;
   criteria: { label: string; score: number }[];
-  comment: string;
+  qualitativeFeedback: string;
 }
 
 function JurorCard({
@@ -31,7 +31,7 @@ function JurorCard({
   score,
   initials,
   criteria,
-  comment,
+  qualitativeFeedback,
 }: Readonly<JurorCardProps>) {
   return (
     <div className="juror-card">
@@ -60,7 +60,7 @@ function JurorCard({
         ))}
       </div>
       <div className="juror-comment">
-        <p>&quot;{comment}&ldquo;</p>
+        <p>&quot;{qualitativeFeedback}&ldquo;</p>
       </div>
     </div>
   );
@@ -412,7 +412,7 @@ function ApplicationDetail() {
                     { label: 'Innovation Level', score: 9 },
                     { label: 'Team Experience', score: 7 },
                   ]}
-                  comment="Very strong pitch, team needs more industry experience."
+                  qualitativeFeedback="Very strong pitch, team needs more industry experience."
                 />
                 <JurorCard
                   name="Paul Dubois"
@@ -423,7 +423,7 @@ function ApplicationDetail() {
                     { label: 'Innovation Level', score: 8 },
                     { label: 'Team Experience', score: 7 },
                   ]}
-                  comment="Solid concept but market validation could be stronger."
+                  qualitativeFeedback="Solid concept but market validation could be stronger."
                 />
                 <JurorCard
                   name="Sophie Caron"
@@ -434,7 +434,7 @@ function ApplicationDetail() {
                     { label: 'Innovation Level', score: 7 },
                     { label: 'Team Experience', score: 9 },
                   ]}
-                  comment="Excellent team synergy. Would strongly recommend for Excellence class."
+                  qualitativeFeedback="Excellent team synergy. Would strongly recommend for Excellence class."
                 />
               </div>
             </div>

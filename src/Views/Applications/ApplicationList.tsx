@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
   Search,
-  ChevronDown,
   CheckCircle2,
   XCircle,
   Eye,
-  Filter,
-  Star,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
@@ -193,39 +190,7 @@ function ApplicationList() {
             </div>
           </div>
 
-          <div className="bottom-row">
-            <div className="filter-label">
-              <Filter size={16} />
-              <span>Filter by:</span>
-            </div>
-            <div className="filter-dropdowns">
-              <div className="filter-select">
-                <select aria-label="Filter by Gala">
-                  <option>All Galas</option>
-                </select>
-                <ChevronDown size={14} />
-              </div>
-              <div className="filter-select">
-                <select aria-label="Filter by Grant">
-                  <option>All Grants</option>
-                </select>
-                <ChevronDown size={14} />
-              </div>
-              <div className="filter-select">
-                <select aria-label="Filter by Class">
-                  <option>All Classes</option>
-                </select>
-                <ChevronDown size={14} />
-              </div>
-              <div className="filter-select rating">
-                <Star size={14} />
-                <select aria-label="Sort by Rating">
-                  <option>Rating: Best First</option>
-                </select>
-                <ChevronDown size={14} />
-              </div>
-            </div>
-          </div>
+
         </div>
 
         <div className="applications-table-wrapper">

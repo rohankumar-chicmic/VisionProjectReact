@@ -51,8 +51,8 @@ function JuryReview() {
   // Modals & Local State
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [scores, setScores] = useState<Record<string, number>>({});
-  const [comment, setComment] = useState('');
-  const [personalNote, setPersonalNote] = useState('');
+  const [qualitativeFeedback, setQualitativeFeedback] = useState('');
+  const [privateNotes, setPrivateNotes] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Workflow Checks Modals
@@ -76,7 +76,7 @@ function JuryReview() {
     if (id) {
       startReview(id)
         .unwrap()
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [id, startReview]);
 
@@ -94,6 +94,14 @@ function JuryReview() {
         });
         setScores(initialScores);
       }
+
+      // Initialize qualitative feedback and private notes if empty and application has them
+      if (!qualitativeFeedback && application.qualitativeFeedback) {
+        setQualitativeFeedback(application.qualitativeFeedback);
+      }
+      if (!privateNotes && application.privateNotes) {
+        setPrivateNotes(application.privateNotes);
+      }
     }
     return () => resetHeader();
   }, [
@@ -104,6 +112,8 @@ function JuryReview() {
     navigate,
     application,
     scores,
+    qualitativeFeedback,
+    privateNotes,
   ]);
 
   const handleScoreChange = (criteriaKey: string, value: number) => {
@@ -175,8 +185,8 @@ function JuryReview() {
         applicationId: id,
         scores: payloadScores,
         overallScore: averageScore,
-        comment,
-        personalNote,
+        qualitativeFeedback: qualitativeFeedback,
+        privateNotes: privateNotes,
       }).unwrap();
 
       setIsSubmitted(true);
@@ -235,10 +245,10 @@ function JuryReview() {
 
   const initials = application.applicantName
     ? application.applicantName
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
     : 'A';
 
   const getStatusLabel = (status: number) => {
@@ -403,9 +413,9 @@ function JuryReview() {
                   </span>
                 </div>
                 {isInterviewCompleted &&
-                !isSubmitted &&
-                !isFinalized &&
-                !isWinner ? (
+                  !isSubmitted &&
+                  !isFinalized &&
+                  !isWinner ? (
                   <button
                     type="button"
                     className="header-btn btn-primary"
@@ -440,9 +450,9 @@ function JuryReview() {
                   <span className="value">
                     {application.memberSince
                       ? new Date(application.memberSince).toLocaleDateString(
-                          'en-US',
-                          { month: 'short', year: 'numeric' }
-                        )
+                        'en-US',
+                        { month: 'short', year: 'numeric' }
+                      )
                       : 'N/A'}
                   </span>
                 </div>
@@ -498,8 +508,8 @@ function JuryReview() {
                   <span className="value">
                     {application.applicationDeadline
                       ? new Date(
-                          application.applicationDeadline
-                        ).toLocaleDateString()
+                        application.applicationDeadline
+                      ).toLocaleDateString()
                       : 'N/A'}
                   </span>
                 </div>
@@ -569,8 +579,8 @@ function JuryReview() {
                       <span className="value">
                         {application.interviewDate
                           ? new Date(
-                              application.interviewDate
-                            ).toLocaleDateString()
+                            application.interviewDate
+                          ).toLocaleDateString()
                           : 'TBD'}
                       </span>
                     </div>
@@ -704,8 +714,8 @@ function JuryReview() {
                     <textarea
                       id="qualitativeFeedback"
                       placeholder="Provide your professional assessment..."
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
+                      value={qualitativeFeedback}
+                      onChange={(e) => setQualitativeFeedback(e.target.value)}
                       disabled={
                         isSubmitted ||
                         isSubmitting ||
@@ -722,8 +732,8 @@ function JuryReview() {
                     <textarea
                       id="privateNotes"
                       placeholder="Reference notes for jury members..."
-                      value={personalNote}
-                      onChange={(e) => setPersonalNote(e.target.value)}
+                      value={privateNotes}
+                      onChange={(e) => setPrivateNotes(e.target.value)}
                       disabled={
                         isSubmitted ||
                         isSubmitting ||

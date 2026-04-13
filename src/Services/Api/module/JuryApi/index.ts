@@ -86,8 +86,8 @@ export interface EvaluationPayload {
   applicationId: string;
   scores: CriteriaScore[];
   overallScore: number;
-  comment: string;
-  personalNote: string;
+  qualitativeFeedback: string;
+  privateNotes: string;
 }
 
 export interface JuryReviewCriteria {
@@ -146,6 +146,8 @@ export interface ApplicationReviewData {
   interviewCompleted: boolean;
   juryReviewStatus: number;
   myOverallScore: number | null;
+  qualitativeFeedback: string | null;
+  privateNotes: string | null;
   criteria: JuryReviewCriteria[];
 }
 

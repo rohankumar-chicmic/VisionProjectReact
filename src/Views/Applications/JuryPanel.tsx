@@ -13,7 +13,7 @@ interface JuryRatingCardProps {
   overallScore: number;
   highlightColor: string;
   criteria: { label: string; score: number }[];
-  personalNote: string;
+  privateNotes: string;
   status: 'submitted' | 'editing' | 'pending';
 }
 
@@ -24,7 +24,7 @@ function JuryRatingCard({
   overallScore,
   highlightColor,
   criteria,
-  personalNote,
+  privateNotes,
   status,
 }: Readonly<JuryRatingCardProps>) {
   return (
@@ -81,9 +81,9 @@ function JuryRatingCard({
       </div>
 
       <div className="personal-note-section">
-        <span className="section-label">PERSONAL NOTE</span>
+        <span className="section-label">PRIVATE NOTES</span>
         <div className="note-content">
-          <p>{personalNote}</p>
+          <p>{privateNotes}</p>
         </div>
       </div>
 
@@ -143,7 +143,7 @@ function JuryPanel() {
         { label: 'Innovation Level', score: 9 },
         { label: 'Team Experience', score: 7 },
       ],
-      personalNote:
+      privateNotes:
         "Very strong pitch, team needs more industry experience. The innovation angle is compelling and I'd recommend Excellence class if team credentials are verified.",
     },
     {
@@ -158,7 +158,7 @@ function JuryPanel() {
         { label: 'Innovation Level', score: 8 },
         { label: 'Team Experience', score: 7 },
       ],
-      personalNote:
+      privateNotes:
         'Solid concept but market validation could be stronger. The team presents well but lacks references from the sector. Worth monitoring for next cycle.',
     },
     {
@@ -173,7 +173,7 @@ function JuryPanel() {
         { label: 'Innovation Level', score: 7 },
         { label: 'Team Experience', score: 9 },
       ],
-      personalNote:
+      privateNotes:
         'Excellent team synergy. Would strongly recommend for Excellence class. The business model is scalable and the innovation approach is truly unique in the sector.',
     },
   ];

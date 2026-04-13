@@ -23,7 +23,7 @@ function JuryProfile() {
   const { setTitle, setSubtitle, resetHeader } = useHeader();
   const { data: profileResponse, isLoading: isProfileLoading } =
     useGetJuryProfileQuery();
-  console.log(profileResponse)
+  const jury = profileResponse;
   const [updateProfile, { isLoading: isUpdating }] =
     useUpdateJuryProfileMutation();
   const [isEditing, setIsEditing] = useState(false);
@@ -79,8 +79,6 @@ function JuryProfile() {
       </div>
     );
   }
-
-  const jury = profileResponse;
 
   const getInitials = (name: string) => {
     if (!name) return '??';
@@ -139,7 +137,9 @@ function JuryProfile() {
             </div>
 
             <div className="profile-header-strip">
-              <div className="avatar-box">{getInitials(jury?.fullName || '')}</div>
+              <div className="avatar-box">
+                {getInitials(jury?.fullName || '')}
+              </div>
               <div className="header-info">
                 <h2>{jury?.fullName || 'Your full legal name'}</h2>
                 <div className="meta-tags">
@@ -157,19 +157,19 @@ function JuryProfile() {
                       <User size={14} />
                     </span>
                     Full Name
+                    <div className="input-container">
+                      <input
+                        id="fullName"
+                        type="text"
+                        value={formData.fullName}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({ ...formData, fullName: e.target.value })
+                        }
+                        placeholder={jury?.fullName || 'Your full legal name'}
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="fullName"
-                      type="text"
-                      value={formData.fullName}
-                      disabled={!isEditing}
-                      onChange={(e) =>
-                        setFormData({ ...formData, fullName: e.target.value })
-                      }
-                      placeholder={jury?.fullName || 'Your full legal name'}
-                    />
-                  </div>
                 </div>
 
                 <div className="field-wrapper">
@@ -178,16 +178,16 @@ function JuryProfile() {
                       <Mail size={14} />
                     </span>
                     Email Address
+                    <div className="input-container">
+                      <input
+                        id="email"
+                        type="email"
+                        value=""
+                        disabled
+                        placeholder={jury?.email || 'email@example.com'}
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="email"
-                      type="email"
-                      value=""
-                      disabled
-                      placeholder={jury?.email || 'email@example.com'}
-                    />
-                  </div>
                 </div>
 
                 <div className="field-wrapper">
@@ -196,19 +196,19 @@ function JuryProfile() {
                       <Phone size={14} />
                     </span>
                     Phone Number
+                    <div className="input-container">
+                      <input
+                        id="phone"
+                        type="text"
+                        value={formData.phone}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        placeholder={jury?.phoneNumber || '+1 234 567 890'}
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="phone"
-                      type="text"
-                      value={formData.phone}
-                      disabled={!isEditing}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                      placeholder={jury?.phoneNumber || '+1 234 567 890'}
-                    />
-                  </div>
                 </div>
 
                 <div className="field-wrapper">
@@ -217,19 +217,21 @@ function JuryProfile() {
                       <Building2 size={14} />
                     </span>
                     Organization
+                    <div className="input-container">
+                      <input
+                        id="company"
+                        type="text"
+                        value={formData.company}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({ ...formData, company: e.target.value })
+                        }
+                        placeholder={
+                          jury?.companyName || 'Current company or institution'
+                        }
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="company"
-                      type="text"
-                      value={formData.company}
-                      disabled={!isEditing}
-                      onChange={(e) =>
-                        setFormData({ ...formData, company: e.target.value })
-                      }
-                      placeholder={jury?.companyName || 'Current company or institution'}
-                    />
-                  </div>
                 </div>
 
                 <div className="field-wrapper">
@@ -238,37 +240,41 @@ function JuryProfile() {
                       <Tags size={14} />
                     </span>
                     Specialisation
+                    <div className="input-container">
+                      {isEditing ? (
+                        <input
+                          id="expertise"
+                          type="text"
+                          value={formData.expertise}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              expertise: e.target.value,
+                            })
+                          }
+                          placeholder={
+                            jury?.domainOfExpertise || 'AI, Blockchain, Fintech'
+                          }
+                        />
+                      ) : (
+                        <div className="tag-display">
+                          {jury?.domainOfExpertise ? (
+                            jury.domainOfExpertise
+                              .split(',')
+                              .map((tag: string) => (
+                                <span key={tag.trim()} className="skill-tag">
+                                  {tag.trim()}
+                                </span>
+                              ))
+                          ) : (
+                            <span className="no-data">
+                              No specialisation set
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </label>
-                  <div className="input-container">
-                    {isEditing ? (
-                      <input
-                        id="expertise"
-                        type="text"
-                        value={formData.expertise}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            expertise: e.target.value,
-                          })
-                        }
-                        placeholder={jury?.domainOfExpertise || 'AI, Blockchain, Fintech'}
-                      />
-                    ) : (
-                      <div className="tag-display">
-                        {jury?.domainOfExpertise ? (
-                          jury.domainOfExpertise
-                            .split(',')
-                            .map((tag) => (
-                              <span key={tag.trim()} className="skill-tag">
-                                {tag.trim()}
-                              </span>
-                            ))
-                        ) : (
-                          <span className="no-data">No specialisation set</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 <div className="field-wrapper">
@@ -277,20 +283,20 @@ function JuryProfile() {
                       <Calendar size={14} />
                     </span>
                     Member Since
+                    <div className="input-container">
+                      <input
+                        id="createdAt"
+                        type="text"
+                        value=""
+                        disabled
+                        placeholder={
+                          jury?.createdAt
+                            ? new Date(jury.createdAt).toLocaleDateString()
+                            : 'N/A'
+                        }
+                      />
+                    </div>
                   </label>
-                  <div className="input-container">
-                    <input
-                      id="createdAt"
-                      type="text"
-                      value=""
-                      disabled
-                      placeholder={
-                        jury?.createdAt
-                          ? new Date(jury.createdAt).toLocaleDateString()
-                          : 'N/A'
-                      }
-                    />
-                  </div>
                 </div>
               </div>
             </form>

@@ -217,6 +217,7 @@
 
           label {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 12px;
             font-size: 13px;
@@ -226,6 +227,7 @@
             letter-spacing: 0.6px;
             cursor: pointer;
             transition: all 0.2s ease;
+            width: 100%;
 
             .icon-bg {
               width: 32px;
@@ -244,11 +246,14 @@
                 height: 14px;
               }
             }
-          }
 
-          .input-container {
-            width: 100%;
-            position: relative;
+            .input-container {
+              width: 100%;
+              margin-top: 4px;
+              position: relative;
+              font-weight: normal;
+              text-transform: none;
+              letter-spacing: normal;
 
             input, textarea {
               width: 100%;
@@ -312,6 +317,7 @@
                 font-size: 14px;
                 font-style: italic;
               }
+            }
             }
           }
 

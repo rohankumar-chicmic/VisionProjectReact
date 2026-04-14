@@ -15,11 +15,14 @@ import UserProfile from '../Views/Users/UserProfile';
 import GalaDetails from '../Views/Galas/GalaDetails';
 import GrantDetails from '../Views/Grants/GrantDetails';
 import Notifications from '../Views/Notifications/NotificationAutomations';
-import JuryPage from '../Views/Jury/JuryPage';
 import AdminSettings from '../Views/Settings/AdminSettings';
 import ManageJuryCriteria from '../Views/Grants/ManageJuryCriteria';
 import AddCustomCriteria from '../Views/Grants/AddCustomCriteria';
 import ManageJury from '../Views/Jury/ManageJury';
+import JuryDashboard from '../Views/Dashboard/roles/Jury/JuryDashboard';
+import JuryWorkspace from '../Views/Jury/JuryWorkspace/JuryWorkspace';
+import JuryProfile from '../Views/Jury/JuryProfile/JuryProfile';
+import JuryReview from '../Views/Jury/JuryReview/JuryReview';
 import EventOrganiserList from '../Views/Admin/EventOrganisers/EventOrganiserList';
 
 // eslint-disable-next-line import/prefer-default-export
@@ -129,11 +132,28 @@ export const PRIVATE_ROUTES: Array<CustomRouter> = [
     element: <ManageJury />,
     title: 'Manage Jury',
   },
+  // Jury Role Routes
   {
-    path: '/jury',
-    element: <JuryPage />,
-    title: 'Jury Scoring',
+    path: '/jury/dashboard',
+    element: <JuryDashboard />,
+    title: 'Jury Dashboard',
   },
+  {
+    path: '/jury/workspace',
+    element: <JuryWorkspace />,
+    title: 'Jury Workspace',
+  },
+  {
+    path: '/jury/review/:id',
+    element: <JuryReview />,
+    title: 'Jury Review',
+  },
+  {
+    path: '/jury/profile',
+    element: <JuryProfile />,
+    title: 'My Profile',
+  },
+
   {
     path: '/settings',
     element: <AdminSettings />,

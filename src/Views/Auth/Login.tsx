@@ -135,17 +135,15 @@ function Login() {
               />
               Remember me
             </label>
-            <a
-              href="/forgot-password"
-              title="Forgot Password Page"
+            <button
+              type="button"
               className="forgot-password-link"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/forgot-password');
-              }}
+              onClick={() =>
+                navigate('/forgot-password', { state: { role: selectedRole } })
+              }
             >
               Forgot password?
-            </a>
+            </button>
           </div>
 
           {submitError && (
@@ -163,7 +161,7 @@ function Login() {
             New here?{' '}
             <button
               type="button"
-              className="create-link"
+              className="create-link-btn"
               onClick={() => navigate('/create-organiser')}
             >
               Create your Organiser account

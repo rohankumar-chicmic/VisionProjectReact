@@ -1,42 +1,54 @@
-function AssignedGrantsList() {
-  const grants = [
-    {
-      name: 'Innovation Technology Grant',
-      meta: '14 applications • Gala Spring Summit',
-      status: 'Scoring open',
-    },
-    {
-      name: 'Community Impact Grant',
-      meta: '9 applications • Gala Founders Night',
-      status: 'Review briefing',
-    },
-    {
-      name: 'Sustainability Excellence Grant',
-      meta: '6 applications • Gala Green Awards',
-      status: 'Consensus pending',
-    },
-  ];
+import { ArrowRight, Calendar, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AssignedGrant } from '../../../../../Services/Api/module/JuryApi';
+
+interface AssignedGrantsListProps {
+  data: AssignedGrant[];
+}
+
+function AssignedGrantsList({ data }: AssignedGrantsListProps) {
+  const navigate = useNavigate();
 
   return (
-    <section className="dashboard-section">
+    <section className="dashboard-section assigned-grants">
       <div className="dashboard-section-header">
         <div>
-          <h3>Assigned Grants List</h3>
-          <p>All grant programs currently assigned to this jury workspace.</p>
+          <h3>My Assigned Programs</h3>
+          <p>Programs where you are a primary jury member.</p>
         </div>
       </div>
 
-      <ul className="list-stack">
-        {grants.map((grant) => (
-          <li key={grant.name}>
-            <div className="metric-copy">
-              <strong>{grant.name}</strong>
-              <span>{grant.meta}</span>
+      <div className="grants-stack">
+        {data?.map((grant) => (
+          <div key={grant.name} className="grant-list-item">
+            <div className="grant-info">
+              <h4>{grant.name}</h4>
+              <div className="grant-meta">
+                <span className="meta-item">
+                  <Calendar size={14} /> {grant.gala}
+                </span>
+                <span className="meta-item">
+                  <Users size={14} /> {grant.applicants} Applicants
+                </span>
+              </div>
             </div>
-            <span className="status-pill">{grant.status}</span>
-          </li>
+            <div className="grant-actions">
+              <span
+                className={`status-pill ${grant.status.toLowerCase().replace(' ', '-')}`}
+              >
+                {grant.status}
+              </span>
+              <button
+                type="button"
+                className="view-btn"
+                onClick={() => navigate('/jury/workspace')}
+              >
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }

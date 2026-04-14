@@ -72,10 +72,16 @@ const api = createApi({
   endpoints: () => ({}),
   tagTypes: [
     'Galas',
+
     'Grants',
+
     'Admins',
+
     'Notifications',
+
     'Announcements',
+    'Jury',
+    'JuryDashboard',
     'OrganiserGalas',
     'OrganiserGrants',
     'OrganiserJuries',

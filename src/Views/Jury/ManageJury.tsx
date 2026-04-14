@@ -1,45 +1,43 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Search,
-  Plus,
   Mail,
   Phone,
   Building2,
   Briefcase,
-  MoreVertical,
   Edit2,
   Trash2,
   UserPlus,
-  Loader2,
+  Users,
+  AlertTriangle,
 } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import Table, { Column } from '../../Components/Atom/Table/Table';
-import CreateJuryModal from './Components/CreateJuryModal';
-import {
-  useCreateOrganiserJuryMutation,
-  useDeleteOrganiserJuryMutation,
-  useGetOrganiserJuriesQuery,
-  useUpdateOrganiserJuryMutation,
-  type CreateOrganiserJuryRequest,
-  type OrganiserJuryMember,
-} from '../../Services/Api/module/Organiser/Jury';
+import CreateJuryModal, { JuryFormData } from './Components/CreateJuryModal';
 import Modal from '../../Components/Atom/Modal/Modal';
+import {
+  useGetJuriesQuery,
+  useCreateJuryMutation,
+  useUpdateJuryMutation,
+  useDeleteJuryMutation,
+  JuryMember,
+} from '../../Services/Api/module/JuryApi';
 import showToast from '../../Shared/Utils/toast';
 import './ManageJury.scss';
 
-function JuryUserCell({ jury }: { jury: OrganiserJuryMember }) {
+function UserCell({ jury }: { jury: JuryMember }) {
   return (
     <div className="jury-user-cell">
       <div className="avatar-circle">{jury.fullName.charAt(0)}</div>
       <div className="user-details">
         <span className="name">{jury.fullName}</span>
-        <span className="date">{jury.domainOfExpertise}</span>
+        <span className="date">Jury Member</span>
       </div>
     </div>
   );
 }
 
-function ContactCell({ jury }: { jury: OrganiserJuryMember }) {
+function ContactCell({ jury }: { jury: JuryMember }) {
   return (
     <div className="contact-cell">
       <div className="contact-item">
@@ -54,7 +52,7 @@ function ContactCell({ jury }: { jury: OrganiserJuryMember }) {
   );
 }
 
-function CompanyCell({ jury }: { jury: OrganiserJuryMember }) {
+function CompanyCell({ jury }: { jury: JuryMember }) {
   return (
     <div className="company-cell">
       <div className="company-item">
@@ -69,21 +67,22 @@ function CompanyCell({ jury }: { jury: OrganiserJuryMember }) {
   );
 }
 
-interface ActionCellProps {
-  jury: OrganiserJuryMember;
-  onEdit: (jury: OrganiserJuryMember) => void;
-  onDelete: (id: string) => void;
-  isDisabled: boolean;
+interface ActionsCellProps {
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
-function ActionsCell({ jury, onEdit, onDelete, isDisabled }: ActionCellProps) {
+function ActionsCell({ onEdit, onDelete }: ActionsCellProps) {
   return (
     <div className="table-actions">
       <button
         type="button"
         className="action-btn edit"
         title="Edit"
-        onClick={() => onEdit(jury)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
       >
         <Edit2 size={16} />
       </button>
@@ -91,40 +90,48 @@ function ActionsCell({ jury, onEdit, onDelete, isDisabled }: ActionCellProps) {
         type="button"
         className="action-btn delete"
         title="Delete"
-        onClick={() => onDelete(jury.id)}
-        disabled={isDisabled}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
       >
         <Trash2 size={16} />
-      </button>
-      <button type="button" className="action-btn more">
-        <MoreVertical size={16} />
       </button>
     </div>
   );
 }
 
+const renderUserCell = (jury: JuryMember) => <UserCell jury={jury} />;
+const renderContactCell = (jury: JuryMember) => <ContactCell jury={jury} />;
+const renderCompanyCell = (jury: JuryMember) => <CompanyCell jury={jury} />;
+
 function ManageJury() {
   const { setTitle, setSubtitle, resetHeader } = useHeader();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingJury, setEditingJury] = useState<OrganiserJuryMember | null>(
-    null
-  );
-  const [deletingJuryId, setDeletingJuryId] = useState<string | null>(null);
-  const {
-    data: juryResponse,
-    isLoading,
-    isFetching,
-  } = useGetOrganiserJuriesQuery();
-  const [createJury] = useCreateOrganiserJuryMutation();
-  const [updateJury] = useUpdateOrganiserJuryMutation();
-  const [deleteJury, { isLoading: isDeleting }] =
-    useDeleteOrganiserJuryMutation();
+  const [editingJury, setEditingJury] = useState<JuryFormData | null>(null);
+
+  // Delete modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [juryToDelete, setJuryToDelete] = useState<JuryMember | null>(null);
+
+  const { data: juriesData, isLoading: isFetching } = useGetJuriesQuery();
+  const [createJury] = useCreateJuryMutation();
+  const [updateJury] = useUpdateJuryMutation();
+  const [deleteJury] = useDeleteJuryMutation();
+
+  const juryList = useMemo(() => juriesData?.data || [], [juriesData]);
 
   useEffect(() => {
-    setTitle('Manage Jury');
-    setSubtitle('View and manage jury members for your programs');
-    return () => resetHeader();
+    const timeoutId = setTimeout(() => {
+      setTitle('Manage Jury');
+      setSubtitle('View and manage jury members for your programs');
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      resetHeader();
+    };
   }, [setTitle, setSubtitle, resetHeader]);
 
   const juryList = useMemo(
@@ -141,81 +148,77 @@ function ManageJury() {
     );
   }, [juryList, searchTerm]);
 
-  const handleCreateOrUpdateJury = async (
-    juryData: CreateOrganiserJuryRequest
-  ) => {
+  const confirmDelete = async () => {
+    if (!juryToDelete) return;
     try {
-      if (editingJury) {
-        const payload = {
-          id: editingJury.id,
-          ...juryData,
-          password: juryData.password || 'unchanged-password',
-        };
-        await updateJury(payload).unwrap();
-        showToast.success('Jury member updated successfully');
-      } else {
-        await createJury(juryData).unwrap();
-        showToast.success('Jury member created successfully');
-      }
-
-      setIsModalOpen(false);
-      setEditingJury(null);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to save jury member';
-      showToast.error(message);
-    }
-  };
-
-  const handleDeleteJury = async () => {
-    if (!deletingJuryId || isDeleting) return;
-
-    try {
-      await deleteJury(deletingJuryId).unwrap();
+      await deleteJury(juryToDelete.id).unwrap();
       showToast.success('Jury member deleted successfully');
-      setDeletingJuryId(null);
+      setIsDeleteModalOpen(false);
+      setJuryToDelete(null);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to delete jury member';
-      showToast.error(message);
+      showToast.error('Failed to delete jury member');
     }
   };
 
-  const openCreateModal = () => {
-    setEditingJury(null);
-    setIsModalOpen(true);
-  };
+  const renderActionsColumn = useCallback(
+    (jury: JuryMember) => (
+      <ActionsCell
+        onEdit={() => {
+          setEditingJury(jury);
+          setIsModalOpen(true);
+        }}
+        onDelete={() => {
+          setJuryToDelete(jury);
+          setIsDeleteModalOpen(true);
+        }}
+      />
+    ),
+    []
+  );
 
-  const columns: Column<OrganiserJuryMember>[] = useMemo(
+  const JURY_COLUMNS: Column<JuryMember>[] = useMemo(
     () => [
       {
         header: 'Jury Member',
-        accessor: (jury) => JuryUserCell({ jury }),
+        accessor: renderUserCell,
       },
       {
         header: 'Contact Information',
-        accessor: (jury) => ContactCell({ jury }),
+        accessor: renderContactCell,
       },
       {
         header: 'Company & Industry',
-        accessor: (jury) => CompanyCell({ jury }),
+        accessor: renderCompanyCell,
       },
       {
         header: 'Actions',
-        accessor: (jury) =>
-          ActionsCell({
-            jury,
-            onEdit: (j: OrganiserJuryMember) => {
-              setEditingJury(j);
-              setIsModalOpen(true);
-            },
-            onDelete: (idValue: string) => setDeletingJuryId(idValue),
-            isDisabled: isDeleting,
-          }),
+        accessor: renderActionsColumn,
       },
     ],
-    [isDeleting]
+    [renderActionsColumn]
   );
+
+  const handleCreateOrUpdateJury = async (data: JuryFormData) => {
+    try {
+      if (editingJury?.id) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { password, ...updateData } = data;
+        await updateJury({ id: editingJury.id, body: updateData }).unwrap();
+        showToast.success('Jury member updated successfully');
+      } else {
+        await createJury(data).unwrap();
+        showToast.success('Jury member invited successfully');
+      }
+      setIsModalOpen(false);
+      setEditingJury(null);
+    } catch (error) {
+      showToast.error(
+        editingJury
+          ? 'Failed to update jury member'
+          : 'Failed to invite jury member'
+      );
+    }
+  };
 
   return (
     <div className="manage-jury-page">
@@ -223,7 +226,10 @@ function ManageJury() {
         <button
           type="button"
           className="header-btn btn-primary"
-          onClick={openCreateModal}
+          onClick={() => {
+            setEditingJury(null);
+            setIsModalOpen(true);
+          }}
         >
           <UserPlus size={18} />
           <span>Invite New Jury</span>
@@ -233,7 +239,7 @@ function ManageJury() {
       <div className="jury-stats-grid">
         <div className="stat-card">
           <div className="stat-icon jury">
-            <Plus size={24} />
+            <Users size={24} />
           </div>
           <div className="stat-content">
             <span className="label">Total Jury</span>
@@ -256,18 +262,11 @@ function ManageJury() {
         </div>
 
         <div className="table-wrapper">
-          {isFetching && !juryList.length ? (
-            <div className="jury-loading-state">
-              <Loader2 className="spin" size={22} />
-              <span>Loading jury members...</span>
-            </div>
-          ) : (
-            <Table<OrganiserJuryMember>
-              columns={columns}
-              data={filteredJury}
-              isLoading={isLoading}
-            />
-          )}
+          <Table<JuryMember>
+            columns={JURY_COLUMNS}
+            data={filteredJury}
+            isLoading={isFetching}
+          />
         </div>
       </div>
 
@@ -278,52 +277,43 @@ function ManageJury() {
           setEditingJury(null);
         }}
         onSubmit={handleCreateOrUpdateJury}
-        initialValues={editingJury}
+        initialData={editingJury}
       />
 
       <Modal
-        isOpen={Boolean(deletingJuryId)}
-        onClose={() => setDeletingJuryId(null)}
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
         title="Delete Jury Member"
-        subtitle="Are you sure you want to delete this jury member? This action cannot be undone."
         width="400px"
         footer={
           <div className="modal-actions-footer">
             <button
               type="button"
               className="btn-cancel"
-              onClick={() => setDeletingJuryId(null)}
-              disabled={isDeleting}
+              onClick={() => setIsDeleteModalOpen(false)}
             >
               Cancel
             </button>
             <button
               type="button"
-              className="btn-confirm-delete"
-              style={{
-                backgroundColor: '#ef4444',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontWeight: 600,
-              }}
-              onClick={handleDeleteJury}
-              disabled={isDeleting}
+              className="btn-confirm-jury btn-danger"
+              style={{ backgroundColor: '#ef4444' }}
+              onClick={confirmDelete}
             >
-              {isDeleting ? 'Deleting...' : 'Delete Member'}
+              Delete Member
             </button>
           </div>
         }
       >
-        <div style={{ textAlign: 'center', padding: '20px 0' }}>
-          <Trash2 size={48} color="#ef4444" style={{ marginBottom: '16px' }} />
+        <div className="delete-confirm-modal">
+          <div className="icon-box">
+            <AlertTriangle size={32} />
+          </div>
           <p>
-            You are about to remove{' '}
-            <strong>
-              {juryList.find((j) => j.id === deletingJuryId)?.fullName}
-            </strong>{' '}
-            from your jury list.
+            Are you sure you want to delete{' '}
+            <strong>{juryToDelete?.fullName}</strong>?
+            <br />
+            This action cannot be undone.
           </p>
         </div>
       </Modal>

@@ -5,7 +5,7 @@ import './Auth.scss';
 
 function ForgotPassword() {
   const navigate = useNavigate();
-  const { register, errors, isSubmitting, onSubmit, submitError } =
+  const { register, errors, isSubmitting, onSubmit, submitError, role } =
     useForgotPasswordForm();
 
   return (
@@ -63,8 +63,11 @@ function ForgotPassword() {
               <AlertCircle size={16} /> Email Recovery
             </div>
             <div className="alert-text">
-              Enter the email address associated with your admin account and
-              we&apos;ll send you a link to reset your password.
+              Enter the email address associated with your{' '}
+              {role === 'admin' && 'admin'}
+              {role === 'organiser' && 'organiser'}
+              {role === 'jury' && 'jury member'} account and we&apos;ll send you
+              a link to reset your password.
             </div>
           </div>
 

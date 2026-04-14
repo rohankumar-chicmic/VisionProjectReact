@@ -28,16 +28,29 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        
-        &.jury { background-color: #f0fdf4; color: #10b981; }
+
+        &.jury {
+          background-color: #f0fdf4;
+          color: #10b981;
+        }
       }
 
       .stat-content {
         display: flex;
         flex-direction: column;
-        
-        .label { font-size: 14px; font-weight: 600; color: #64748b; }
-        .value { font-size: 28px; font-weight: 800; color: #1e293b; line-height: 1; margin-top: 4px; }
+
+        .label {
+          font-size: 14px;
+          font-weight: 600;
+          color: #64748b;
+        }
+        .value {
+          font-size: 28px;
+          font-weight: 800;
+          color: #1e293b;
+          line-height: 1;
+          margin-top: 4px;
+        }
       }
     }
   }
@@ -71,7 +84,9 @@
           width: 100%;
           font-size: 14px;
           color: #1e293b;
-          &::placeholder { color: #cbd5e1; }
+          &::placeholder {
+            color: #cbd5e1;
+          }
         }
       }
     }
@@ -114,8 +129,15 @@
       .user-details {
         display: flex;
         flex-direction: column;
-        .name { font-weight: 700; color: #1e293b; }
-        .date { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+        .name {
+          font-weight: 700;
+          color: #1e293b;
+        }
+        .date {
+          font-size: 12px;
+          color: #94a3b8;
+          margin-top: 2px;
+        }
       }
     }
 
@@ -130,7 +152,9 @@
         gap: 8px;
         font-size: 13px;
         color: #475569;
-        svg { color: #94a3b8; }
+        svg {
+          color: #94a3b8;
+        }
       }
     }
 
@@ -146,7 +170,9 @@
         font-size: 14px;
         font-weight: 600;
         color: #1e293b;
-        svg { color: #94a3b8; }
+        svg {
+          color: #94a3b8;
+        }
       }
 
       .industry-badge {
@@ -160,7 +186,9 @@
         font-weight: 700;
         color: #4b5563;
         width: fit-content;
-        svg { color: #94a3b8; }
+        svg {
+          color: #94a3b8;
+        }
       }
     }
 
@@ -185,15 +213,59 @@
           opacity: 0.5;
         }
 
-        &.edit { color: #3b82f6; &:hover { background-color: #eff6ff; } }
-        &.delete { color: #ef4444; &:hover { background-color: #fef2f2; } }
-        &.more { color: #94a3b8; &:hover { background-color: #f1f5f9; } }
+        &.edit {
+          color: #3b82f6;
+          &:hover {
+            background-color: #eff6ff;
+          }
+        }
+        &.delete {
+          color: #ef4444;
+          &:hover {
+            background-color: #fef2f2;
+          }
+        }
+        &.more {
+          color: #94a3b8;
+          &:hover {
+            background-color: #f1f5f9;
+          }
+        }
       }
     }
   }
 }
 
-@keyframes jury-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.delete-confirm-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 0;
+
+  .icon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: #fef2f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ef4444;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+  }
+
+  p {
+    font-size: 16px;
+    color: #475569;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 320px;
+
+    strong {
+      color: #1e293b;
+      font-weight: 700;
+    }
+  }
 }

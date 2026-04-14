@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  CheckCircle2,
-  XCircle,
   Download,
   User,
   ExternalLink,
@@ -17,7 +15,6 @@ import {
   useGetAdminApplicationByIdQuery,
   AdminApplicationDetail,
   useLazyDownloadAdminApplicationAvatarQuery,
-  JuryPanelMember,
 } from '../../Services/Api/module/Admin/Application';
 import {
   useGetOrganiserApplicationByIdQuery,
@@ -34,53 +31,78 @@ import RejectApplicationModal from './Components/RejectApplicationModal';
 import RescheduleInterviewModal from './Components/RescheduleInterviewModal';
 import './ApplicationDetail.scss';
 
+// Avatar color palette — cycles through for each juror index
+const AVATAR_COLORS = [
+  { bg: '#dcfce7', color: '#16a34a' },
+  { bg: '#dbeafe', color: '#2563eb' },
+  { bg: '#fef9c3', color: '#ca8a04' },
+  { bg: '#fce7f3', color: '#db2777' },
+  { bg: '#ede9fe', color: '#7c3aed' },
+];
+
+// Returns a color class based on score value (out of 10)
+function getScoreColor(score: number): string {
+  if (score >= 8) return 'score-high';
+  if (score >= 6) return 'score-mid';
+  return 'score-low';
+}
+
 // Individual Juror Card Component
 interface JurorCardProps {
   name: string;
-  score: number;
+  averageScore: number;
   initials: string;
-  criteria: { label: string; score: number }[];
-  comment: string;
+  jurorRole: string;
+  criteriaScores: { criteriaName: string; score: number }[];
+  comment: string | null;
+  colorIndex: number;
 }
 
 function JurorCard({
   name,
-  score,
+  averageScore,
   initials,
-  criteria,
+  jurorRole,
+  criteriaScores,
   comment,
+  colorIndex,
 }: Readonly<JurorCardProps>) {
+  const avatarColor = AVATAR_COLORS[colorIndex % AVATAR_COLORS.length];
   return (
     <div className="juror-card">
       <div className="juror-header">
         <div className="juror-info">
-          <div className="avatar-initials">{initials}</div>
+          <div
+            className="avatar-initials"
+            style={{
+              backgroundColor: avatarColor.bg,
+              color: avatarColor.color,
+            }}
+          >
+            {initials}
+          </div>
           <div className="text">
             <span className="name">{name}</span>
-            <span className="role">Jury Member</span>
+            <span className="role">{jurorRole}</span>
           </div>
         </div>
-        <div className="juror-score-badge">{score.toFixed(1)} / 10</div>
+        <div className={`juror-score-badge ${getScoreColor(averageScore)}`}>
+          {averageScore.toFixed(1)} / 10
+        </div>
       </div>
-      <div className="criteria-ratings">
-        {criteria?.map((c) => (
-          <div key={c.label} className="criteria-item">
-            <div className="criteria-label">
-              <span>{c.label}</span>
-              <span className="val">{c.score}/10</span>
-            </div>
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${c.score * 10}%` }}
-              />
-            </div>
+      <div className="criteria-list">
+        {criteriaScores?.map((c) => (
+          <div key={c.criteriaName} className="criteria-row">
+            <span className="criteria-label">{c.criteriaName}</span>
+            <span className={`criteria-score ${getScoreColor(c.score)}`}>
+              {c.score} / 10
+            </span>
           </div>
         ))}
       </div>
       {comment && (
         <div className="juror-comment">
-          <p>“{comment}”</p>
+          <p>{comment}</p>
         </div>
       )}
     </div>
@@ -164,10 +186,10 @@ function ApplicationDetail() {
 
   useEffect(() => {
     setTitle('Application Review');
-    setSubtitle(`Ref: ${id || 'N/A'}`);
+    setSubtitle('Review and approve grant application');
     setBackAction(true, () => navigate(-1));
     return () => resetHeader();
-  }, [setTitle, setSubtitle, setBackAction, resetHeader, id, navigate]);
+  }, [setTitle, setSubtitle, setBackAction, resetHeader, navigate]);
 
   useEffect(() => {
     if (application?.adminNotes) {
@@ -181,24 +203,20 @@ function ApplicationDetail() {
   };
 
   const handleRejectConfirm = () => {
-    // API logic for reject
     setIsRejectOpen(false);
   };
 
   const handleRescheduleConfirm = () => {
-    // API logic for reschedule
     setIsRescheduleOpen(false);
   };
 
   const handleDownloadAvatar = async () => {
     if (!id || !application) return;
-
     try {
       const trigger = isAdmin
         ? triggerDownloadAdminAvatar
         : triggerDownloadOrganiserAvatar;
       const blob = await trigger(id).unwrap();
-
       if (blob) {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -209,7 +227,7 @@ function ApplicationDetail() {
         link.remove();
         window.URL.revokeObjectURL(url);
       }
-    } catch (err) {
+    } catch {
       // Failed to download avatar
     }
   };
@@ -224,7 +242,7 @@ function ApplicationDetail() {
   if (isLoading) {
     return (
       <div className="application-review-page">
-        <div className="skeleton-container" style={{ padding: '24px' }}>
+        <div style={{ padding: '24px' }}>
           <Skeleton height={200} />
           <div style={{ marginTop: '24px' }}>
             <Skeleton height={600} />
@@ -237,20 +255,13 @@ function ApplicationDetail() {
   if (!application) {
     return (
       <div className="application-review-page">
-        <div
-          className="error-container"
-          style={{ padding: '40px', textAlign: 'center' }}
-        >
+        <div className="not-found-state">
           <h2>Application Not Found</h2>
           <p>
             The application you are looking for does not exist or you do not
             have permission to view it.
           </p>
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="btn-secondary"
-          >
+          <button type="button" onClick={() => navigate(-1)}>
             Go Back
           </button>
         </div>
@@ -259,6 +270,12 @@ function ApplicationDetail() {
   }
 
   const statusInfo = getStatusDetails(application.status);
+  const applicantInitials =
+    application.applicantName
+      ?.split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase() || 'U';
 
   return (
     <div className="application-review-page">
@@ -266,7 +283,7 @@ function ApplicationDetail() {
         isOpen={isRejectOpen}
         onClose={() => setIsRejectOpen(false)}
         onConfirm={handleRejectConfirm}
-        applicantInitials={application.applicantName?.charAt(0) || ''}
+        applicantInitials={applicantInitials}
         applicantName={application.applicantName || ''}
         grantName={application.grantName || ''}
         appId={application.applicationId || ''}
@@ -283,34 +300,34 @@ function ApplicationDetail() {
         applicantName={application.applicantName}
       />
 
+      {/* Header Actions */}
       <HeaderActions>
-        {/* Status Check Refactored for String Safety */}
         {(application.status === '2' ||
           application.status === 'Pending' ||
-          application.status === 'Pending Review') && (
-          <>
+          application.status === 'Pending Review' ||
+          application.status === 'Draft') && (
+          <div className="header-action-btns">
             <button
               type="button"
-              className="header-btn btn-outline-red"
+              className="hdr-btn hdr-btn--reject"
               onClick={() => setIsRejectOpen(true)}
             >
-              <XCircle size={18} />
-              <span>Reject</span>
+              Reject
             </button>
             <button
               type="button"
-              className="header-btn btn-primary"
+              className="hdr-btn hdr-btn--approve"
               onClick={handleApprove}
             >
-              <CheckCircle2 size={18} />
-              <span>Approve</span>
+              <Check size={16} />
+              Approve
             </button>
-          </>
+          </div>
         )}
         {(application.status === '4' || application.status === 'Approved') && (
           <div className="winner-class-selection">
             <span className="selection-label">
-              APPROVED - Assign Winner Class:
+              APPROVED — Assign Winner Class:
             </span>
             <div className="class-buttons">
               {winnerClasses.map((wc) => (
@@ -328,8 +345,7 @@ function ApplicationDetail() {
                   }}
                   onClick={() => setWinnerClass(wc.id)}
                 >
-                  <span className="icon">🏆</span>
-                  {wc.label}
+                  🏆 {wc.label}
                 </button>
               ))}
             </div>
@@ -338,338 +354,400 @@ function ApplicationDetail() {
       </HeaderActions>
 
       <div className="review-grid">
-        {/* Left Column: Application Details */}
-        <div className="details-column">
-          {/* User Profile Card */}
-          <section className="review-card profile-card">
-            <div className="card-body">
-              <div className="profile-header">
-                <div className="avatar-large">
-                  {application.applicantName?.charAt(0) || ''}
-                </div>
-                <div className="info">
-                  <h3>{application.applicantName || 'Unknown Applicant'}</h3>
-                  <p>{application.applicantEmail || 'No email provided'}</p>
-                  <span className="usr-id">
-                    {application.applicantDisplayId ||
-                      `#USR-${id?.substring(0, 8)}`}
+        {/* ── LEFT COLUMN ── */}
+        <div className="left-col">
+          {/* Profile Card */}
+          <div className="ar-card">
+            <div className="profile-section">
+              <div className="profile-avatar">{applicantInitials}</div>
+              <div className="profile-meta">
+                <div className="profile-name-row">
+                  <span className="profile-name">
+                    {application.applicantName}
+                  </span>
+                  <span
+                    className={`status-pill status-pill--${statusInfo.class}`}
+                  >
+                    {statusInfo.label}
                   </span>
                 </div>
-                <div className={`status-badge ${statusInfo.class}`}>
-                  {statusInfo.label}
-                </div>
-              </div>
-              <div className="stats-grid">
-                <div className="stat-item">
-                  <span className="label">Applications</span>
-                  <span className="value">
-                    {application.applicantGrantApplicationCount || 0}
-                  </span>
-                </div>
-                <div className="stat-item">
-                  <span className="label">Approved</span>
-                  <span className="value">
-                    {application.applicantApprovedGrantApplicationCount || 0}
-                  </span>
-                </div>
-                <div className="stat-item">
-                  <span className="label">Member Since</span>
-                  <span className="value">
-                    {application.applicantMemberSince
-                      ? new Date(
-                          application.applicantMemberSince
-                        ).toLocaleDateString('en-US', {
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                      : 'N/A'}
-                  </span>
-                </div>
-                <div className="stat-item">
-                  <span className="label">Subscription</span>
-                  <span className="value">
-                    {application.applicantSubscriptionPlan === 2
-                      ? 'Premium'
-                      : 'Standard'}
-                  </span>
-                </div>
-              </div>
-              <div className="profile-actions">
-                <button type="button" className="btn-secondary">
-                  <User size={16} />
-                  <span>Open User Profile</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={handleDownloadAvatar}
-                >
-                  <Download size={16} />
-                  <span>Download Profile Photo</span>
-                </button>
+                <span className="profile-email">
+                  {application.applicantEmail}
+                </span>
+                <span className="profile-id">
+                  # {application.applicantDisplayId}
+                </span>
               </div>
             </div>
-          </section>
 
-          {/* Grant Details Card */}
-          <section className="review-card">
-            <div className="card-header">
-              <h3>Grant Details</h3>
-              <span className="submission-date">
+            <div className="profile-stats">
+              <div className="stat-col">
+                <span className="stat-label">Applications</span>
+                <span className="stat-val">
+                  {application.applicantGrantApplicationCount ?? 0}
+                </span>
+              </div>
+              <div className="stat-col">
+                <span className="stat-label">Approved</span>
+                <span className="stat-val">
+                  {application.applicantApprovedGrantApplicationCount ?? 0}
+                </span>
+              </div>
+              <div className="stat-col">
+                <span className="stat-label">Member Since</span>
+                <span className="stat-val">
+                  {application.applicantMemberSince
+                    ? new Date(
+                        application.applicantMemberSince
+                      ).toLocaleDateString('en-US', {
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : 'Jan 2024'}
+                </span>
+              </div>
+              <div className="stat-col">
+                <span className="stat-label">Subscription</span>
+                <span className="stat-val">
+                  {application.applicantSubscriptionPlan === 2
+                    ? 'Yearly'
+                    : 'Monthly'}
+                </span>
+              </div>
+            </div>
+
+            <div className="profile-actions">
+              <button type="button" className="profile-btn profile-btn--blue">
+                <User size={15} />
+                Open User Profile
+              </button>
+              <button
+                type="button"
+                className="profile-btn profile-btn--purple"
+                onClick={handleDownloadAvatar}
+              >
+                <Download size={15} />
+                Download Profile Photo
+              </button>
+            </div>
+          </div>
+
+          {/* Grant Details */}
+          <div className="ar-card">
+            <div className="ar-card-header">
+              <div>
+                <h3 className="ar-card-title">Grant Details</h3>
+                <span className="ar-card-sub">
+                  Application ID: {application.applicationId}
+                </span>
+              </div>
+              <span className="submitted-label">
                 Submitted on{' '}
                 {application.appliedDate
-                  ? new Date(application.appliedDate).toLocaleDateString()
+                  ? new Date(application.appliedDate).toLocaleDateString(
+                      'en-US',
+                      {
+                        month: 'numeric',
+                        day: 'numeric',
+                        year: 'numeric',
+                      }
+                    )
                   : 'N/A'}
               </span>
             </div>
-            <div className="card-body">
-              <div className="info-list">
-                <div className="info-row">
-                  <span className="label">Application ID:</span>
-                  <span className="value">
-                    {application.applicationId || id}
-                  </span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Grant:</span>
-                  <span className="value highlight">
-                    {application.grantName}
-                  </span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Gala Event:</span>
-                  <span className="value highlight">
-                    {application.galaName}
-                  </span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Prize Amount:</span>
-                  <span className="value amount">
-                    ${application.grantPrizeAmount?.toLocaleString() || '0'}
-                  </span>
-                </div>
-                <div className="info-row">
-                  <span className="label">Deadline:</span>
-                  <span className="value">
+
+            <table className="grant-table">
+              <tbody>
+                <tr>
+                  <td className="gt-label">Grant</td>
+                  <td className="gt-value">{application.grantName}</td>
+                </tr>
+                <tr>
+                  <td className="gt-label">Gala Event</td>
+                  <td className="gt-value">{application.galaName}</td>
+                </tr>
+                <tr>
+                  <td className="gt-label">Prize Amount</td>
+                  <td className="gt-value gt-amount">
+                    ${application.grantPrizeAmount?.toLocaleString()}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="gt-label">Deadline</td>
+                  <td className="gt-value">
                     {application.grantApplicationDeadline
                       ? new Date(
                           application.grantApplicationDeadline
-                        ).toLocaleDateString()
+                        ).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
                       : 'N/A'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           {/* Application Information */}
-          <section className="review-card">
-            <div className="card-header">
-              <h3>Application Information</h3>
-              <p>Details provided by the applicant</p>
+          <div className="ar-card">
+            <div className="ar-card-header">
+              <div>
+                <h3 className="ar-card-title">Application Information</h3>
+                <span className="ar-card-sub">
+                  Details provided by the applicant
+                </span>
+              </div>
             </div>
-            <div className="card-body">
-              <div className="content-group">
-                <span className="label">Company Name</span>
-                <div className="content-box">{application.companyName}</div>
-              </div>
-              <div className="content-group">
-                <span className="label">Industry</span>
-                <div className="content-box">{application.industry}</div>
-              </div>
-              <div className="content-group">
-                <span className="label">Motivation Statement</span>
-                <div className="content-box text-content">
-                  {application.motivationStatement}
-                </div>
-              </div>
-              {application.videoUrl && (
-                <div className="content-group">
-                  <span className="label">Participation Video</span>
-                  <a
-                    href={application.videoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="video-link"
-                  >
-                    <PlayCircle size={18} />
-                    <span>{application.videoUrl}</span>
-                    <ExternalLink size={14} />
-                  </a>
-                </div>
-              )}
+
+            <div className="info-field">
+              <span className="info-field-label">Company Name</span>
+              <div className="info-field-box">{application.companyName}</div>
             </div>
-          </section>
+            <div className="info-field">
+              <span className="info-field-label">Industry</span>
+              <div className="info-field-box">{application.industry}</div>
+            </div>
+            <div className="info-field">
+              <span className="info-field-label">Motivation Statement</span>
+              <div className="info-field-box info-field-box--text">
+                {application.motivationStatement}
+              </div>
+            </div>
+
+            {application.videoUrl && (
+              <div className="info-field">
+                <span className="info-field-label">Participation Video</span>
+                <a
+                  href={application.videoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="video-link-row"
+                >
+                  <PlayCircle size={18} className="video-play-icon" />
+                  <span className="video-link-url">{application.videoUrl}</span>
+                  <ExternalLink size={14} className="video-ext-icon" />
+                </a>
+              </div>
+            )}
+          </div>
 
           {/* Interview Schedule */}
-          <section className="review-card">
-            <div className="card-header">
-              <h3>Interview Schedule</h3>
-              <p>Applicant has requested an interview slot</p>
+          <div className="ar-card">
+            <div className="ar-card-header">
+              <div>
+                <h3 className="ar-card-title">Interview Schedule</h3>
+                <span className="ar-card-sub">
+                  {application.grantRequireInterview
+                    ? 'Interview required for this grant'
+                    : 'No interview required'}
+                </span>
+              </div>
             </div>
-            <div className="card-body">
-              <div className="schedule-box">
-                <div className="schedule-info">
-                  <div className="slot-item">
-                    <div className="icon-circle primary">
-                      <Calendar size={18} />
-                    </div>
-                    <div className="text">
-                      <span className="label">Interview Date</span>
-                      <span className="value">
-                        {application.interviewDate
-                          ? new Date(
-                              application.interviewDate
-                            ).toLocaleDateString()
-                          : 'Not Scheduled'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="slot-item">
-                    <div className="icon-circle success">
-                      <Clock size={18} />
-                    </div>
-                    <div className="text">
-                      <span className="label">Time Slot</span>
-                      <span className="value">
-                        {application.interviewStartTime || 'Not Set'}
-                      </span>
-                    </div>
-                  </div>
+
+            <div className="schedule-slots">
+              <div className="schedule-slot">
+                <div className="slot-icon slot-icon--green">
+                  <Calendar size={18} />
                 </div>
-                <div className="schedule-footer">
-                  <span className="status-text green">
+                <div className="slot-text">
+                  <span className="slot-text-label">Interview Date</span>
+                  <span className="slot-text-value">
                     {application.interviewDate
-                      ? 'Interview scheduled'
-                      : 'No interview scheduled yet'}
+                      ? new Date(application.interviewDate).toLocaleDateString(
+                          'en-US',
+                          { month: 'long', day: 'numeric', year: 'numeric' }
+                        )
+                      : 'Not Scheduled'}
                   </span>
-                  {application.status === 'Approved' ||
-                  application.isInterviewCompleted ? (
-                    <div className="completed-badge">
-                      <Check size={16} />
-                      <span>Interview Completed</span>
-                    </div>
-                  ) : (
-                    <div className="footer-actions">
-                      <button
-                        type="button"
-                        className="btn-reschedule"
-                        onClick={() => setIsRescheduleOpen(true)}
-                      >
-                        <Calendar size={16} />
-                        <span>Reschedule</span>
-                      </button>
-                    </div>
-                  )}
+                </div>
+              </div>
+              <div className="schedule-slot">
+                <div className="slot-icon slot-icon--blue">
+                  <Clock size={18} />
+                </div>
+                <div className="slot-text">
+                  <span className="slot-text-label">Time Slot</span>
+                  <span className="slot-text-value">
+                    {application.interviewStartTime &&
+                    application.interviewEndTime
+                      ? `${application.interviewStartTime} – ${application.interviewEndTime}`
+                      : application.interviewStartTime || 'Not Set'}
+                  </span>
                 </div>
               </div>
             </div>
-          </section>
+
+            <div className="schedule-footer">
+              <span
+                className={`schedule-status ${application.interviewDate ? 'status-scheduled' : ''}`}
+              >
+                {application.interviewDate
+                  ? 'Interview scheduled'
+                  : 'No interview scheduled yet'}
+              </span>
+              {application.isInterviewCompleted ? (
+                <span className="interview-complete-badge">
+                  <Check size={14} />
+                  Interview Completed
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-reschedule"
+                  onClick={() => setIsRescheduleOpen(true)}
+                >
+                  <Calendar size={14} />
+                  Reschedule
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Right Column: Jury & Notes */}
-        <div className="review-column">
-          {/* Jury Panel Scores */}
-          <section className="review-card jury-panel-card">
-            <div className="card-header">
-              <div className="header-text">
-                <h3>Jury Panel</h3>
-                <p>
-                  {application.juryPanel?.length || 0} jurors • criteria-based
+        {/* ── RIGHT COLUMN ── */}
+        <div className="right-col">
+          {/* Jury Panel */}
+          <div className="ar-card">
+            <div className="ar-card-header">
+              <div>
+                <h3 className="ar-card-title">Jury Panel</h3>
+                <span className="ar-card-sub">
+                  {application.juryPanel?.length ?? 0} jurors · criteria-based
                   rating /10
-                </p>
+                </span>
               </div>
               <button
                 type="button"
-                className="btn-outline"
+                className="btn-open-jury"
                 onClick={() => navigate(`/applications/${id}/jury`)}
               >
-                <span>View Full Panel</span>
-                <ExternalLink size={14} />
+                <User size={14} />
+                Open Jury Page
               </button>
             </div>
-            <div className="card-body">
-              <div className="score-summary-box">
-                <div className="avg-score">
-                  <span className="score-label">OVERALL AVERAGE</span>
-                  <p>Average of all jurors</p>
-                </div>
-                <div className="big-score">
-                  {application.juryPanelSummary?.overallAverageScore &&
-                  application.juryPanelSummary.overallAverageScore > 0
+
+            {/* Overall Score */}
+            <div className="overall-score-box">
+              <div className="overall-score-left">
+                <span className="overall-score-title">Overall Jury Score</span>
+                <span className="overall-score-sub">
+                  Average of {application.juryPanel?.length ?? 0} jurors
+                </span>
+              </div>
+              <div className="overall-score-right">
+                <span className="overall-score-num">
+                  {application.juryPanelSummary?.overallAverageScore != null
                     ? application.juryPanelSummary.overallAverageScore.toFixed(
                         1
                       )
-                    : '—'}{' '}
-                  <span>/ 10</span>
-                </div>
-              </div>
-
-              <div className="individual-jurors-list">
-                {application.juryPanel?.map((juror: JuryPanelMember) => (
-                  <JurorCard
-                    key={juror.jurorName}
-                    name={juror.jurorName}
-                    score={juror.score || 0}
-                    initials={juror.initials}
-                    criteria={juror.criteria}
-                    comment={juror.comment || ''}
-                  />
-                ))}
-                {(!application.juryPanel ||
-                  application.juryPanel.length === 0) && (
-                  <p className="no-scores">
-                    No jury evaluations submitted yet.
-                  </p>
-                )}
+                    : '—'}
+                </span>
+                <span className="overall-score-denom">&nbsp;/ 10</span>
               </div>
             </div>
-          </section>
+
+            {/* Juror Cards */}
+            <div className="jurors-list">
+              {application.juryPanel?.length > 0 ? (
+                application.juryPanel.map((juror, idx) => (
+                  <JurorCard
+                    key={juror.juryMemberId}
+                    name={juror.juryMemberName}
+                    averageScore={juror.averageScore ?? 0}
+                    initials={
+                      juror.juryMemberName
+                        ? juror.juryMemberName
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .toUpperCase()
+                        : 'JM'
+                    }
+                    jurorRole={`Jury Member ${idx + 1}`}
+                    criteriaScores={juror.criteriaScores ?? []}
+                    comment={juror.comment}
+                    colorIndex={idx}
+                  />
+                ))
+              ) : (
+                <p className="no-jury-msg">
+                  No jury evaluations submitted yet.
+                </p>
+              )}
+            </div>
+          </div>
 
           {/* Admin Notes */}
-          <section className="review-card notes-card">
-            <div className="card-header flex-header">
-              <h3>Admin Notes</h3>
+          <div className="ar-card">
+            <div className="ar-card-header">
+              <h3 className="ar-card-title">Admin Notes</h3>
               {isNoteSaved && (
-                <div className="saved-indicator">
-                  <CheckCircle2 size={14} color="#16a34a" />
-                  <span>Saved</span>
-                </div>
+                <span className="notes-saved-badge">
+                  <Check size={13} />
+                  Saved
+                </span>
               )}
             </div>
-            <div className="card-body">
-              {isNoteSaved ? (
-                <>
-                  <div className="saved-note-display">{adminNote}</div>
-                  <button
-                    type="button"
-                    className="btn-edit-notes"
-                    onClick={() => setIsNoteSaved(false)}
-                  >
-                    <Edit2 size={14} />
-                    <span>Edit Notes</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <textarea
-                    placeholder="Add private notes about this application..."
-                    value={adminNote}
-                    onChange={(e) => setAdminNote(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="btn-save-notes"
-                    onClick={() => setIsNoteSaved(true)}
-                  >
-                    <span>Save Notes</span>
-                  </button>
-                </>
-              )}
-            </div>
-          </section>
+
+            {isNoteSaved ? (
+              <>
+                <div className="saved-note">{adminNote}</div>
+                <button
+                  type="button"
+                  className="btn-edit-notes"
+                  onClick={() => setIsNoteSaved(false)}
+                >
+                  <Edit2 size={14} />
+                  Edit Notes
+                </button>
+              </>
+            ) : (
+              <>
+                <textarea
+                  className="notes-textarea"
+                  placeholder="Add private notes about this application..."
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn-save-notes"
+                  onClick={() => setIsNoteSaved(true)}
+                >
+                  Save Notes
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Winner class selection  */}
+      {winnerClass && (
+        <div className="winner-class-selection">
+          <span className="selection-label">
+            APPROVED — Assign Winner Class:
+          </span>
+          <div className="class-buttons">
+            {winnerClasses.map((wc) => (
+              <button
+                type="button"
+                key={wc.id}
+                className={`class-btn ${winnerClass === wc.id ? 'selected' : ''}`}
+                style={{
+                  backgroundColor: winnerClass === wc.id ? wc.bg : '#e2e8f0',
+                  color: winnerClass === wc.id ? '#fff' : '#94a3b8',
+                }}
+                onClick={() => setWinnerClass(wc.id)}
+              >
+                🏆 {wc.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

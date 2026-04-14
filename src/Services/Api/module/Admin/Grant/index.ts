@@ -54,10 +54,61 @@ export interface GrantResponse {
   notificationCount: number;
 }
 
+export interface AdminGrantDetailData {
+  id: string;
+  galaEventId: string;
+  galaEventName: string;
+  name: string;
+  description: string;
+  category: string;
+  prizeAmount: number;
+  numberOfPrizes: number;
+  applicationDeadline: string;
+  durationLeftSeconds: number;
+  status: number;
+  createdAt: string;
+  requireInterview: boolean;
+  requireCompanyName: boolean;
+  requireIndustrySelection: boolean;
+  requireMotivationStatement: boolean;
+  requireBusinessPlanDocument: boolean;
+  questions: GrantQuestion[];
+  requirements: GrantAdditionalRequirement[];
+  criteria: {
+    criteriaKey: string;
+    name: string;
+    description: string;
+    category: string;
+    isCustom: boolean;
+    isActive: boolean;
+    type: number;
+  }[];
+  juries: {
+    id: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    companyName: string;
+    domainOfExpertise: string;
+  }[];
+  prizeWinners: {
+    id: string;
+    rank: number;
+    amount: number;
+    winnerUserId: string | null;
+    winnerFullName: string | null;
+  }[];
+  isWinnerDecided: boolean;
+  decidedWinnersCount: number;
+  totalWinnerSlots: number;
+  winnerDecisionMessage: string;
+  applicantCount?: number;
+}
+
 export interface SingleGrantResponse {
   success: boolean;
   message: string;
-  data: CreateUpdateGrantRequest & { id: string };
+  data: AdminGrantDetailData;
 }
 
 export interface GrantParams {

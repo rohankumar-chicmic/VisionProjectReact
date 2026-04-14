@@ -73,7 +73,7 @@ const renderActionsCell = (
       onClick={(e) => e.stopPropagation()}
     >
       <ExternalLink size={18} />
-      <span>Verify ID</span>
+      <span>View ID</span>
     </a>
   </div>
 );

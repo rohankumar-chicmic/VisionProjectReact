@@ -2,6 +2,7 @@ import api from '../../../api';
 
 export interface OrganiserApplication {
   id: string;
+  applicationId: string;
   applicantName: string;
   applicantEmail: string;
   applicantAvatarUrl: string | null;
@@ -9,7 +10,7 @@ export interface OrganiserApplication {
   grantName: string;
   appliedDate: string;
   juryScore: number;
-  status: number;
+  status: string | number;
 }
 
 export interface OrganiserApplicationData {
@@ -40,17 +41,34 @@ export interface OrganiserApplicationParams {
   pageSize?: number;
 }
 
+export interface JuryCriteriaScore {
+  criteriaKey: string;
+  criteriaName: string;
+  category: string;
+  score: number;
+}
+
 export interface JuryPanelMember {
-  jurorName: string;
-  score: number | null;
-  initials: string;
+  juryMemberId: string;
+  juryMemberName: string;
+  averageScore: number | null;
   comment: string | null;
-  criteria: { label: string; score: number }[];
+  personalNote: string | null;
+  evaluatedAt: string | null;
+  isCurrentUser: boolean;
+  criteriaScores: JuryCriteriaScore[];
+}
+
+export interface JuryCriteriaAverage {
+  criteriaKey: string;
+  criteriaName: string;
+  category: string;
+  averageScore: number;
 }
 
 export interface JuryPanelSummary {
   overallAverageScore: number | null;
-  criteriaAverages: { label: string; average: number }[];
+  criteriaAverages: JuryCriteriaAverage[];
   suggestedClass: string | null;
 }
 

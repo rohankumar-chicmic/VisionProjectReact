@@ -22,24 +22,34 @@ import Skeleton from '../../Components/Shared/Skeleton';
 import EmptyState from '../../Components/Shared/EmptyState';
 import './ApplicationList.scss';
 
-const getStatusDetails = (status: number) => {
-  switch (status) {
+const getStatusDetails = (status: string | number) => {
+  const s = typeof status === 'string' ? status.toLowerCase() : status;
+  switch (s) {
+    case 'draft':
     case 1:
       return { label: 'Draft', class: 'draft' };
+    case 'pending':
+    case 'pending review':
     case 2:
-      return { label: 'Pending', class: 'pending' };
+      return { label: 'Pending Review', class: 'pending' };
+    case 'in review':
+    case 'reviewed':
     case 3:
-      return { label: 'In Review', class: 'in-review' };
+      return { label: 'Reviewed', class: 'in-review' };
+    case 'approved':
     case 4:
       return { label: 'Approved', class: 'approved' };
+    case 'rejected':
     case 5:
       return { label: 'Rejected', class: 'rejected' };
+    case 'winner':
     case 6:
       return { label: 'Winner', class: 'winner' };
+    case 'interview':
     case 7:
       return { label: 'Interview', class: 'interview' };
     default:
-      return { label: 'Unknown', class: '' };
+      return { label: status?.toString() || 'Unknown', class: '' };
   }
 };
 
@@ -363,6 +373,7 @@ function ApplicationList() {
           <table className="hi-fi-table">
             <thead>
               <tr>
+                <th>App ID</th>
                 <th>Applicant</th>
                 <th>Gala Name</th>
                 <th>Grant</th>
@@ -376,17 +387,17 @@ function ApplicationList() {
               {isAppsLoading && (
                 <>
                   <tr key="skel-1">
-                    <td colSpan={7}>
+                    <td colSpan={8}>
                       <Skeleton height={60} />
                     </td>
                   </tr>
                   <tr key="skel-2">
-                    <td colSpan={7}>
+                    <td colSpan={8}>
                       <Skeleton height={60} />
                     </td>
                   </tr>
                   <tr key="skel-3">
-                    <td colSpan={7}>
+                    <td colSpan={8}>
                       <Skeleton height={60} />
                     </td>
                   </tr>
@@ -399,6 +410,7 @@ function ApplicationList() {
                   const statusInfo = getStatusDetails(app.status);
                   return (
                     <tr key={app.id}>
+                      <td className="id-cell">#{app.applicationId}</td>
                       <td>
                         <div className="applicant-cell">
                           <div className="avatar">
@@ -408,7 +420,11 @@ function ApplicationList() {
                                 alt="Applicant"
                               />
                             ) : (
-                              <span>{app.applicantName.charAt(0)}</span>
+                              <span>
+                                {app.applicantName
+                                  ? app.applicantName.charAt(0).toUpperCase()
+                                  : 'U'}
+                              </span>
                             )}
                           </div>
                           <div className="info">
@@ -420,9 +436,9 @@ function ApplicationList() {
                       <td>{app.galaName}</td>
                       <td>{app.grantName}</td>
                       <td>
-                        {new Date(app.appliedDate).toLocaleDateString('en-US', {
+                        {new Date(app.appliedDate).toLocaleDateString('en-GB', {
+                          day: 'numeric',
                           month: 'short',
-                          day: '2-digit',
                           year: 'numeric',
                         })}
                       </td>
@@ -444,7 +460,7 @@ function ApplicationList() {
                       </td>
                       <td>
                         <div className="action-buttons">
-                          {app.status === 2 && (
+                          {(app.status === 2 || app.status === 'Pending') && (
                             <>
                               <button type="button" className="btn-approve">
                                 <CheckCircle2 size={16} />
@@ -471,7 +487,7 @@ function ApplicationList() {
 
               {!isAppsLoading && applications.length === 0 && (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <EmptyState
                       icon={Filter}
                       title="No applications found"

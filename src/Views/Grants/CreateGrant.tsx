@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/label-has-associated-control, react/no-array-index-key */
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import {
   Plus,
   Trash2,
@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Settings2,
   Loader2,
+  Link2,
 } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
@@ -41,6 +42,7 @@ interface PrizeWinnerInput {
 }
 
 const CREATE_GALA_FORM_SESSION_KEY = 'create_gala_form_state';
+const CREATE_GRANT_FORM_SESSION_KEY = 'create_grant_form_state';
 
 function CreateGrant() {
   const { id } = useParams<{ id: string }>();
@@ -137,7 +139,7 @@ function CreateGrant() {
     );
   };
 
-  const [juryCriteria] = useState<number[]>([1, 2, 5, 8]);
+  const [juryCriteria, setJuryCriteria] = useState<number[]>([1, 2, 5, 8]);
   const [selectedJuryIds, setSelectedJuryIds] = useState<string[]>([]);
   const [juryIdToAdd, setJuryIdToAdd] = useState('');
 
@@ -145,6 +147,147 @@ function CreateGrant() {
     () => organiserJuriesResponse?.data ?? [],
     [organiserJuriesResponse?.data]
   );
+
+  // Track if we've already restored data to prevent overwriting
+  const hasRestored = useRef(false);
+
+  // Save form state immediately before leaving the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (!isEditMode && !isGalaBuilderMode) {
+        const formState = {
+          name,
+          galaEventId,
+          description,
+          category,
+          prizeAmount,
+          numberOfPrizes,
+          applicationDeadline,
+          status,
+          questions,
+          requirements,
+          requireInterview,
+          requiredFields,
+          juryCriteria,
+          selectedJuryIds,
+          prizeWinners,
+        };
+        sessionStorage.setItem(
+          CREATE_GRANT_FORM_SESSION_KEY,
+          JSON.stringify(formState)
+        );
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [
+    name,
+    galaEventId,
+    description,
+    category,
+    prizeAmount,
+    numberOfPrizes,
+    applicationDeadline,
+    status,
+    questions,
+    requirements,
+    requireInterview,
+    requiredFields,
+    juryCriteria,
+    selectedJuryIds,
+    prizeWinners,
+    isEditMode,
+    isGalaBuilderMode,
+  ]);
+
+  // Save form state to sessionStorage (only after initial restore is complete)
+  useEffect(() => {
+    // Only save after we've restored data (or if there's no data to restore)
+    // This prevents overwriting saved data with empty initial state
+    if (!isEditMode && !isGalaBuilderMode && hasRestored.current) {
+      const formState = {
+        name,
+        galaEventId,
+        description,
+        category,
+        prizeAmount,
+        numberOfPrizes,
+        applicationDeadline,
+        status,
+        questions,
+        requirements,
+        requireInterview,
+        requiredFields,
+        juryCriteria,
+        selectedJuryIds,
+        prizeWinners,
+      };
+      sessionStorage.setItem(
+        CREATE_GRANT_FORM_SESSION_KEY,
+        JSON.stringify(formState)
+      );
+    }
+  }, [
+    name,
+    galaEventId,
+    description,
+    category,
+    prizeAmount,
+    numberOfPrizes,
+    applicationDeadline,
+    status,
+    questions,
+    requirements,
+    requireInterview,
+    requiredFields,
+    juryCriteria,
+    selectedJuryIds,
+    prizeWinners,
+    isEditMode,
+    isGalaBuilderMode,
+  ]);
+
+  // Restore form state from sessionStorage
+  useEffect(() => {
+    if (!isEditMode && !isGalaBuilderMode && !hasRestored.current) {
+      const savedState = sessionStorage.getItem(CREATE_GRANT_FORM_SESSION_KEY);
+      if (savedState) {
+        try {
+          const state = JSON.parse(savedState);
+          // Only restore if we have actual saved data (not just empty defaults)
+          if (state.name || state.description || state.prizeAmount) {
+            setName(state.name || '');
+            setGalaEventId(state.galaEventId || '');
+            setDescription(state.description || '');
+            setCategory(state.category || 'Technology');
+            setPrizeAmount(state.prizeAmount || '');
+            setNumberOfPrizes(state.numberOfPrizes || '');
+            setApplicationDeadline(state.applicationDeadline || '');
+            setStatus(state.status || 1);
+            setQuestions(state.questions || []);
+            setRequirements(state.requirements || []);
+            setRequireInterview(state.requireInterview || false);
+            setRequiredFields(
+              state.requiredFields || {
+                companyName: true,
+                industrySelection: true,
+                motivationStatement: true,
+                businessPlan: false,
+              }
+            );
+            setJuryCriteria(state.juryCriteria || [1, 2, 5, 8]);
+            setSelectedJuryIds(state.selectedJuryIds || []);
+            setPrizeWinners(state.prizeWinners || []);
+          }
+        } catch {
+          // Silently handle restore error
+        }
+      }
+      // Mark as restored even if there was no data (fresh page load)
+      hasRestored.current = true;
+    }
+  }, [isEditMode, isGalaBuilderMode]);
 
   // Sync Data on Edit Mode
   useEffect(() => {
@@ -405,6 +548,8 @@ function CreateGrant() {
       } else {
         await createGrant(payload).unwrap();
         showToast.success('Grant created successfully');
+        // Clear sessionStorage after successful grant creation
+        sessionStorage.removeItem(CREATE_GRANT_FORM_SESSION_KEY);
       }
       navigate('/grants');
     } catch (error: unknown) {
@@ -474,24 +619,38 @@ function CreateGrant() {
   return (
     <div className="create-grant-page">
       <HeaderActions>
-        <button
-          type="button"
-          className="header-btn btn-outline"
-          onClick={() => handleSave(false)}
-          disabled={isCreating || isUpdating}
-        >
-          <Save size={18} />
-          <span>{isEditMode ? 'Update' : 'Save Draft'}</span>
-        </button>
-        <button
-          type="button"
-          className="header-btn btn-primary"
-          onClick={() => handleSave(true)}
-          disabled={isCreating || isUpdating}
-        >
-          <Send size={18} />
-          <span>Publish</span>
-        </button>
+        {isGalaBuilderMode ? (
+          <button
+            type="button"
+            className="header-btn btn-primary"
+            onClick={() => handleSave(false)}
+            disabled={isCreating || isUpdating}
+          >
+            <Link2 size={18} />
+            <span>Link to Gala</span>
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="header-btn btn-outline"
+              onClick={() => handleSave(false)}
+              disabled={isCreating || isUpdating}
+            >
+              <Save size={18} />
+              <span>{isEditMode ? 'Update' : 'Save Draft'}</span>
+            </button>
+            <button
+              type="button"
+              className="header-btn btn-primary"
+              onClick={() => handleSave(true)}
+              disabled={isCreating || isUpdating}
+            >
+              <Send size={18} />
+              <span>Publish</span>
+            </button>
+          </>
+        )}
       </HeaderActions>
 
       <RequirementsModal
@@ -1014,6 +1173,30 @@ function CreateGrant() {
                 className="btn-manage"
                 onClick={(e) => {
                   e.preventDefault();
+                  // Explicitly save form state before navigating
+                  if (!isEditMode && !isGalaBuilderMode) {
+                    const formState = {
+                      name,
+                      galaEventId,
+                      description,
+                      category,
+                      prizeAmount,
+                      numberOfPrizes,
+                      applicationDeadline,
+                      status,
+                      questions,
+                      requirements,
+                      requireInterview,
+                      requiredFields,
+                      juryCriteria,
+                      selectedJuryIds,
+                      prizeWinners,
+                    };
+                    sessionStorage.setItem(
+                      CREATE_GRANT_FORM_SESSION_KEY,
+                      JSON.stringify(formState)
+                    );
+                  }
                   navigate('/grants/jury-criteria');
                 }}
               >

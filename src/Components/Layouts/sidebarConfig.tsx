@@ -37,10 +37,10 @@ export const SIDEBAR_CONFIG: Record<AppRole, SidebarItem[]> = {
     },
     { icon: Calendar, label: 'Galas Management', path: '/galas' },
     { icon: Award, label: 'Grants', path: '/grants' },
-    { icon: FileText, label: 'Applications', path: '/applications' },
+    // { icon: FileText, label: 'Applications', path: '/applications' },
     { icon: Megaphone, label: 'Announcements', path: '/announcements' },
     { icon: ShieldCheck, label: 'Admin Managers', path: '/admins' },
-    { icon: Bell, label: 'Notifications', path: '/notifications' },
+    // { icon: Bell, label: 'Notifications', path: '/notifications' },
   ],
   sub_admin: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },

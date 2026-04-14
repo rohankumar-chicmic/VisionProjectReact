@@ -149,6 +149,8 @@ export interface AdminUserDetail {
   id: string;
   fullName: string;
   email: string;
+  avatarUrl: string | null;
+  phoneNumber?: string;
   companyName: string;
   subscriptionPlan: number;
   subscriptionStatus: number;
@@ -182,6 +184,26 @@ export interface AdminUserParams {
 export interface BlockUserRequest {
   id: string;
   isBlocked: boolean;
+}
+
+export interface CreateAdminUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  companyName?: string;
+  temporaryPassword?: string;
+  freeDurationMonths: number;
+  sendWelcomeEmail: boolean;
+}
+
+export interface UpdateAdminUserRequest {
+  id: string; // From path
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  companyName?: string;
 }
 
 export const adminUserApi = api.injectEndpoints({
@@ -253,6 +275,22 @@ export const adminUserApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Admins'],
     }),
+    createAdminUser: build.mutation<unknown, CreateAdminUserRequest>({
+      query: (body) => ({
+        url: '/api/v1/admin/users',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Admins'],
+    }),
+    updateAdminUser: build.mutation<unknown, UpdateAdminUserRequest>({
+      query: ({ id, ...body }) => ({
+        url: `/api/v1/admin/users/${id}`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Admins'],
+    }),
     importAdminUsers: build.mutation<unknown, FormData>({
       query: (body) => ({
         url: '/api/v1/admin/users/import',
@@ -261,9 +299,17 @@ export const adminUserApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Admins'],
     }),
-    exportAdminUsers: build.query<Blob, void>({
-      query: () => ({
+    exportAdminUsers: build.query<Blob, AdminUserParams>({
+      query: (params) => ({
         url: '/api/v1/admin/users/export',
+        method: 'GET',
+        params,
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+    exportAdminUserById: build.query<Blob, string>({
+      query: (id) => ({
+        url: `/api/v1/admin/users/${id}/export`,
         method: 'GET',
         responseHandler: (response) => response.blob(),
       }),
@@ -282,7 +328,11 @@ export const {
   useGetAdminUsersQuery,
   useGetAdminUserByIdQuery,
   useBlockUserMutation,
+  useCreateAdminUserMutation,
+  useUpdateAdminUserMutation,
   useImportAdminUsersMutation,
   useExportAdminUsersQuery,
   useLazyExportAdminUsersQuery,
+  useExportAdminUserByIdQuery,
+  useLazyExportAdminUserByIdQuery,
 } = adminUserApi;

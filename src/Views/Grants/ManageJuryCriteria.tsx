@@ -1,9 +1,12 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, react/button-has-type, react/function-component-definition */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Check, Info, Plus, X, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
+import showToast from '../../Shared/Utils/toast';
 import './ManageJuryCriteria.scss';
+
+const CREATE_GRANT_FORM_SESSION_KEY = 'create_grant_form_state';
 
 interface Criterion {
   id: string;
@@ -23,153 +26,210 @@ const ManageJuryCriteria: React.FC = () => {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
 
-  const [categories, setCategories] = useState<Category[]>([
-    {
-      title: 'Business & Finance',
-      criteria: [
-        {
-          id: '1',
-          name: 'Business Viability',
-          description: 'Is the business model sustainable?',
-          selected: true,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '2',
-          name: 'Financial Potential',
-          description: 'Revenue and growth projections',
-          selected: true,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '3',
-          name: 'Market Size',
-          description: 'Total addressable market',
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '4',
-          name: 'Revenue Track Record',
-          description: 'Existing sales and traction',
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-      ],
-    },
-    {
-      title: 'Social & Environmental',
-      criteria: [
-        {
-          id: '12',
-          name: 'Social Impact',
-          description: 'Positive community contribution',
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '13',
-          name: 'Environmental Responsibility',
-          description: 'Eco-friendly practices',
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '14',
-          name: 'Community Engagement',
-          description: 'Local involvement and outreach',
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-      ],
-    },
-    {
-      title: 'Team & Leadership',
-      criteria: [
-        {
-          id: '5',
-          name: 'Team Experience',
-          description: 'Relevant skills and background',
-          selected: true,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '6',
-          name: 'Leadership Quality',
-          description: "Founder's vision and drive",
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '7',
-          name: 'Team Diversity',
-          description: 'Complementary team skills',
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-      ],
-    },
-    {
-      title: 'Innovation & Technology',
-      criteria: [
-        {
-          id: '8',
-          name: 'Innovation Level',
-          description: 'Uniqueness of the solution',
-          selected: true,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '9',
-          name: 'Technical Feasibility',
-          description: 'Can the solution actually be built?',
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '10',
-          name: 'Scalability',
-          description: 'Growth beyond initial market',
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-        {
-          id: '11',
-          name: 'Competitive Advantage',
-          description: 'Differentiation from competitors',
-          selected: false,
-          scoreRange: '0 - 10',
-        },
-      ],
-    },
-  ]);
+  // Define initial categories as a memoized constant
+  const initialCategoriesData: Category[] = useMemo(
+    () => [
+      {
+        title: 'Business & Finance',
+        criteria: [
+          {
+            id: '1',
+            name: 'Business Viability',
+            description: 'Is the business model sustainable?',
+            selected: true,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '2',
+            name: 'Financial Potential',
+            description: 'Revenue and growth projections',
+            selected: true,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '3',
+            name: 'Market Size',
+            description: 'Total addressable market',
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '4',
+            name: 'Revenue Track Record',
+            description: 'Existing sales and traction',
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+        ],
+      },
+      {
+        title: 'Social & Environmental',
+        criteria: [
+          {
+            id: '12',
+            name: 'Social Impact',
+            description: 'Positive community contribution',
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '13',
+            name: 'Environmental Responsibility',
+            description: 'Eco-friendly practices',
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '14',
+            name: 'Community Engagement',
+            description: 'Local involvement and outreach',
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+        ],
+      },
+      {
+        title: 'Team & Leadership',
+        criteria: [
+          {
+            id: '5',
+            name: 'Team Experience',
+            description: 'Relevant skills and background',
+            selected: true,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '6',
+            name: 'Leadership Quality',
+            description: "Founder's vision and drive",
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '7',
+            name: 'Team Diversity',
+            description: 'Complementary team skills',
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+        ],
+      },
+      {
+        title: 'Innovation & Technology',
+        criteria: [
+          {
+            id: '8',
+            name: 'Innovation Level',
+            description: 'Uniqueness of the solution',
+            selected: true,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '9',
+            name: 'Technical Feasibility',
+            description: 'Can the solution actually be built?',
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '10',
+            name: 'Scalability',
+            description: 'Growth beyond initial market',
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+          {
+            id: '11',
+            name: 'Competitive Advantage',
+            description: 'Differentiation from competitors',
+            selected: false,
+            scoreRange: '0 - 10',
+          },
+        ],
+      },
+    ],
+    []
+  );
 
-  const [customCriteria, setCustomCriteria] = useState<Criterion[]>([
-    {
-      id: 'c1',
-      name: 'Pitch Quality',
-      description: 'Clarity and impact of the presentation',
-      selected: true,
-      scoreRange: '0 - 10',
-      custom: true,
-    },
-    {
-      id: 'c2',
-      name: 'Market Readiness',
-      description: 'Is the market ready to adopt this solution?',
-      selected: true,
-      scoreRange: '0 - 10',
-      custom: true,
-    },
-    {
-      id: 'c3',
-      name: 'Community Impact Score',
-      description: 'Local community engagement level',
-      selected: false,
-      scoreRange: '0 - 10',
-      custom: true,
-    },
-  ]);
+  // Define initial custom criteria as a memoized constant
+  const initialCustomCriteriaData: Criterion[] = useMemo(
+    () => [
+      {
+        id: 'c1',
+        name: 'Pitch Quality',
+        description: 'Clarity and impact of the presentation',
+        selected: true,
+        scoreRange: '0 - 10',
+        custom: true,
+      },
+      {
+        id: 'c2',
+        name: 'Market Readiness',
+        description: 'Is the market ready to adopt this solution?',
+        selected: true,
+        scoreRange: '0 - 10',
+        custom: true,
+      },
+      {
+        id: 'c3',
+        name: 'Community Impact Score',
+        description: 'Local community engagement level',
+        selected: false,
+        scoreRange: '0 - 10',
+        custom: true,
+      },
+    ],
+    []
+  );
+
+  const [categories, setCategories] = useState<Category[]>(
+    initialCategoriesData
+  );
+  const [customCriteria, setCustomCriteria] = useState<Criterion[]>(
+    initialCustomCriteriaData
+  );
+
+  // Track if we've already restored criteria to prevent overwriting
+  const hasRestoredCriteria = useRef(false);
+
+  // Restore jury criteria from sessionStorage on component mount
+  useEffect(() => {
+    if (!hasRestoredCriteria.current) {
+      const savedState = sessionStorage.getItem(CREATE_GRANT_FORM_SESSION_KEY);
+      if (savedState) {
+        try {
+          const state = JSON.parse(savedState);
+          const savedCriteria = state.juryCriteria || [1, 2, 5, 8];
+
+          // Update categories to reflect saved criteria using initial values
+          const updatedCategories = initialCategoriesData.map(
+            (cat: Category) => ({
+              ...cat,
+              criteria: cat.criteria.map((crit: Criterion) => ({
+                ...crit,
+                selected: savedCriteria.includes(parseInt(crit.id, 10)),
+              })),
+            })
+          );
+          setCategories(updatedCategories);
+
+          // Update custom criteria using initial values
+          const updatedCustomCriteria = initialCustomCriteriaData.map(
+            (crit: Criterion) => ({
+              ...crit,
+              selected: savedCriteria.includes(
+                parseInt(crit.id.replace('c', ''), 10)
+              ),
+            })
+          );
+          setCustomCriteria(updatedCustomCriteria);
+        } catch {
+          // Silently handle restore error
+        }
+      }
+      hasRestoredCriteria.current = true;
+    }
+  }, [initialCategoriesData, initialCustomCriteriaData]); // Include constants as dependencies
 
   useEffect(() => {
     setTitle('Manage Jury Criteria');
@@ -185,18 +245,61 @@ const ManageJuryCriteria: React.FC = () => {
     setCategories(newCats);
   };
 
+  // Save selected criteria to sessionStorage
+  const saveCriteriaToSessionStorage = () => {
+    const allCriteria = [
+      ...categories.flatMap((cat) => cat.criteria),
+      ...customCriteria,
+    ];
+    const selectedCriteria = allCriteria
+      .filter((crit) => crit.selected)
+      .map((crit) => {
+        // Handle both regular IDs (1, 2, 3) and custom IDs (c1, c2, c3)
+        if (crit.custom) {
+          return parseInt(crit.id.replace('c', ''), 10);
+        }
+        return parseInt(crit.id, 10);
+      });
+
+    try {
+      const savedState = sessionStorage.getItem(CREATE_GRANT_FORM_SESSION_KEY);
+      const existingState = savedState ? JSON.parse(savedState) : {};
+
+      const updatedState = {
+        ...existingState,
+        juryCriteria: selectedCriteria,
+      };
+
+      sessionStorage.setItem(
+        CREATE_GRANT_FORM_SESSION_KEY,
+        JSON.stringify(updatedState)
+      );
+
+      showToast.success('Jury criteria saved successfully');
+    } catch {
+      showToast.error('Failed to save jury criteria');
+    }
+  };
+
+  const handleSaveAndReturn = () => {
+    saveCriteriaToSessionStorage();
+    navigate('/grants/create');
+  };
+
   return (
     <div className="manage-jury-page">
       <HeaderActions>
         <button
           className="header-btn btn-outline"
-          onClick={() => navigate('/grants/create')}
+          onClick={() => {
+            navigate('/grants/create');
+          }}
         >
           Cancel
         </button>
         <button
           className="header-btn btn-primary"
-          onClick={() => navigate('/grants/create')}
+          onClick={handleSaveAndReturn}
         >
           <Check size={18} />
           <span>Save & Return</span>

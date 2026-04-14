@@ -130,6 +130,7 @@ function CreateGala() {
   const [uploadFile, { isLoading: isUploading }] = useUploadFileMutation();
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [tempImagePreview, setTempImagePreview] = useState<string | null>(null);
   const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
   const [editingProgramIndex, setEditingProgramIndex] = useState<number | null>(
     null
@@ -179,8 +180,10 @@ function CreateGala() {
 
   const eveningItems = watch('eveningItems');
   const grants = watch('grants');
+  const coverImageUrl = watch('coverImageUrl');
   const formValues = watch();
   const currentStatus = watch('status');
+  const activeImagePreview = tempImagePreview || imagePreview;
   const isSubmitting = isCreating || isUpdatingGala || isPublishingGala;
 
   const totalPrizePool = useMemo(
@@ -282,6 +285,20 @@ function CreateGala() {
     }
   }, [formValues, isEditMode, isRestored]);
 
+  useEffect(() => {
+    if (coverImageUrl && coverImageUrl !== imagePreview) {
+      setImagePreview(coverImageUrl);
+    }
+  }, [coverImageUrl, imagePreview]);
+
+  useEffect(() => {
+    if (!tempImagePreview) return undefined;
+
+    return () => {
+      URL.revokeObjectURL(tempImagePreview);
+    };
+  }, [tempImagePreview]);
+
   const handleUpload = async (file: File) => {
     try {
       const formData = new FormData();
@@ -297,12 +314,19 @@ function CreateGala() {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleUpload(file).catch(() => {
+      const previewUrl = URL.createObjectURL(file);
+      setTempImagePreview(previewUrl);
+
+      try {
+        await handleUpload(file);
+      } catch {
         showToast.error('Image upload failed. Please try again.');
-      });
+      } finally {
+        setTempImagePreview(null);
+      }
     }
   };
 
@@ -376,7 +400,7 @@ function CreateGala() {
   };
 
   const submitForm = async (data: GalaFormValues, intent: SubmitIntent) => {
-    if (!isEditMode && data.grants.length === 0) {
+    if (!isEditMode && data.grants.length === 0 && intent === 'publish') {
       showToast.error('Add at least one grant before creating the gala.');
       return;
     }
@@ -673,7 +697,7 @@ function CreateGala() {
                       </div>
                     ) : (
                       <>
-                        {!imagePreview && (
+                        {!activeImagePreview && (
                           <div className="upload-placeholder">
                             <Upload size={32} />
                             <p>Click to upload or drag and drop</p>
@@ -681,9 +705,12 @@ function CreateGala() {
                           </div>
                         )}
 
-                        {imagePreview && (
+                        {activeImagePreview && (
                           <div className="image-preview-container">
-                            <img src={imagePreview} alt="Gala cover preview" />
+                            <img
+                              src={activeImagePreview}
+                              alt="Gala cover preview"
+                            />
                             <div className="image-overlay">
                               <Upload size={24} />
                               <span>Change Image</span>

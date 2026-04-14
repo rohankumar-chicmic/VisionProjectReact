@@ -10,6 +10,7 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   width?: string;
+  className?: string;
 }
 
 function Modal({
@@ -20,6 +21,7 @@ function Modal({
   children,
   footer,
   width = '500px',
+  className = '',
 }: Readonly<ModalProps>) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -37,7 +39,7 @@ function Modal({
   return (
     <div className="modal-overlay">
       <div
-        className="modal-container"
+        className={`modal-container ${className}`}
         aria-modal="true"
         aria-labelledby="modal-title"
         style={{ maxWidth: width }}

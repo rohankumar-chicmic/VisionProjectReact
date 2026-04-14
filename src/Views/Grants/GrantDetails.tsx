@@ -23,6 +23,10 @@ import {
   useGetOrganiserGrantByIdQuery,
   useDeleteOrganiserGrantMutation,
 } from '../../Services/Api/module/Organiser/Grant';
+import {
+  useGetAdminGrantByIdQuery,
+  useDeleteAdminGrantMutation,
+} from '../../Services/Api/module/Admin/Grant';
 import Skeleton from '../../Components/Shared/Skeleton';
 import showToast from '../../Shared/Utils/toast';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
@@ -37,13 +41,30 @@ function GrantDetails() {
   const isAdmin = role === 'admin' || role === 'sub_admin';
 
   const {
-    data: grantResponse,
-    isLoading,
-    isError,
-  } = useGetOrganiserGrantByIdQuery(id ?? '', { skip: !id });
+    data: organiserGrantResponse,
+    isLoading: isOrganiserLoading,
+    isError: isOrganiserError,
+  } = useGetOrganiserGrantByIdQuery(id ?? '', {
+    skip: !id || isAdmin,
+  });
 
-  const [deleteGrant, { isLoading: isDeleting }] =
+  const {
+    data: adminGrantResponse,
+    isLoading: isAdminLoading,
+    isError: isAdminError,
+  } = useGetAdminGrantByIdQuery(id ?? '', {
+    skip: !id || !isAdmin,
+  });
+
+  const [deleteOrganiserGrant, { isLoading: isDeletingOrganiser }] =
     useDeleteOrganiserGrantMutation();
+  const [deleteAdminGrant, { isLoading: isDeletingAdmin }] =
+    useDeleteAdminGrantMutation();
+
+  const grantResponse = isAdmin ? adminGrantResponse : organiserGrantResponse;
+  const isLoading = isAdmin ? isAdminLoading : isOrganiserLoading;
+  const isError = isAdmin ? isAdminError : isOrganiserError;
+  const isDeleting = isAdmin ? isDeletingAdmin : isDeletingOrganiser;
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const grant = grantResponse?.data;
@@ -59,7 +80,11 @@ function GrantDetails() {
     if (!id || isDeleting) return;
 
     try {
-      await deleteGrant(id).unwrap();
+      if (isAdmin) {
+        await deleteAdminGrant(id).unwrap();
+      } else {
+        await deleteOrganiserGrant(id).unwrap();
+      }
       showToast.success('Grant deleted successfully');
       setIsDeleteModalOpen(false);
       navigate('/grants');

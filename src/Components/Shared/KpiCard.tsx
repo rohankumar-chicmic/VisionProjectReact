@@ -5,8 +5,8 @@ export interface KpiCardProps {
   icon: React.ReactNode;
   label: string;
   value: string;
-  trend: string;
-  trendType: 'up' | 'down';
+  trend?: string;
+  trendType?: 'up' | 'down';
   color: string;
   subLabel?: string;
   period?: string;
@@ -31,10 +31,12 @@ function KpiCard({
         >
           {icon}
         </div>
-        <div className={`kpi-trend ${trendType}`}>
-          <TrendingUp size={14} />
-          <span>{trend}</span>
-        </div>
+        {trend && trendType && (
+          <div className={`kpi-trend ${trendType}`}>
+            <TrendingUp size={14} />
+            <span>{trend}</span>
+          </div>
+        )}
       </div>
 
       <div className="kpi-body-row">

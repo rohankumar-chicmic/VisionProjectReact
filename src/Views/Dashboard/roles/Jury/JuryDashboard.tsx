@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
 import { Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { HeaderActions, useHeader } from '../../../../Shared/Context/HeaderContext';
+import {
+  HeaderActions,
+  useHeader,
+} from '../../../../Shared/Context/HeaderContext';
 import JurySummary from './components/JurySummary';
 import AssignedGrantsList from './components/AssignedGrantsList';
 import EvaluationQueue from './components/EvaluationQueue';

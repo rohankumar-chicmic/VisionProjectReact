@@ -1,5 +1,5 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Upload,
   Calendar,
@@ -16,25 +16,70 @@ import {
   Pencil,
   Eye,
   Link2,
+  Gift,
+  FileText,
 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
-import {
-  useForm,
-  useFieldArray,
-  SubmitHandler,
-  Resolver,
-} from 'react-hook-form';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Resolver, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
+import { HeaderActions, useHeader } from '../../Shared/Context/HeaderContext';
 import {
-  useCreateGalaMutation,
-  useGetGalaByIdQuery,
-  useUpdateGalaMutation,
-} from '../../Services/Api/module/GalaApi';
-import { useUploadFileMutation } from '../../Services/Api/module/CommonApi';
+  useCreateOrganiserGalaWithGrantsMutation,
+  useGetOrganiserGalaByIdQuery,
+  usePublishOrganiserGalaMutation,
+  useUpdateOrganiserGalaMutation,
+} from '../../Services/Api/module/Organiser/Gala';
+import { useUploadFileMutation } from '../../Services/Api/module/Common';
+import { createGrantPlatformTransaction } from '../../Services/WalletConnect';
 import EveningProgramModal from './Components/EveningProgramModal';
+import showToast from '../../Shared/Utils/toast';
 import './CreateGala.scss';
+
+const questionSchema = z.object({
+  questionText: z.string().min(1),
+  questionType: z.string().min(1),
+  order: z.number().int().min(0),
+});
+
+const requirementSchema = z.object({
+  text: z.string().min(1),
+  order: z.number().int().min(0),
+});
+
+const grantSchema = z.object({
+  name: z.string().min(1, { message: 'Grant name is required' }),
+  description: z.string().min(1, { message: 'Grant description is required' }),
+  category: z.string().min(1, { message: 'Grant category is required' }),
+  prizeAmount: z.coerce
+    .number()
+    .min(0, { message: 'Prize amount must be 0 or more' }),
+  numberOfPrizes: z.coerce
+    .number()
+    .int()
+    .min(1, { message: 'At least one prize is required' }),
+  juryPanelSize: z.coerce
+    .number()
+    .int()
+    .min(1, { message: 'Jury panel size must be at least 1' }),
+  applicationDeadline: z
+    .string()
+    .min(1, { message: 'Application deadline is required' }),
+  status: z.number().int(),
+  requireInterview: z.boolean(),
+  requireCompanyName: z.boolean(),
+  requireIndustrySelection: z.boolean(),
+  requireMotivationStatement: z.boolean(),
+  requireBusinessPlanDocument: z.boolean(),
+  juryCriteria: z.array(z.number().int()),
+  questions: z.array(questionSchema),
+  additionalRequirements: z.array(requirementSchema),
+  prizeWinners: z
+    .array(z.object({ rank: z.number(), amount: z.number() }))
+    .optional(),
+  juryIds: z.array(z.string()).optional(),
+  id: z.string().optional(),
+});
 
 const galaSchema = z.object({
   name: z.string().min(1, { message: 'Event name is required' }),
@@ -43,13 +88,12 @@ const galaSchema = z.object({
   status: z.number().int(),
   eventDate: z.string().min(1, { message: 'Event date is required' }),
   eventTime: z.string().min(1, { message: 'Event time is required' }),
-  venue: z.string().min(1, { message: 'Venue/Location is required' }),
-  city: z.string().optional().or(z.literal('')),
+  venue: z.string().min(1, { message: 'Venue / location is required' }),
+  city: z.string().min(1, { message: 'City / region is required' }),
   expectedAttendees: z.coerce
     .number()
     .int()
     .min(0, { message: 'Must be 0 or more' }),
-  totalPrizePool: z.coerce.number().min(0, { message: 'Must be 0 or more' }),
   eveningItems: z.array(
     z.object({
       time: z.string().min(1, { message: 'Time is required' }),
@@ -57,46 +101,59 @@ const galaSchema = z.object({
       description: z.string().optional().or(z.literal('')),
     })
   ),
+  grants: z.array(grantSchema),
 });
 
 type GalaFormValues = z.infer<typeof galaSchema>;
+type SubmitIntent = 'draft' | 'publish';
+
+const CREATE_GALA_FORM_SESSION_KEY = 'create_gala_form_state';
+
+const toIsoStartOfDay = (date: string) =>
+  date.includes('T') ? date : `${date}T00:00:00.000Z`;
 
 function CreateGala() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
+  const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const isEditMode = !!id;
+  const isEditMode = Boolean(id);
 
-  const [createGala, { isLoading: isCreating }] = useCreateGalaMutation();
-  const [updateGala, { isLoading: isUpdatingGala }] = useUpdateGalaMutation();
-  const { data: galaDetail, isLoading: isLoadingGala } = useGetGalaByIdQuery(
-    id!,
-    { skip: !id }
-  );
+  const [createOrganiserGalaWithGrants, { isLoading: isCreating }] =
+    useCreateOrganiserGalaWithGrantsMutation();
+  const [updateGala, { isLoading: isUpdatingGala }] =
+    useUpdateOrganiserGalaMutation();
+  const [publishGala, { isLoading: isPublishingGala }] =
+    usePublishOrganiserGalaMutation();
+  const { data: galaDetail, isLoading: isLoadingGala } =
+    useGetOrganiserGalaByIdQuery(id!, { skip: !id });
   const [uploadFile, { isLoading: isUploading }] = useUploadFileMutation();
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Modal State
+  const [tempImagePreview, setTempImagePreview] = useState<string | null>(null);
   const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
   const [editingProgramIndex, setEditingProgramIndex] = useState<number | null>(
     null
   );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isRestored, setIsRestored] = useState(false);
 
-  const [defaultValues] = useState<GalaFormValues>(() => ({
-    name: '',
-    about: '',
-    coverImageUrl: '',
-    status: 0,
-    eventDate: '',
-    eventTime: '',
-    venue: '',
-    city: '',
-    expectedAttendees: 0,
-    totalPrizePool: 0,
-    eveningItems: [],
-  }));
+  const defaultValues: GalaFormValues = useMemo(
+    () => ({
+      name: '',
+      about: '',
+      coverImageUrl: '',
+      status: 1,
+      eventDate: '',
+      eventTime: '',
+      venue: '',
+      city: '',
+      expectedAttendees: 0,
+      eveningItems: [],
+      grants: [],
+    }),
+    []
+  );
 
   const {
     register,
@@ -111,29 +168,67 @@ function CreateGala() {
     defaultValues,
   });
 
-  const { append, remove, update } = useFieldArray({
+  const {
+    fields: eveningProgramFields,
+    append: appendProgram,
+    remove: removeProgram,
+    update: updateProgram,
+  } = useFieldArray({
     control,
     name: 'eveningItems',
   });
 
   const eveningItems = watch('eveningItems');
+  const grants = watch('grants');
+  const coverImageUrl = watch('coverImageUrl');
+  const formValues = watch();
   const currentStatus = watch('status');
+  const activeImagePreview = tempImagePreview || imagePreview;
+  const isSubmitting = isCreating || isUpdatingGala || isPublishingGala;
+
+  const totalPrizePool = useMemo(
+    () =>
+      grants.reduce(
+        (total, grant) =>
+          total +
+          (Number(grant.prizeAmount) || 0) *
+            (Number(grant.numberOfPrizes) || 0),
+        0
+      ),
+    [grants]
+  );
 
   useEffect(() => {
     setTitle(isEditMode ? 'Edit Gala Event' : 'Create New Gala Event');
     setSubtitle(
       isEditMode
-        ? 'Update event details, Grants, and evening program'
+        ? 'Update event details and review linked grants'
         : 'Set up event details, Grants, and evening program'
     );
     setBackAction(true, () => navigate('/galas'));
 
     return () => resetHeader();
-  }, [setTitle, setSubtitle, setBackAction, resetHeader, navigate, isEditMode]);
+  }, [isEditMode, navigate, resetHeader, setBackAction, setSubtitle, setTitle]);
 
-  // Populate form in edit mode
   useEffect(() => {
-    if (isEditMode && galaDetail?.data) {
+    if (!isEditMode) {
+      const savedState = sessionStorage.getItem(CREATE_GALA_FORM_SESSION_KEY);
+
+      if (savedState) {
+        try {
+          const parsedState = JSON.parse(savedState) as GalaFormValues;
+          reset({ ...defaultValues, ...parsedState });
+          setImagePreview(parsedState.coverImageUrl || null);
+        } catch (error: unknown) {
+          // Error is handled silenty as it's a non-critical draft restore
+        }
+      }
+
+      setIsRestored(true);
+      return;
+    }
+
+    if (galaDetail?.data) {
       const { data } = galaDetail;
       reset({
         name: data.name,
@@ -145,52 +240,93 @@ function CreateGala() {
         venue: data.venue,
         city: data.city || '',
         expectedAttendees: data.expectedAttendees,
-        totalPrizePool: data.totalPrizePool,
         eveningItems: data.eveningItems.map((item) => ({
           time: item.time,
           title: item.title,
           description: item.description,
         })),
+        grants:
+          data.grants.length > 0
+            ? data.grants.map((grant) => ({
+                name: grant.name,
+                description: grant.description,
+                category: grant.category,
+                prizeAmount: grant.prizeAmount,
+                numberOfPrizes: grant.numberOfPrizes,
+                juryPanelSize: 3,
+                applicationDeadline: grant.applicationDeadline
+                  ? grant.applicationDeadline.split('T')[0]
+                  : '',
+                status: grant.status,
+                requireInterview: grant.requireInterview,
+                requireCompanyName: grant.requireCompanyName,
+                requireIndustrySelection: grant.requireIndustrySelection,
+                requireMotivationStatement: grant.requireMotivationStatement,
+                requireBusinessPlanDocument: grant.requireBusinessPlanDocument,
+                juryCriteria: grant.juryCriteria.map(
+                  (criteria) => criteria.type
+                ),
+                questions: grant.questions,
+                additionalRequirements: grant.additionalRequirements,
+              }))
+            : [],
       });
       setImagePreview(data.coverImageUrl);
+      setIsRestored(true);
     }
-  }, [isEditMode, galaDetail, reset]);
+  }, [defaultValues, galaDetail, isEditMode, reset]);
+
+  useEffect(() => {
+    if (!isEditMode && isRestored) {
+      sessionStorage.setItem(
+        CREATE_GALA_FORM_SESSION_KEY,
+        JSON.stringify(formValues)
+      );
+    }
+  }, [formValues, isEditMode, isRestored]);
+
+  useEffect(() => {
+    if (coverImageUrl && coverImageUrl !== imagePreview) {
+      setImagePreview(coverImageUrl);
+    }
+  }, [coverImageUrl, imagePreview]);
+
+  useEffect(() => {
+    if (!tempImagePreview) return undefined;
+
+    return () => {
+      URL.revokeObjectURL(tempImagePreview);
+    };
+  }, [tempImagePreview]);
 
   const handleUpload = async (file: File) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
       const response = await uploadFile(formData).unwrap();
+
       if (response.success && response.data) {
         setValue('coverImageUrl', response.data, { shouldValidate: true });
         setImagePreview(response.data);
       }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Upload failed:', err);
+    } catch {
+      showToast.error('Image upload failed. Please try again.');
     }
   };
 
-  // Mock Grants for UI representation
-  const mockGrants = [
-    {
-      id: '1',
-      title: 'Innovation Technology Grant',
-      amount: 5000,
-      date: 'Mar 31',
-    },
-    {
-      id: '2',
-      title: 'Social Entrepreneurship Grant',
-      amount: 5000,
-      date: 'Mar 31',
-    },
-  ];
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleUpload(file);
+      const previewUrl = URL.createObjectURL(file);
+      setTempImagePreview(previewUrl);
+
+      try {
+        await handleUpload(file);
+      } catch {
+        showToast.error('Image upload failed. Please try again.');
+      } finally {
+        setTempImagePreview(null);
+      }
     }
   };
 
@@ -198,7 +334,9 @@ function CreateGala() {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      handleUpload(file);
+      handleUpload(file).catch(() => {
+        showToast.error('Image upload failed. Please try again.');
+      });
     }
   };
 
@@ -208,10 +346,11 @@ function CreateGala() {
     description?: string;
   }) => {
     if (editingProgramIndex === null) {
-      append(data);
+      appendProgram(data);
     } else {
-      update(editingProgramIndex, data);
+      updateProgram(editingProgramIndex, data);
     }
+
     setEditingProgramIndex(null);
     setIsProgramModalOpen(false);
   };
@@ -221,113 +360,335 @@ function CreateGala() {
     setIsProgramModalOpen(true);
   };
 
-  const onSubmit: SubmitHandler<GalaFormValues> = async (data) => {
+  const formatGrantDeadline = (date: string) => {
     try {
-      if (isEditMode && id) {
-        await updateGala({ ...data, id }).unwrap();
-      } else {
-        await createGala(data).unwrap();
-      }
-      navigate('/galas');
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to submit gala:', err);
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }).format(new Date(date));
+    } catch {
+      return date;
     }
   };
 
-  const getSubmitButtonLabel = () => {
-    if (isCreating || isUpdatingGala) return 'Saving...';
-    if (isEditMode) return 'Update Gala';
-    return 'Publish';
+  const handleLinkGrant = () => {
+    sessionStorage.setItem(
+      CREATE_GALA_FORM_SESSION_KEY,
+      JSON.stringify(formValues)
+    );
+
+    navigate(
+      `/grants/create?mode=gala-builder&returnTo=${encodeURIComponent(location.pathname)}`
+    );
+  };
+
+  const handleEditLinkedGrant = (index: number) => {
+    sessionStorage.setItem(
+      CREATE_GALA_FORM_SESSION_KEY,
+      JSON.stringify(formValues)
+    );
+
+    navigate(
+      `/grants/create?mode=gala-builder&draftIndex=${index}&returnTo=${encodeURIComponent(location.pathname)}`
+    );
+  };
+
+  const handleRemoveLinkedGrant = (index: number) => {
+    const nextGrants = grants.filter((_, grantIndex) => grantIndex !== index);
+    setValue('grants', nextGrants, { shouldDirty: true, shouldValidate: true });
+    showToast.success('Grant removed from this gala.');
+  };
+
+  const submitForm = async (data: GalaFormValues, intent: SubmitIntent) => {
+    if (!isEditMode && data.grants.length === 0 && intent === 'publish') {
+      showToast.error('Add at least one grant before creating the gala.');
+      return;
+    }
+
+    try {
+      let galaIdToPublish = id;
+
+      if (isEditMode && id) {
+        await updateGala({
+          id,
+          name: data.name,
+          about: data.about,
+          coverImageUrl: data.coverImageUrl,
+          status: data.status,
+          eventDate: toIsoStartOfDay(data.eventDate),
+          eventTime: data.eventTime,
+          venue: data.venue,
+          city: data.city,
+          expectedAttendees: Number(data.expectedAttendees),
+          eveningItems: data.eveningItems.map((item) => ({
+            time: item.time,
+            title: item.title,
+            description: item.description || '',
+          })),
+        }).unwrap();
+
+        if (intent === 'draft') {
+          showToast.success('Gala updated successfully.');
+        }
+      } else {
+        const createdGala = await createOrganiserGalaWithGrants({
+          name: data.name,
+          about: data.about,
+          coverImageUrl: data.coverImageUrl,
+          status: data.status,
+          eventDate: toIsoStartOfDay(data.eventDate),
+          eventTime: data.eventTime,
+          venue: data.venue,
+          city: data.city,
+          expectedAttendees: Number(data.expectedAttendees),
+          eveningItems: data.eveningItems.map((item) => ({
+            time: item.time,
+            title: item.title,
+            description: item.description || '',
+          })),
+          grant: data.grants.map((grant) => ({
+            name: grant.name,
+            description: grant.description,
+            category: grant.category,
+            prizeAmount: Number(grant.prizeAmount),
+            numberOfPrizes: Number(grant.numberOfPrizes),
+            juryPanelSize: Number(grant.juryPanelSize),
+            applicationDeadline: toIsoStartOfDay(grant.applicationDeadline),
+            status: grant.status,
+            questions: grant.questions.map((question, questionIndex) => {
+              // Defensively map question types to backend-compliant strings
+              const mapType = (type: string) => {
+                const t = type.toLowerCase().replace(/\s+/g, '');
+                if (t === 'short' || t === 'shorttext' || t === 'text')
+                  return 'ShortText';
+                if (t === 'long' || t === 'longtext') return 'LongText';
+                if (t === 'number') return 'Number';
+                if (t === 'file' || t === 'fileupload') return 'File';
+                return 'ShortText'; // Default fallback
+              };
+
+              return {
+                ...question,
+                questionType: mapType(question.questionType),
+                order: question.order ?? questionIndex,
+              };
+            }),
+            requireInterview: grant.requireInterview,
+            requireCompanyName: grant.requireCompanyName,
+            requireIndustrySelection: grant.requireIndustrySelection,
+            requireMotivationStatement: grant.requireMotivationStatement,
+            requireBusinessPlanDocument: grant.requireBusinessPlanDocument,
+            juryCriteria: grant.juryCriteria,
+            additionalRequirements: grant.additionalRequirements.map(
+              (requirement, requirementIndex) => ({
+                ...requirement,
+                order: requirement.order ?? requirementIndex,
+              })
+            ),
+            prizeWinners:
+              grant.prizeWinners?.map(
+                (pw: { rank: number; amount: number }) => ({
+                  rank: pw.rank,
+                  amount: Number(pw.amount),
+                })
+              ) || [],
+            juryIds: grant.juryIds || [],
+          })),
+          saveAsDraft: true,
+        }).unwrap();
+
+        galaIdToPublish = createdGala.data.id;
+
+        if (intent === 'draft') {
+          showToast.success('Gala draft saved successfully.');
+        }
+      }
+
+      if (intent === 'publish') {
+        if (!galaIdToPublish) {
+          throw new Error(
+            'Unable to publish this gala because no gala ID was found.'
+          );
+        }
+
+        showToast.info(
+          'Please confirm the wallet transaction for your grants.'
+        );
+
+        const totalPoolAmount = data.grants.reduce((acc, grant) => {
+          return (
+            acc +
+            (Number(grant.prizeAmount) || 0) *
+              (Number(grant.numberOfPrizes) || 0)
+          );
+        }, 0);
+
+        const { transactionHash, walletAddress } =
+          await createGrantPlatformTransaction(totalPoolAmount);
+
+        await publishGala({
+          id: galaIdToPublish,
+          body: {
+            blockchainTransactionHash: transactionHash,
+            organiserWalletAddress: walletAddress,
+          },
+        }).unwrap();
+
+        showToast.success(
+          isEditMode
+            ? 'Gala published successfully.'
+            : 'Gala created and published successfully.'
+        );
+      }
+
+      sessionStorage.removeItem(CREATE_GALA_FORM_SESSION_KEY);
+      navigate('/galas');
+    } catch (error: unknown) {
+      let errorMessage = '';
+      if (typeof error === 'object' && error !== null && 'data' in error) {
+        // Handle RTK Query error responses specifically
+        const rtkError = error as {
+          data: { message?: string; errors?: unknown[] };
+        };
+        errorMessage =
+          rtkError.data.message || 'Validation failed. Please check the form.';
+      } else if (isEditMode) {
+        errorMessage = 'Failed to update gala. Please try again.';
+      } else {
+        errorMessage =
+          'Failed to save gala. Please review the form and try again.';
+      }
+
+      showToast.error(errorMessage);
+    }
+  };
+
+  const submitWithIntent = (intent: SubmitIntent) => {
+    handleSubmit(
+      (data) => submitForm(data, intent),
+      (validationErrors) => {
+        // Find the first error message to show in the toast
+        const errorKeys = Object.keys(validationErrors);
+        if (errorKeys.length > 0) {
+          const firstField = errorKeys[0];
+          const errorObj = validationErrors[
+            firstField as keyof typeof validationErrors
+          ] as { message?: string } | undefined;
+          const message =
+            errorObj?.message || `The ${firstField} field is invalid.`;
+          showToast.error(`Form validation failed: ${message}`);
+        }
+      }
+    )().catch(() => {
+      showToast.error('An error occurred while submitting the form.');
+    });
+  };
+
+  const getSubmitButtonLabel = (intent: SubmitIntent) => {
+    if (isSubmitting) {
+      return intent === 'draft' ? 'Saving...' : 'Publishing...';
+    }
+
+    if (isEditMode) {
+      return 'Update Gala';
+    }
+
+    return intent === 'draft' ? 'Save Draft' : 'Publish';
   };
 
   return (
     <div className="create-gala-page">
-      <form id="create-gala-form" onSubmit={handleSubmit(onSubmit)}>
-        <HeaderActions>
-          <button
-            type="button"
-            className="header-btn btn-danger-soft"
-            onClick={() => navigate('/galas')}
-          >
-            <Trash size={18} />
-            <span>Trash</span>
-          </button>
-          <button type="button" className="header-btn btn-outline">
-            <Save size={18} />
-            <span>Save Draft</span>
-          </button>
-          <button
-            type="submit"
-            form="create-gala-form"
-            className="header-btn btn-primary"
-            disabled={isCreating || isUpdatingGala || isLoadingGala}
-          >
-            <Send size={18} />
-            <span>{getSubmitButtonLabel()}</span>
-          </button>
-        </HeaderActions>
+      <HeaderActions>
+        <button
+          type="button"
+          className="header-btn btn-danger-soft"
+          onClick={() => navigate('/galas')}
+        >
+          <Trash size={18} />
+          <span>Trash</span>
+        </button>
+        <button
+          type="button"
+          className="header-btn btn-outline"
+          onClick={() => submitWithIntent('draft')}
+          disabled={isSubmitting || isLoadingGala}
+        >
+          <Save size={18} />
+          <span>{getSubmitButtonLabel('draft')}</span>
+        </button>
+        <button
+          type="button"
+          className="header-btn btn-primary"
+          onClick={() => submitWithIntent('publish')}
+          disabled={isSubmitting || isLoadingGala}
+        >
+          <Send size={18} />
+          <span>{getSubmitButtonLabel('publish')}</span>
+        </button>
+      </HeaderActions>
 
-        <div className="gala-form-centered-wrapper">
-          <div className="gala-form-container">
-            <section className="form-card">
-              <div className="card-header">
-                <h3>Event Information</h3>
-                <p>Basic details about the gala event</p>
+      <div className="gala-form-centered-wrapper">
+        <div className="gala-form-container">
+          <section className="form-card">
+            <div className="card-header">
+              <h3>Event Information</h3>
+              <p>Basic details about the gala event</p>
+            </div>
+
+            <div className="card-body">
+              <div className="form-group">
+                <label id="gala-name-label" htmlFor="gala-name-input">
+                  Event Name *
+                  <input
+                    id="gala-name-input"
+                    type="text"
+                    {...register('name')}
+                    placeholder="e.g. Gala Vision Montreal 2026"
+                    className={errors.name ? 'error' : ''}
+                    aria-labelledby="gala-name-label"
+                  />
+                </label>
+                {errors.name && (
+                  <span className="error-message">{errors.name.message}</span>
+                )}
               </div>
-              <div className="card-body">
-                <div className="form-group">
-                  <label htmlFor="gala-name-input">
-                    <span>Event Name *</span>
-                    <input
-                      id="gala-name-input"
-                      type="text"
-                      {...register('name')}
-                      placeholder="e.g., Gala Vision Montréal 2026"
-                      className={errors.name ? 'error' : ''}
-                    />
-                  </label>
-                  {errors.name && (
-                    <span className="error-message">{errors.name.message}</span>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label htmlFor="gala-about-input">
-                    <span>About Event *</span>
-                    <textarea
-                      id="gala-about-input"
-                      {...register('about')}
-                      placeholder="The biggest entrepreneurial event of the year..."
-                      rows={4}
-                      className={errors.about ? 'error' : ''}
-                    />
-                  </label>
-                  {errors.about && (
-                    <span className="error-message">
-                      {errors.about.message}
-                    </span>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label htmlFor="gala-cover-file">
-                    <span>Event Cover Image *</span>
-                    <input
-                      id="gala-cover-file"
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageChange}
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                    />
-                  </label>
+
+              <div className="form-group">
+                <label id="gala-about-label" htmlFor="gala-about-input">
+                  About Event *
+                  <textarea
+                    id="gala-about-input"
+                    {...register('about')}
+                    placeholder="The biggest entrepreneurial event of the year..."
+                    rows={4}
+                    className={errors.about ? 'error' : ''}
+                    aria-labelledby="gala-about-label"
+                  />
+                </label>
+                {errors.about && (
+                  <span className="error-message">{errors.about.message}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label id="gala-cover-label" htmlFor="gala-cover-file">
+                  Event Cover Image *
+                  <input
+                    id="gala-cover-file"
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
                   <button
-                    id="gala-cover-dropbox"
                     type="button"
+                    id="gala-cover-dropzone"
                     className={`dropzone-area ${imagePreview ? 'has-image' : ''} ${isUploading ? 'uploading' : ''}`}
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDrop}
-                    aria-describedby="upload-instructions"
+                    aria-labelledby="gala-cover-label"
                   >
                     {isUploading ? (
                       <div className="upload-spinner-container">
@@ -336,18 +697,20 @@ function CreateGala() {
                       </div>
                     ) : (
                       <>
-                        {!imagePreview && (
+                        {!activeImagePreview && (
                           <div className="upload-placeholder">
                             <Upload size={32} />
-                            <p id="upload-instructions">
-                              Click to upload or drag and drop
-                            </p>
+                            <p>Click to upload or drag and drop</p>
                             <span>PNG, JPG up to 10MB</span>
                           </div>
                         )}
-                        {imagePreview && (
+
+                        {activeImagePreview && (
                           <div className="image-preview-container">
-                            <img src={imagePreview} alt="Preview" />
+                            <img
+                              src={activeImagePreview}
+                              alt="Gala cover preview"
+                            />
                             <div className="image-overlay">
                               <Upload size={24} />
                               <span>Change Image</span>
@@ -357,288 +720,373 @@ function CreateGala() {
                       </>
                     )}
                   </button>
-                </div>
+                </label>
+
                 {errors.coverImageUrl && (
                   <span className="error-message">
                     {errors.coverImageUrl.message}
                   </span>
                 )}
-                <div className="form-group">
-                  <span className="label-fake">Event Status *</span>
-                  <div className="status-tabs" id="status-selection-box">
-                    <button
-                      id="status-btn-upcoming"
-                      type="button"
-                      className={`status-tab ${currentStatus === 0 ? 'active' : ''}`}
-                      onClick={() => setValue('status', 0)}
-                    >
-                      <Clock size={16} />
-                      <span>Upcoming</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`status-tab ${currentStatus === 1 ? 'active' : ''}`}
-                      onClick={() => setValue('status', 1)}
-                    >
-                      <RefreshCcw size={16} />
-                      <span>Active</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`status-tab ${currentStatus === 2 ? 'active' : ''}`}
-                      onClick={() => setValue('status', 2)}
-                    >
-                      <Trophy size={16} />
-                      <span>Completed</span>
-                    </button>
-                  </div>
-                </div>
               </div>
-            </section>
 
-            <section className="form-card">
-              <div className="card-header">
-                <h3>Date, Time & Location</h3>
-                <p>When and where the event will take place</p>
-              </div>
-              <div className="card-body">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="gala-event-date">
-                      <span>Event Date *</span>
-                      <div className="input-with-icon">
-                        <Calendar size={18} />
-                        <input
-                          id="gala-event-date"
-                          type="date"
-                          {...register('eventDate')}
-                          className={errors.eventDate ? 'error' : ''}
-                        />
-                      </div>
-                    </label>
-                    {errors.eventDate && (
-                      <span className="error-message">
-                        {errors.eventDate.message}
-                      </span>
-                    )}
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="gala-event-time">
-                      <span>Event Time *</span>
-                      <div className="input-with-icon">
-                        <Clock size={18} />
-                        <input
-                          id="gala-event-time"
-                          type="time"
-                          {...register('eventTime')}
-                          className={errors.eventTime ? 'error' : ''}
-                        />
-                      </div>
-                    </label>
-                    {errors.eventTime && (
-                      <span className="error-message">
-                        {errors.eventTime.message}
-                      </span>
-                    )}
-                  </div>
+              <div className="form-group">
+                <span id="gala-status-label" className="label-fake">
+                  Event Status *
+                </span>
+                <div
+                  className="status-tabs"
+                  role="radiogroup"
+                  aria-labelledby="gala-status-label"
+                >
+                  <button
+                    type="button"
+                    className={`status-tab ${currentStatus === 1 ? 'active' : ''}`}
+                    onClick={() => setValue('status', 1)}
+                    role="radio"
+                    aria-checked={currentStatus === 1}
+                  >
+                    <FileText size={16} />
+                    <span>Draft</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`status-tab ${currentStatus === 2 ? 'active' : ''}`}
+                    onClick={() => setValue('status', 2)}
+                    role="radio"
+                    aria-checked={currentStatus === 2}
+                  >
+                    <Clock size={16} />
+                    <span>Upcoming</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`status-tab ${currentStatus === 3 ? 'active' : ''}`}
+                    onClick={() => setValue('status', 3)}
+                    role="radio"
+                    aria-checked={currentStatus === 3}
+                  >
+                    <RefreshCcw size={16} />
+                    <span>Active</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`status-tab ${currentStatus === 4 ? 'active' : ''}`}
+                    onClick={() => setValue('status', 4)}
+                    role="radio"
+                    aria-checked={currentStatus === 4}
+                  >
+                    <Trophy size={16} />
+                    <span>Completed</span>
+                  </button>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="form-card">
+            <div className="card-header">
+              <h3>Date, Time &amp; Location</h3>
+              <p>When and where the event will take place</p>
+            </div>
+
+            <div className="card-body">
+              <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="gala-venue-input">
-                    <span>Venue/Location *</span>
+                  <label id="gala-date-label" htmlFor="gala-event-date">
+                    Event Date *
                     <div className="input-with-icon">
-                      <MapPin size={18} />
+                      <Calendar size={18} />
                       <input
-                        id="gala-venue-input"
-                        type="text"
-                        {...register('venue')}
-                        placeholder="Palais des congrès, Montréal"
-                        className={errors.venue ? 'error' : ''}
+                        id="gala-event-date"
+                        type="date"
+                        {...register('eventDate')}
+                        className={errors.eventDate ? 'error' : ''}
+                        aria-labelledby="gala-date-label"
                       />
                     </div>
                   </label>
-                  {errors.venue && (
+                  {errors.eventDate && (
                     <span className="error-message">
-                      {errors.venue.message}
+                      {errors.eventDate.message}
                     </span>
                   )}
                 </div>
+
                 <div className="form-group">
-                  <label htmlFor="gala-city-input">
-                    <span>City/Region</span>
+                  <label id="gala-time-label" htmlFor="gala-event-time">
+                    Event Time *
+                    <div className="input-with-icon">
+                      <Clock size={18} />
+                      <input
+                        id="gala-event-time"
+                        type="time"
+                        {...register('eventTime')}
+                        className={errors.eventTime ? 'error' : ''}
+                        aria-labelledby="gala-time-label"
+                      />
+                    </div>
+                  </label>
+                  {errors.eventTime && (
+                    <span className="error-message">
+                      {errors.eventTime.message}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label id="gala-venue-label" htmlFor="gala-venue-input">
+                  Venue / Location *
+                  <div className="input-with-icon">
+                    <MapPin size={18} />
                     <input
-                      id="gala-city-input"
+                      id="gala-venue-input"
                       type="text"
-                      {...register('city')}
-                      placeholder="Montreal, QC"
+                      {...register('venue')}
+                      placeholder="Palais des congres, Montreal"
+                      className={errors.venue ? 'error' : ''}
+                      aria-labelledby="gala-venue-label"
                     />
+                  </div>
+                </label>
+                {errors.venue && (
+                  <span className="error-message">{errors.venue.message}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label id="gala-city-label" htmlFor="gala-city-input">
+                  City / Region *
+                  <input
+                    id="gala-city-input"
+                    type="text"
+                    {...register('city')}
+                    placeholder="Montreal, QC"
+                    className={errors.city ? 'error' : ''}
+                    aria-labelledby="gala-city-label"
+                  />
+                </label>
+                {errors.city && (
+                  <span className="error-message">{errors.city.message}</span>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="form-card">
+            <div className="card-header">
+              <h3>Participants &amp; Prize Pool</h3>
+              <p>Expected attendees and grant prize pool</p>
+            </div>
+
+            <div className="card-body">
+              <div className="form-row">
+                <div className="form-group">
+                  <label
+                    id="attendees-label"
+                    htmlFor="expected-attendees-count"
+                  >
+                    Expected Attendees *
+                    <div className="input-with-icon">
+                      <Users size={18} />
+                      <input
+                        id="expected-attendees-count"
+                        type="number"
+                        {...register('expectedAttendees')}
+                        placeholder="245"
+                        className={errors.expectedAttendees ? 'error' : ''}
+                        aria-labelledby="attendees-label"
+                      />
+                    </div>
+                  </label>
+                  {errors.expectedAttendees && (
+                    <span className="error-message">
+                      {errors.expectedAttendees.message}
+                    </span>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label id="grants-count-label" htmlFor="number-of-grants">
+                    Number of Grants *
+                    <div className="input-with-icon readonly-input">
+                      <Link2 size={18} />
+                      <input
+                        id="number-of-grants"
+                        type="text"
+                        value={grants.length.toString()}
+                        readOnly
+                        aria-labelledby="grants-count-label"
+                      />
+                    </div>
                   </label>
                 </div>
               </div>
-            </section>
 
-            {/* Participants & Prize Pool */}
-            <section className="form-card">
-              <div className="card-header">
-                <h3>Participants & Prize Pool</h3>
-                <p>Expected attendees and grant prize pool</p>
-              </div>
-              <div className="card-body">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="expected-attendees-count">
-                      <span>Expected Attendees *</span>
-                      <div className="input-with-icon">
-                        <Users size={18} />
-                        <input
-                          id="expected-attendees-count"
-                          type="number"
-                          {...register('expectedAttendees')}
-                          placeholder="245"
-                          className={errors.expectedAttendees ? 'error' : ''}
-                        />
-                      </div>
-                    </label>
-                    {errors.expectedAttendees && (
-                      <span className="error-message">
-                        {errors.expectedAttendees.message}
-                      </span>
-                    )}
+              <div className="form-group">
+                <label id="prize-pool-label" htmlFor="total-prize-pool">
+                  Total Prize Pool *
+                  <div className="input-with-icon readonly-input">
+                    <Trophy size={18} />
+                    <input
+                      id="total-prize-pool"
+                      type="text"
+                      value={`$ ${totalPrizePool.toLocaleString()} in grants`}
+                      readOnly
+                      aria-labelledby="prize-pool-label"
+                    />
                   </div>
-                  <div className="form-group">
-                    <label htmlFor="total-prize-pool-amount">
-                      <span>Total Prize Pool ($) *</span>
-                      <div className="input-with-icon">
-                        <Trophy size={18} />
-                        <input
-                          id="total-prize-pool-amount"
-                          type="number"
-                          step="0.01"
-                          {...register('totalPrizePool')}
-                          placeholder="15000"
-                          className={errors.totalPrizePool ? 'error' : ''}
-                        />
-                      </div>
-                    </label>
-                    {errors.totalPrizePool && (
-                      <span className="error-message">
-                        {errors.totalPrizePool.message}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                </label>
               </div>
-            </section>
+            </div>
+          </section>
 
-            {/* Evening Program */}
-            <section className="form-card section-program">
-              <div className="card-header flex-header">
-                <div className="header-text">
-                  <h3>Evening Program</h3>
-                  <p>Schedule of activities and sessions</p>
-                </div>
-                <button
-                  type="button"
-                  className="btn-add-item-header"
-                  onClick={() => {
-                    setEditingProgramIndex(null);
-                    setIsProgramModalOpen(true);
-                  }}
-                >
-                  <Plus size={16} />
-                  <span>Add Item</span>
-                </button>
+          <section className="form-card section-program">
+            <div className="card-header flex-header">
+              <div className="header-text">
+                <h3>Evening Program</h3>
+                <p>Schedule of activities and sessions</p>
               </div>
-              <div className="card-body">
-                <div className="program-items-list">
-                  {eveningItems.map((item, index) => (
-                    <div key={item.title} className="program-item-card-premium">
-                      <div className="time-badge">
-                        <span>{item.time}</span>
-                      </div>
-                      <div className="item-content">
-                        <h4>{item.title}</h4>
-                        <p>{item.description || 'No description provided'}</p>
-                      </div>
-                      <div className="item-actions">
-                        <button
-                          type="button"
-                          className="action-btn-edit"
-                          onClick={() => openEditProgram(index)}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="action-btn-delete"
-                          onClick={() => remove(index)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+              <button
+                type="button"
+                className="btn-add-item-header"
+                onClick={() => {
+                  setEditingProgramIndex(null);
+                  setIsProgramModalOpen(true);
+                }}
+              >
+                <Plus size={16} />
+                <span>Add Item</span>
+              </button>
+            </div>
+
+            <div className="card-body">
+              <div className="program-items-list">
+                {eveningProgramFields.map((item, index) => (
+                  <div key={item.id} className="program-item-card-premium">
+                    <div className="time-badge">
+                      <span>{eveningItems[index]?.time || '--:--'}</span>
                     </div>
-                  ))}
-                  {eveningItems.length === 0 && (
-                    <div className="empty-state-card">
+
+                    <div className="item-content">
+                      <h4>{eveningItems[index]?.title || 'Program item'}</h4>
                       <p>
-                        No programs added yet. Click &quot;Add Item&quot; to
-                        start.
+                        {eveningItems[index]?.description ||
+                          'No description provided'}
                       </p>
                     </div>
-                  )}
-                </div>
-                {errors.eveningItems && (
-                  <span className="error-message">
-                    Please add at least one program item
-                  </span>
+
+                    <div className="item-actions">
+                      <button
+                        type="button"
+                        className="action-btn-edit"
+                        onClick={() => openEditProgram(index)}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="action-btn-delete"
+                        onClick={() => removeProgram(index)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {eveningProgramFields.length === 0 && (
+                  <div className="empty-state-card">
+                    <p>
+                      No program items yet. Click &quot;Add Item&quot; to start.
+                    </p>
+                  </div>
                 )}
               </div>
-            </section>
+            </div>
+          </section>
 
-            {/* Associated Grants */}
-            <section className="form-card section-grants">
-              <div className="card-header flex-header">
-                <div className="header-text">
-                  <h3>Associated Grants</h3>
-                  <p>Grants available for this gala</p>
-                </div>
-                <button type="button" className="btn-add-item-header">
-                  <Plus size={16} />
-                  <span>Link Grant</span>
-                </button>
+          <section className="form-card section-grants">
+            <div className="card-header flex-header">
+              <div className="header-text">
+                <h3>Associated Grants</h3>
+                <p>Grants available for this gala</p>
               </div>
-              <div className="card-body">
-                <div className="grants-items-list">
-                  {mockGrants.map((grant) => (
-                    <div key={grant.id} className="grant-item-card-premium">
+              <button
+                type="button"
+                className="btn-add-item-header"
+                onClick={handleLinkGrant}
+              >
+                <Plus size={16} />
+                <span>Link Grant</span>
+              </button>
+            </div>
+
+            <div className="card-body">
+              <div className="grants-items-list">
+                {grants.map((grant, index) => {
+                  const grantTotal =
+                    (Number(grant.prizeAmount) || 0) *
+                    (Number(grant.numberOfPrizes) || 0);
+
+                  return (
+                    <div
+                      key={
+                        grant.id ||
+                        `${grant.name}-${grant.applicationDeadline}-${index}`
+                      }
+                      className="grant-item-card-premium"
+                    >
                       <div className="grant-icon-badge">
-                        <Trophy size={20} />
+                        <Gift size={20} />
                       </div>
+
                       <div className="item-content">
-                        <h4>{grant.title}</h4>
+                        <h4>{grant.name}</h4>
                         <div className="grant-meta">
                           <span className="amount">
-                            $ {grant.amount.toLocaleString()}
+                            $ {grantTotal.toLocaleString()}
                           </span>
                           <span className="dot">•</span>
-                          <span className="date">{grant.date}</span>
+                          <span className="date">
+                            {formatGrantDeadline(grant.applicationDeadline)}
+                          </span>
                         </div>
                       </div>
+
                       <div className="item-actions">
-                        <button type="button" className="action-btn-view">
+                        <button
+                          type="button"
+                          className="action-btn-view"
+                          onClick={() => handleEditLinkedGrant(index)}
+                        >
                           <Eye size={16} />
                         </button>
-                        <button type="button" className="action-btn-link">
+                        <button
+                          type="button"
+                          className="action-btn-link"
+                          onClick={() => handleRemoveLinkedGrant(index)}
+                        >
                           <Link2 size={16} />
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
+
+                {grants.length === 0 && (
+                  <div className="empty-state-card">
+                    <p>
+                      No grants linked yet. Click &quot;Link Grant&quot; to add
+                      one.
+                    </p>
+                  </div>
+                )}
               </div>
-            </section>
-          </div>
+            </div>
+          </section>
         </div>
-      </form>
+      </div>
 
       <EveningProgramModal
         isOpen={isProgramModalOpen}

@@ -10,10 +10,15 @@ import {
   MessageSquare,
   Bell,
   Send,
+  Loader2,
 } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
-import { useGetAdminUserByIdQuery } from '../../Services/Api/module/AdminApi';
+import {
+  useGetAdminUserByIdQuery,
+  useLazyExportAdminUserByIdQuery,
+} from '../../Services/Api/module/Admin/User';
 import Skeleton from '../../Components/Shared/Skeleton';
+import showToast from '../../Shared/Utils/toast';
 import BlockUserModal from './Components/BlockUserModal';
 import EditUserModal from './Components/EditUserModal';
 import './UserProfile.scss';
@@ -55,19 +60,25 @@ function UserProfile() {
     setSubtitle('Complete profile and account information');
   }, [setTitle, setSubtitle]);
 
-  const handleExportJSON = () => {
-    if (!user) return;
-    const blob = new Blob([JSON.stringify(user, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `user_profile_${id || 'user'}_${Date.now()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  const [triggerExport, { isFetching: isExporting }] =
+    useLazyExportAdminUserByIdQuery();
+
+  const handleExportCSV = async () => {
+    if (!id) return;
+    try {
+      const blob = await triggerExport(id).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `user_export_${id.substring(0, 8)}_${Date.now()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast.success('Profile exported successfully');
+    } catch (exportError) {
+      showToast.error('Failed to export profile');
+    }
   };
 
   if (isLoading) {
@@ -116,10 +127,15 @@ function UserProfile() {
         <button
           type="button"
           className="header-btn btn-outline"
-          onClick={handleExportJSON}
+          onClick={handleExportCSV}
+          disabled={isExporting}
         >
-          <Download size={18} />
-          <span>Export Profile Details</span>
+          {isExporting ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Download size={18} />
+          )}
+          <span>{isExporting ? 'Exporting...' : 'Export Profile Details'}</span>
         </button>
       </HeaderActions>
 
@@ -133,7 +149,13 @@ function UserProfile() {
             </div>
 
             <div className="user-hero">
-              <div className="hero-avatar">{user.fullName.charAt(0)}</div>
+              <div className="hero-avatar">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.fullName} />
+                ) : (
+                  user.fullName.charAt(0)
+                )}
+              </div>
               <div className="hero-info">
                 <div className="name-row">
                   <h2>{user.fullName}</h2>
@@ -152,7 +174,7 @@ function UserProfile() {
                 <div className="contact-info">
                   <div className="info-item">
                     <Phone size={16} />
-                    <span>N/A</span>
+                    <span>{user.phoneNumber || 'N/A'}</span>
                   </div>
                   <div className="info-item">
                     <Mail size={16} />
@@ -237,12 +259,14 @@ function UserProfile() {
             onClose={() => setIsEditModalOpen(false)}
             onConfirm={() => {
               setIsEditModalOpen(false);
-              // In the future this would trigger a refetch
             }}
+            userId={user.id}
             userData={{
-              fullName: user.fullName,
+              firstName: user.fullName.split(' ')[0] || '',
+              lastName: user.fullName.split(' ').slice(1).join(' ') || '',
               email: user.email,
               companyName: user.companyName,
+              phoneNumber: user.phoneNumber,
             }}
           />
 

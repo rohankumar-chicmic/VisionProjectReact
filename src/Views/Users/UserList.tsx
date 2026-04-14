@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
-  Upload,
+  // Upload,
   Download,
   Plus,
   Eye,
@@ -11,7 +11,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  Loader2,
 } from 'lucide-react';
+import showToast from '../../Shared/Utils/toast';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import KpiCard from '../../Components/Shared/KpiCard';
 import Table, { Column } from '../../Components/Atom/Table/Table';
@@ -22,7 +24,8 @@ import {
   useGetAdminUserDashboardQuery,
   useGetAdminUsersQuery,
   AdminUser,
-} from '../../Services/Api/module/AdminApi';
+  useLazyExportAdminUsersQuery,
+} from '../../Services/Api/module/Admin/User';
 import './UserList.scss';
 import Skeleton from '../../Components/Shared/Skeleton';
 
@@ -137,6 +140,9 @@ function UserList() {
   const { data: dashboardData, isLoading: isDashboardLoading } =
     useGetAdminUserDashboardQuery();
 
+  const [triggerExport, { isFetching: isExporting }] =
+    useLazyExportAdminUsersQuery();
+
   const getParams = (): Record<
     string,
     string | number | boolean | undefined
@@ -183,34 +189,30 @@ function UserList() {
     return () => resetHeader();
   }, [setTitle, setSubtitle, setBackAction, resetHeader]);
 
-  const handleExportUsers = () => {
-    const headers = [
-      'ID',
-      'Full Name',
-      'Email',
-      'Subscription',
-      'Status',
-      'Joined Date',
-    ];
-    const rows = (usersData?.data?.items || []).map((u) => [
-      u.displayId,
-      u.fullName,
-      u.email,
-      getSubscriptionLabel(u.subscriptionPlan, u.subscriptionStatus),
-      getStatusLabel(u.isBlocked),
-      new Date(u.createdAt).toLocaleDateString(),
-    ]);
+  const handleExportUsers = async () => {
+    try {
+      // Get all filters but ignore pagination for export
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const {
+        pageNumber: unusedPage,
+        pageSize: unusedSize,
+        ...filters
+      } = getParams();
 
-    const csvContent = [headers, ...rows].map((e) => e.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `users_export_${Date.now()}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const blob = await triggerExport(filters).unwrap();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `users_export_${Date.now()}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast.success('Users exported successfully');
+    } catch (error) {
+      showToast.error('Failed to export users');
+    }
   };
 
   const kpis = [
@@ -300,30 +302,35 @@ function UserList() {
   return (
     <div className="user-list-page">
       <HeaderActions>
-        <button
+        {/* <button
           type="button"
           className="header-btn btn-outline"
           onClick={() => setIsImportModalOpen(true)}
         >
           <Upload size={18} />
           <span>Import Users</span>
-        </button>
+        </button> */}
         <button
           type="button"
           className="header-btn btn-outline"
           onClick={handleExportUsers}
+          disabled={isExporting}
         >
-          <Download size={18} />
-          <span>Export Users</span>
+          {isExporting ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Download size={18} />
+          )}
+          <span>{isExporting ? 'Exporting...' : 'Export Users'}</span>
         </button>
-        <button
+        {/* <button
           type="button"
           className="header-btn btn-primary"
           onClick={() => setIsCreateModalOpen(true)}
         >
           <Plus size={18} />
           <span>Create New User</span>
-        </button>
+        </button> */}
       </HeaderActions>
 
       <div className="kpi-grid">
@@ -335,7 +342,17 @@ function UserList() {
             <Skeleton height={140} />
           </>
         ) : (
-          kpis.map((kpi) => <KpiCard key={kpi.id} {...kpi} />)
+          kpis.map((kpi) => (
+            <KpiCard
+              key={kpi.id}
+              icon={kpi.icon}
+              label={kpi.label}
+              value={kpi.value}
+              trend={kpi.trend}
+              trendType={kpi.trendType}
+              color={kpi.color}
+            />
+          ))
         )}
       </div>
 

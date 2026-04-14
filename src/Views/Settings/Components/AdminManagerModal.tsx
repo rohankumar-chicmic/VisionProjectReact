@@ -1,5 +1,5 @@
 /* eslint-disable jsx-a11y/label-has-associated-control, react/require-default-props */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Mail, Check, RefreshCw, Loader2, Shield, Users } from 'lucide-react';
@@ -8,7 +8,7 @@ import {
   useCreateAdminManagerMutation,
   useUpdateAdminManagerMutation,
   useGetAdminByIdQuery,
-} from '../../../Services/Api/module/AdminApi';
+} from '../../../Services/Api/module/Admin/User';
 import {
   createAdminSchema,
   updateAdminSchema,
@@ -69,15 +69,14 @@ function AdminManagerModal({
     manageAdmins: false,
   });
 
-  useEffect(() => {
-    if (isEdit && adminDetail?.data) {
-      const {
-        fullName,
-        email,
-        role: rId,
-        permissions: pStr,
-      } = adminDetail.data;
-
+  const handleInitialData = useCallback(
+    (data: {
+      fullName: string;
+      email: string;
+      role: number;
+      permissions: string;
+    }) => {
+      const { fullName, email, role: rId, permissions: pStr } = data;
       const nameParts = fullName.split(' ');
       const fName = nameParts[0] || '';
       const lName = nameParts.slice(1).join(' ') || '';
@@ -98,17 +97,28 @@ function AdminManagerModal({
           // Fallback if parsing fails
         }
       }
+    },
+    [reset]
+  );
+
+  const resetToDefault = useCallback(() => {
+    reset({
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      role: 'Sub Admin',
+      sendWelcomeEmail: true,
+    });
+  }, [reset]);
+
+  useEffect(() => {
+    if (isEdit && adminDetail?.data) {
+      handleInitialData(adminDetail.data);
     } else if (!isOpen) {
-      reset({
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        role: 'Sub Admin',
-        sendWelcomeEmail: true,
-      });
+      resetToDefault();
     }
-  }, [isEdit, adminDetail, reset, isOpen]);
+  }, [isEdit, adminDetail, isOpen, handleInitialData, resetToDefault]);
 
   const generatePassword = () => {
     const chars =

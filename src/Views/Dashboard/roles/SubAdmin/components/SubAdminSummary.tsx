@@ -1,17 +1,16 @@
 import { CheckCircle2, Shield, Users } from 'lucide-react';
-import KpiCard, { type KpiCardProps } from '../../../../../Components/Shared/KpiCard';
+import KpiCard, {
+  type KpiCardProps,
+} from '../../../../../Components/Shared/KpiCard';
 import { KpiSkeleton } from '../../../Components/DashboardSkeletons';
-import type { UserDashboardData } from '../../../../../Services/Api/module/AdminApi';
+import type { UserDashboardData } from '../../../../../Services/Api/module/Admin/User';
 
 interface SubAdminSummaryProps {
   isLoading: boolean;
   stats?: UserDashboardData;
 }
 
-function SubAdminSummary({
-  isLoading,
-  stats,
-}: Readonly<SubAdminSummaryProps>) {
+function SubAdminSummary({ isLoading, stats }: Readonly<SubAdminSummaryProps>) {
   const cards: KpiCardProps[] = [
     {
       icon: <Users size={22} />,
@@ -44,7 +43,15 @@ function SubAdminSummary({
       {isLoading
         ? [1, 2, 3].map((id) => <KpiSkeleton key={`sub-admin-kpi-${id}`} />)
         : cards.map((card) => (
-            <KpiCard key={`${card.label}-${card.value}`} {...card} />
+            <KpiCard
+              key={`${card.label}-${card.value}`}
+              icon={card.icon}
+              label={card.label}
+              value={card.value}
+              trend={card.trend}
+              trendType={card.trendType}
+              color={card.color}
+            />
           ))}
     </div>
   );

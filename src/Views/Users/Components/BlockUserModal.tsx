@@ -1,6 +1,6 @@
 import { Slash, ChevronDown, RefreshCcw } from 'lucide-react';
 import Modal from '../../../Components/Atom/Modal/Modal';
-import { useBlockUserMutation } from '../../../Services/Api/module/AdminApi';
+import { useBlockUserMutation } from '../../../Services/Api/module/Admin/User';
 import showToast from '../../../Shared/Utils/toast';
 import './UserModals.scss';
 
@@ -96,7 +96,7 @@ function BlockUserModal({
         {!isBlocked && (
           <>
             <div className="form-group no-margin">
-              <label htmlFor="block-message">
+              <label htmlFor="block-message" className="form-label">
                 <span>Message to send to user</span>
                 <p className="field-hint">
                   This message will be sent by email and SMS to the user
@@ -110,7 +110,7 @@ function BlockUserModal({
             </div>
 
             <div className="form-group">
-              <label htmlFor="block-reason">
+              <label htmlFor="block-reason" className="form-label">
                 <span>Reason for block</span>
                 <div className="select-wrapper">
                   <select id="block-reason">

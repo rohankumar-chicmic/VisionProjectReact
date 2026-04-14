@@ -1,4 +1,4 @@
-import api from '../../api';
+import api from '../../../api';
 
 export interface GalaEveningItem {
   id?: string;
@@ -64,6 +64,10 @@ export interface GalaGrantDetail {
   additionalRequirements: GalaRequirement[];
   juryCriteria: GalaJuryCriteria[];
   appliedCount: number;
+  isWinnerDecided: boolean;
+  decidedWinnersCount: number;
+  totalWinnerSlots: number;
+  winnerDecisionMessage: string;
   applications: GalaApplication[];
 }
 
@@ -78,8 +82,17 @@ export interface GalaItem {
   venue: string;
   city: string;
   expectedAttendees: number;
-  totalPrizePool: number;
+  totalGalaValue: number | null;
+  estimatedTicketPrice: number | null;
+  entryFee: number | null;
+  ticketPrice: number | null;
+  publishedAt: string | null;
+  blockchainTransactionHash: string | null;
+  organiserWalletAddress: string | null;
+  canEditTicketPricingInputs: boolean;
   appliedCount: number;
+  allWinnersDecided: boolean;
+  winnerDecisionMessage: string;
   eveningItems: GalaEveningItem[];
   grants: GalaGrantDetail[];
 }
@@ -140,24 +153,40 @@ export interface UpdateGalaRequest extends CreateGalaRequest {
   id: string;
 }
 
-export const galaApi = api.injectEndpoints({
+export const normalizeGalaResponse = (
+  response: GalaResponse
+): GalaResponse => ({
+  ...response,
+  data: {
+    items: response.data?.items ?? [],
+    pageNumber: response.data?.pageNumber ?? 1,
+    totalPages: response.data?.totalPages ?? 0,
+    totalCount: response.data?.totalCount ?? 0,
+    hasPreviousPage: response.data?.hasPreviousPage ?? false,
+    hasNextPage: response.data?.hasNextPage ?? false,
+  },
+});
+
+export const adminGalaApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getGalas: build.query<GalaResponse, GalaParams>({
+    getAdminGalas: build.query<GalaResponse, GalaParams>({
       query: (params) => ({
         url: '/api/v1/admin/gala',
         method: 'GET',
         params,
       }),
+      transformResponse: (response: GalaResponse) =>
+        normalizeGalaResponse(response),
       providesTags: ['Galas'],
     }),
-    getGalaById: build.query<SingleGalaResponse, string>({
+    getAdminGalaById: build.query<SingleGalaResponse, string>({
       query: (id) => ({
         url: `/api/v1/admin/gala/${id}`,
         method: 'GET',
       }),
       providesTags: (_result, _error, id) => [{ type: 'Galas', id }],
     }),
-    createGala: build.mutation<SingleGalaResponse, CreateGalaRequest>({
+    createAdminGala: build.mutation<SingleGalaResponse, CreateGalaRequest>({
       query: (body) => ({
         url: '/api/v1/admin/gala',
         method: 'POST',
@@ -165,7 +194,7 @@ export const galaApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Galas'],
     }),
-    updateGala: build.mutation<SingleGalaResponse, UpdateGalaRequest>({
+    updateAdminGala: build.mutation<SingleGalaResponse, UpdateGalaRequest>({
       query: (body) => ({
         url: '/api/v1/admin/gala',
         method: 'PUT',
@@ -173,21 +202,21 @@ export const galaApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Galas'],
     }),
-    publishGala: build.mutation<SingleGalaResponse, string>({
+    publishAdminGala: build.mutation<SingleGalaResponse, string>({
       query: (id) => ({
         url: `/api/v1/admin/gala/${id}/publish`,
         method: 'POST',
       }),
       invalidatesTags: ['Galas'],
     }),
-    unpublishGala: build.mutation<SingleGalaResponse, string>({
+    unpublishAdminGala: build.mutation<SingleGalaResponse, string>({
       query: (id) => ({
         url: `/api/v1/admin/gala/${id}/unpublish`,
         method: 'POST',
       }),
       invalidatesTags: ['Galas'],
     }),
-    deleteGala: build.mutation<SingleGalaResponse, string>({
+    deleteAdminGala: build.mutation<SingleGalaResponse, string>({
       query: (id) => ({
         url: `/api/v1/admin/gala/${id}`,
         method: 'DELETE',
@@ -199,11 +228,11 @@ export const galaApi = api.injectEndpoints({
 });
 
 export const {
-  useGetGalasQuery,
-  useGetGalaByIdQuery,
-  useCreateGalaMutation,
-  useUpdateGalaMutation,
-  usePublishGalaMutation,
-  useUnpublishGalaMutation,
-  useDeleteGalaMutation,
-} = galaApi;
+  useGetAdminGalasQuery,
+  useGetAdminGalaByIdQuery,
+  useCreateAdminGalaMutation,
+  useUpdateAdminGalaMutation,
+  usePublishAdminGalaMutation,
+  useUnpublishAdminGalaMutation,
+  useDeleteAdminGalaMutation,
+} = adminGalaApi;

@@ -1,4 +1,4 @@
-import api from '../../api';
+import api from '../../../api';
 
 export interface AdminItem {
   id: string;
@@ -149,6 +149,8 @@ export interface AdminUserDetail {
   id: string;
   fullName: string;
   email: string;
+  avatarUrl: string | null;
+  phoneNumber?: string;
   companyName: string;
   subscriptionPlan: number;
   subscriptionStatus: number;
@@ -184,85 +186,27 @@ export interface BlockUserRequest {
   isBlocked: boolean;
 }
 
-export interface AdminApplication {
-  id: string;
-  applicantName: string;
-  applicantEmail: string;
-  applicantAvatarUrl: string | null;
-  galaName: string;
-  grantName: string;
-  appliedDate: string;
-  juryScore: number;
-  status: number;
+export interface CreateAdminUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  companyName?: string;
+  temporaryPassword?: string;
+  freeDurationMonths: number;
+  sendWelcomeEmail: boolean;
 }
 
-export interface AdminApplicationData {
-  items: AdminApplication[];
-  pageNumber: number;
-  totalPages: number;
-  totalCount: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
+export interface UpdateAdminUserRequest {
+  id: string; // From path
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  companyName?: string;
 }
 
-export interface AdminApplicationListResponse {
-  success: boolean;
-  message: string;
-  data: AdminApplicationData;
-  errors: unknown;
-  notificationCount: number;
-}
-
-export interface AdminApplicationParams {
-  searchTerm?: string;
-  galaId?: string;
-  grantId?: string;
-  status?: number;
-  sortBy?: string;
-  sortOrder?: string;
-  pageNumber?: number;
-  pageSize?: number;
-}
-
-export interface AnnouncementItem {
-  id: string;
-  title: string;
-  message: string;
-  isPublished: boolean;
-  scheduledAt: string;
-  targetAudience: number;
-  sendPush: boolean;
-  createdAt: string;
-}
-
-export interface AnnouncementResponse {
-  success: boolean;
-  message: string;
-  data: AnnouncementItem[];
-  errors: unknown;
-  notificationCount: number;
-}
-
-export interface CreateAnnouncementRequest {
-  title: string;
-  message: string;
-  publishNow: boolean;
-  scheduledAt: string;
-  targetAudience: number;
-  sendPush: boolean;
-}
-
-export interface UpdateAnnouncementRequest {
-  id: string;
-  title: string;
-  message: string;
-  isPublished: boolean;
-  scheduledAt: string;
-  targetAudience: number;
-  sendPush: boolean;
-}
-
-export const adminApi = api.injectEndpoints({
+export const adminUserApi = api.injectEndpoints({
   endpoints: (build) => ({
     getAdminManagers: build.query<AdminResponse, AdminParams>({
       query: (params) => ({
@@ -277,7 +221,6 @@ export const adminApi = api.injectEndpoints({
         url: `/api/v1/admin/managers/${id}`,
         method: 'GET',
       }),
-      // providesTags: (result, error, id) => [{ type: 'Admins', id }],
     }),
     createAdminManager: build.mutation<unknown, CreateAdminParams>({
       query: (body) => ({
@@ -332,46 +275,21 @@ export const adminApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Admins'],
     }),
-    getAdminApplications: build.query<
-      AdminApplicationListResponse,
-      AdminApplicationParams
-    >({
-      query: (params) => ({
-        url: '/api/v1/admin/applications',
-        method: 'GET',
-        params,
-      }),
-      providesTags: ['Admins'],
-    }),
-    getAnnouncements: build.query<AnnouncementResponse, void>({
-      query: () => ({
-        url: '/api/v1/admin/announcements',
-        method: 'GET',
-      }),
-      providesTags: ['Announcements'],
-    }),
-    createAnnouncement: build.mutation<unknown, CreateAnnouncementRequest>({
+    createAdminUser: build.mutation<unknown, CreateAdminUserRequest>({
       query: (body) => ({
-        url: '/api/v1/admin/announcements',
+        url: '/api/v1/admin/users',
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Announcements'],
+      invalidatesTags: ['Admins'],
     }),
-    updateAnnouncement: build.mutation<unknown, UpdateAnnouncementRequest>({
+    updateAdminUser: build.mutation<unknown, UpdateAdminUserRequest>({
       query: ({ id, ...body }) => ({
-        url: `/api/v1/admin/announcements/${id}`,
+        url: `/api/v1/admin/users/${id}`,
         method: 'PUT',
         body,
       }),
-      invalidatesTags: ['Announcements'],
-    }),
-    deleteAnnouncement: build.mutation<unknown, string>({
-      query: (id) => ({
-        url: `/api/v1/admin/announcements/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['Announcements'],
+      invalidatesTags: ['Admins'],
     }),
     importAdminUsers: build.mutation<unknown, FormData>({
       query: (body) => ({
@@ -381,9 +299,17 @@ export const adminApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Admins'],
     }),
-    exportAdminUsers: build.query<Blob, void>({
-      query: () => ({
+    exportAdminUsers: build.query<Blob, AdminUserParams>({
+      query: (params) => ({
         url: '/api/v1/admin/users/export',
+        method: 'GET',
+        params,
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+    exportAdminUserById: build.query<Blob, string>({
+      query: (id) => ({
+        url: `/api/v1/admin/users/${id}/export`,
         method: 'GET',
         responseHandler: (response) => response.blob(),
       }),
@@ -402,12 +328,11 @@ export const {
   useGetAdminUsersQuery,
   useGetAdminUserByIdQuery,
   useBlockUserMutation,
-  useGetAdminApplicationsQuery,
-  useGetAnnouncementsQuery,
-  useCreateAnnouncementMutation,
-  useUpdateAnnouncementMutation,
-  useDeleteAnnouncementMutation,
+  useCreateAdminUserMutation,
+  useUpdateAdminUserMutation,
   useImportAdminUsersMutation,
   useExportAdminUsersQuery,
   useLazyExportAdminUsersQuery,
-} = adminApi;
+  useExportAdminUserByIdQuery,
+  useLazyExportAdminUserByIdQuery,
+} = adminUserApi;

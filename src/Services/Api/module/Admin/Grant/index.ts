@@ -1,8 +1,8 @@
-import api from '../../api';
+import api from '../../../api';
 
 export interface GrantQuestion {
   questionText: string;
-  questionType: 'Long Text' | 'File Upload' | 'Short Text';
+  questionType: 'ShortText' | 'LongText' | 'Number' | 'File';
   order: number;
 }
 
@@ -54,10 +54,61 @@ export interface GrantResponse {
   notificationCount: number;
 }
 
+export interface AdminGrantDetailData {
+  id: string;
+  galaEventId: string;
+  galaEventName: string;
+  name: string;
+  description: string;
+  category: string;
+  prizeAmount: number;
+  numberOfPrizes: number;
+  applicationDeadline: string;
+  durationLeftSeconds: number;
+  status: number;
+  createdAt: string;
+  requireInterview: boolean;
+  requireCompanyName: boolean;
+  requireIndustrySelection: boolean;
+  requireMotivationStatement: boolean;
+  requireBusinessPlanDocument: boolean;
+  questions: GrantQuestion[];
+  requirements: GrantAdditionalRequirement[];
+  criteria: {
+    criteriaKey: string;
+    name: string;
+    description: string;
+    category: string;
+    isCustom: boolean;
+    isActive: boolean;
+    type: number;
+  }[];
+  juries: {
+    id: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    companyName: string;
+    domainOfExpertise: string;
+  }[];
+  prizeWinners: {
+    id: string;
+    rank: number;
+    amount: number;
+    winnerUserId: string | null;
+    winnerFullName: string | null;
+  }[];
+  isWinnerDecided: boolean;
+  decidedWinnersCount: number;
+  totalWinnerSlots: number;
+  winnerDecisionMessage: string;
+  applicantCount?: number;
+}
+
 export interface SingleGrantResponse {
   success: boolean;
   message: string;
-  data: CreateUpdateGrantRequest & { id: string };
+  data: AdminGrantDetailData;
 }
 
 export interface GrantParams {
@@ -68,9 +119,9 @@ export interface GrantParams {
   search?: string;
 }
 
-export const grantsApi = api.injectEndpoints({
+export const adminGrantsApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getGrants: build.query<GrantResponse, GrantParams>({
+    getAdminGrants: build.query<GrantResponse, GrantParams>({
       query: (params) => ({
         url: '/api/v1/admin/grants',
         method: 'GET',
@@ -78,14 +129,14 @@ export const grantsApi = api.injectEndpoints({
       }),
       providesTags: ['Grants'],
     }),
-    getGrantById: build.query<SingleGrantResponse, string>({
+    getAdminGrantById: build.query<SingleGrantResponse, string>({
       query: (id) => ({
         url: `/api/v1/admin/grants/${id}`,
         method: 'GET',
       }),
       providesTags: (_result, _error, id) => [{ type: 'Grants', id }],
     }),
-    getGrantsSummary: build.query<
+    getAdminGrantsSummary: build.query<
       {
         data: {
           totalGrants: number;
@@ -102,7 +153,7 @@ export const grantsApi = api.injectEndpoints({
       }),
       providesTags: ['Grants'],
     }),
-    createGrant: build.mutation<
+    createAdminGrant: build.mutation<
       { success: boolean; message: string },
       CreateUpdateGrantRequest
     >({
@@ -113,7 +164,7 @@ export const grantsApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Grants'],
     }),
-    updateGrant: build.mutation<
+    updateAdminGrant: build.mutation<
       { success: boolean; message: string },
       CreateUpdateGrantRequest
     >({
@@ -127,7 +178,10 @@ export const grantsApi = api.injectEndpoints({
         { type: 'Grants', id: body.id },
       ],
     }),
-    deleteGrant: build.mutation<{ success: boolean; message: string }, string>({
+    deleteAdminGrant: build.mutation<
+      { success: boolean; message: string },
+      string
+    >({
       query: (id) => ({
         url: `/api/v1/admin/grants/${id}`,
         method: 'DELETE',
@@ -139,10 +193,10 @@ export const grantsApi = api.injectEndpoints({
 });
 
 export const {
-  useGetGrantsQuery,
-  useGetGrantByIdQuery,
-  useGetGrantsSummaryQuery,
-  useCreateGrantMutation,
-  useUpdateGrantMutation,
-  useDeleteGrantMutation,
-} = grantsApi;
+  useGetAdminGrantsQuery,
+  useGetAdminGrantByIdQuery,
+  useGetAdminGrantsSummaryQuery,
+  useCreateAdminGrantMutation,
+  useUpdateAdminGrantMutation,
+  useDeleteAdminGrantMutation,
+} = adminGrantsApi;

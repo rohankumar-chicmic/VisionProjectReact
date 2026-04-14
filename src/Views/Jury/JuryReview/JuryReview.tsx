@@ -76,7 +76,7 @@ function JuryReview() {
     if (id) {
       startReview(id)
         .unwrap()
-        .catch(() => { });
+        .catch(() => {});
     }
   }, [id, startReview]);
 
@@ -185,8 +185,8 @@ function JuryReview() {
         applicationId: id,
         scores: payloadScores,
         overallScore: averageScore,
-        qualitativeFeedback: qualitativeFeedback,
-        privateNotes: privateNotes,
+        qualitativeFeedback,
+        privateNotes,
       }).unwrap();
 
       setIsSubmitted(true);
@@ -245,10 +245,10 @@ function JuryReview() {
 
   const initials = application.applicantName
     ? application.applicantName
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
     : 'A';
 
   const getStatusLabel = (status: number) => {
@@ -413,9 +413,9 @@ function JuryReview() {
                   </span>
                 </div>
                 {isInterviewCompleted &&
-                  !isSubmitted &&
-                  !isFinalized &&
-                  !isWinner ? (
+                !isSubmitted &&
+                !isFinalized &&
+                !isWinner ? (
                   <button
                     type="button"
                     className="header-btn btn-primary"
@@ -450,9 +450,9 @@ function JuryReview() {
                   <span className="value">
                     {application.memberSince
                       ? new Date(application.memberSince).toLocaleDateString(
-                        'en-US',
-                        { month: 'short', year: 'numeric' }
-                      )
+                          'en-US',
+                          { month: 'short', year: 'numeric' }
+                        )
                       : 'N/A'}
                   </span>
                 </div>
@@ -508,8 +508,8 @@ function JuryReview() {
                   <span className="value">
                     {application.applicationDeadline
                       ? new Date(
-                        application.applicationDeadline
-                      ).toLocaleDateString()
+                          application.applicationDeadline
+                        ).toLocaleDateString()
                       : 'N/A'}
                   </span>
                 </div>
@@ -579,8 +579,8 @@ function JuryReview() {
                       <span className="value">
                         {application.interviewDate
                           ? new Date(
-                            application.interviewDate
-                          ).toLocaleDateString()
+                              application.interviewDate
+                            ).toLocaleDateString()
                           : 'TBD'}
                       </span>
                     </div>

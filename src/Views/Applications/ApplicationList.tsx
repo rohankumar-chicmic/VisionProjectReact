@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  Search,
-  CheckCircle2,
-  XCircle,
-  Eye,
-} from 'lucide-react';
+import { Search, CheckCircle2, XCircle, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
@@ -189,8 +184,6 @@ function ApplicationList() {
               ))}
             </div>
           </div>
-
-
         </div>
 
         <div className="applications-table-wrapper">

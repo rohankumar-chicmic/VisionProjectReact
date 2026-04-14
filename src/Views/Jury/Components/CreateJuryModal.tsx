@@ -12,10 +12,6 @@ import {
   EyeOff,
 } from 'lucide-react';
 import Modal from '../../../Components/Atom/Modal/Modal';
-import type {
-  CreateOrganiserJuryRequest,
-  OrganiserJuryMember,
-} from '../../../Services/Api/module/Organiser/Jury';
 import './CreateJuryModal.scss';
 
 export interface JuryFormData {

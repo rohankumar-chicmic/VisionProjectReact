@@ -12,7 +12,7 @@ import {
   useForgotPasswordAdminMutation,
   useForgotPasswordOrganiserMutation,
   useForgotPasswordJuryMutation,
-} from '../../Services/Api/module/AuthApi';
+} from '../../Services/Api/module/Auth';
 import './Auth.scss';
 
 function EmailSent() {

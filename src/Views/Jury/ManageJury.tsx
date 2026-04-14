@@ -134,11 +134,6 @@ function ManageJury() {
     };
   }, [setTitle, setSubtitle, resetHeader]);
 
-  const juryList = useMemo(
-    () => juryResponse?.data ?? [],
-    [juryResponse?.data]
-  );
-
   const filteredJury = useMemo(() => {
     return juryList.filter(
       (j) =>

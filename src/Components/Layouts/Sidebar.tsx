@@ -6,7 +6,7 @@ import {
   useLogoutAdminMutation,
   useLogoutOrganiserMutation,
   useLogoutJuryMutation,
-} from '../../Services/Api/module/AuthApi';
+} from '../../Services/Api/module/Auth';
 import { clearAuthTokenRedux } from '../../Store/Common';
 import { RootState } from '../../Store';
 import LogoutModal from '../Molecule/LogoutModal/LogoutModal';

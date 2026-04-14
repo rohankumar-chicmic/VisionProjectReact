@@ -20,23 +20,23 @@ function AssignedGrantsList({ data }: AssignedGrantsListProps) {
 
       <div className="grants-stack">
         {data?.map((grant) => (
-          <div key={grant.name} className="grant-list-item">
+          <div key={grant.name || Math.random()} className="grant-list-item">
             <div className="grant-info">
-              <h4>{grant.name}</h4>
+              <h4>{grant.name || 'Unnamed Program'}</h4>
               <div className="grant-meta">
                 <span className="meta-item">
-                  <Calendar size={14} /> {grant.gala}
+                  <Calendar size={14} /> {grant.gala || 'N/A'}
                 </span>
                 <span className="meta-item">
-                  <Users size={14} /> {grant.applicants} Applicants
+                  <Users size={14} /> {grant.applicants ?? 0} Applicants
                 </span>
               </div>
             </div>
             <div className="grant-actions">
               <span
-                className={`status-pill ${grant.status.toLowerCase().replace(' ', '-')}`}
+                className={`status-pill ${grant.status?.toLowerCase().replace(' ', '-') || 'unknown'}`}
               >
-                {grant.status}
+                {grant.status || 'Unknown'}
               </span>
               <button
                 type="button"

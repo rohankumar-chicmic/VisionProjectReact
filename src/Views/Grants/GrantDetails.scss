@@ -55,23 +55,23 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
         &.active {
-          background: rgba(34, 197, 94, 0.3);
-          color: #4ade80;
+          background: rgba(34, 197, 94, 0.2);
+          color: #065f46;
           border: 1px solid rgba(34, 197, 94, 0.4);
         }
         &.upcoming {
-          background: rgba(245, 158, 11, 0.3);
-          color: #fbbf24;
+          background: rgba(245, 158, 11, 0.2);
+          color: #92400e;
           border: 1px solid rgba(245, 158, 11, 0.4);
         }
         &.completed {
-          background: rgba(148, 163, 184, 0.3);
-          color: #f1f5f9;
+          background: rgba(148, 163, 184, 0.2);
+          color: #1e293b;
           border: 1px solid rgba(148, 163, 184, 0.4);
         }
         &.draft {
-          background: rgba(139, 92, 246, 0.3);
-          color: #c084fc;
+          background: rgba(139, 92, 246, 0.2);
+          color: #6d28d9;
           border: 1px solid rgba(139, 92, 246, 0.4);
         }
 
@@ -134,13 +134,13 @@
           .link-icon-box {
             width: 40px;
             height: 40px;
-            background: rgba(0, 206, 134, 0.2);
-            color: #00ce86;
+            background: rgba(0, 206, 134, 0.15);
+            color: #059669;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 20px rgba(0, 206, 134, 0.2);
+            box-shadow: 0 0 20px rgba(0, 206, 134, 0.15);
           }
 
           .link-text {
@@ -240,7 +240,7 @@
       &.prize {
         .stat-icon {
           background: #ecfdf5;
-          color: #10b981;
+          color: #047857;
         }
         .value {
           color: #10b981;
@@ -249,13 +249,13 @@
       &.slots {
         .stat-icon {
           background: #eff6ff;
-          color: #3b82f6;
+          color: #1d4ed8;
         }
       }
       &.deadline {
         .stat-icon {
           background: #fdf2f8;
-          color: #ec4899;
+          color: #be185d;
         }
         .value {
           color: #ec4899;
@@ -264,7 +264,7 @@
       &.applicants {
         .stat-icon {
           background: #f5f3ff;
-          color: #8b5cf6;
+          color: #6d28d9;
         }
       }
     }
@@ -335,7 +335,7 @@
       .count-badge {
         padding: 6px 14px;
         background: #f1f5f9;
-        color: #64748b;
+        color: #475569;
         border-radius: 50px;
         font-size: 0.85rem;
         font-weight: 800;
@@ -379,7 +379,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #10b981;
+        color: #047857;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
       }
 
@@ -441,7 +441,7 @@
         .q-type {
           padding: 4px 12px;
           background: #f1f5f9;
-          color: #64748b;
+          color: #475569;
           border-radius: 6px;
           font-size: 0.75rem;
           font-weight: 800;
@@ -593,10 +593,10 @@
   .empty-state-mini {
     padding: 32px 0;
     text-align: center;
-    color: #94a3b8;
-    background: #fafafa;
+    color: #475569;
+    background: #f8fafc;
     border-radius: 16px;
-    border: 1px dashed #e2e8f0;
+    border: 1px dashed #cbd5e1;
 
     svg {
       margin-bottom: 12px;
@@ -633,7 +633,7 @@
     }
     &.btn-danger-soft {
       background: #fee2e2;
-      color: #ef4444;
+      color: #b91c1c;
     }
 
     &:hover {
@@ -645,6 +645,238 @@
       cursor: not-allowed;
       transform: none;
     }
+  }
+}
+
+.allocation-action-card {
+  &.highlight {
+    border: 2px solid #10b981;
+    background: linear-gradient(to right bottom, #ffffff, #f0fdf4);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 150px;
+      height: 150px;
+      background: radial-gradient(
+        circle,
+        rgba(16, 185, 129, 0.08) 0%,
+        transparent 70%
+      );
+      border-radius: 50%;
+    }
+  }
+
+  .card-header-horizontal {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+    gap: 20px;
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .header-info {
+      .card-title {
+        margin-bottom: 6px;
+        .icon-burn {
+          color: #f59e0b;
+          filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.4));
+        }
+      }
+      .card-subtitle {
+        color: #64748b;
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin: 0;
+      }
+    }
+
+    .header-badge-status {
+      .badge-released {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: #ecfdf5;
+        color: #064e3b;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 800;
+        border: 1px solid #10b981;
+      }
+
+      .badge-pending {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: #fffbeb;
+        color: #78350f;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 800;
+        border: 1px solid #f59e0b;
+      }
+    }
+  }
+
+  .action-button-row {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .allocation-cta,
+    .release-cta {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn-sparkle {
+      position: relative;
+      overflow: hidden;
+      background: #10b981;
+      color: white;
+      padding: 14px 32px;
+      border-radius: 16px;
+      font-weight: 800;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: fit-content;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+
+      &:hover:not(:disabled) {
+        transform: translateY(-3px) scale(1.02);
+        background: #059669;
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        filter: grayscale(0.5);
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+    }
+
+    .btn-success-solid {
+      background: #0f172a;
+      color: white;
+      padding: 14px 32px;
+      border-radius: 16px;
+      font-weight: 800;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: fit-content;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+
+      &:hover:not(:disabled) {
+        background: #1e293b;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .disabled-msg {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #b91c1c;
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: #fef2f2;
+      padding: 8px 16px;
+      border-radius: 10px;
+      width: fit-content;
+    }
+
+    .release-hint {
+      color: #64748b;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .success-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #f0fdf4;
+      color: #166534;
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid #bbf7d0;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+  }
+}
+
+.prize-item-premium {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+
+  .prize-main-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .winner-badge-reveal {
+    animation: slideInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+    .winner-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      color: #1e293b;
+      font-size: 0.9rem;
+      font-weight: 800;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+      svg {
+        color: #10b981;
+      }
+    }
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

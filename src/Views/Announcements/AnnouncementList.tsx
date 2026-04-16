@@ -31,6 +31,7 @@ import {
 } from '../../Services/Api/module/Admin/Announcement';
 import Modal from '../../Components/Atom/Modal/Modal';
 import showToast from '../../Shared/Utils/toast';
+import { formatDateTime } from '../../Shared/Utils/dateUtils';
 import './AnnouncementList.scss';
 
 const AUDIENCE_MAP = [
@@ -38,17 +39,6 @@ const AUDIENCE_MAP = [
   { value: 2, label: 'Admins Only', icon: Shield, color: '#00ce86' },
   { value: 3, label: 'Jury Members', icon: Star, color: '#00ce86' },
 ];
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 function AnnouncementList() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
@@ -386,7 +376,7 @@ function AnnouncementList() {
                           )}
                           <span className="meta-chip date">
                             <Clock size={12} />
-                            {formatDate(ann.createdAt)}
+                            {formatDateTime(ann.createdAt)}
                           </span>
                         </div>
 

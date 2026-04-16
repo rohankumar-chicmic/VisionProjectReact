@@ -45,9 +45,6 @@
       max-height: 400px;
       overflow-y: auto;
       padding-right: 8px;
-
-      &::-webkit-scrollbar { width: 6px; }
-      &::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 3px; }
     }
   }
 

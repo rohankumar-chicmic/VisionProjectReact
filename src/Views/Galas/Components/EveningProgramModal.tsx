@@ -1,13 +1,13 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Clock, Type, AlignLeft, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import Modal from '../../../Components/Atom/Modal/Modal';
 import './EveningProgramModal.scss';
 
-const programItemSchema = z.object({
+const baseSchema = z.object({
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
     message: 'Enter a valid time in HH:MM format',
   }),
@@ -15,13 +15,14 @@ const programItemSchema = z.object({
   description: z.string().optional().or(z.literal('')),
 });
 
-type ProgramItemValues = z.infer<typeof programItemSchema>;
+type ProgramItemValues = z.infer<typeof baseSchema>;
 
 interface EveningProgramModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: ProgramItemValues) => void;
   initialData?: ProgramItemValues | null;
+  minTime?: string;
 }
 
 function EveningProgramModal({
@@ -29,14 +30,28 @@ function EveningProgramModal({
   onClose,
   onSubmit,
   initialData = null,
+  minTime,
 }: Readonly<EveningProgramModalProps>) {
+  const schema = useMemo(() => {
+    return baseSchema.refine(
+      (data) => {
+        if (!minTime) return true;
+        return data.time >= minTime;
+      },
+      {
+        message: `Activity time cannot be earlier than gala time (${minTime})`,
+        path: ['time'],
+      }
+    );
+  }, [minTime]);
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
   } = useForm<ProgramItemValues>({
-    resolver: zodResolver(programItemSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       time: '',
       title: '',
@@ -88,17 +103,14 @@ function EveningProgramModal({
               <span className="label-text">
                 Time <span className="required-indicator">*</span>
               </span>
-              <div className="input-with-icon">
-                <Clock size={18} />
-                <input
-                  id="item-time"
-                  type="time"
-                  step="60"
-                  {...register('time')}
-                  placeholder="HH:MM"
-                  className={errors.time ? 'error' : ''}
-                />
-              </div>
+              <input
+                id="item-time"
+                type="time"
+                step="60"
+                {...register('time')}
+                placeholder="HH:MM"
+                className={errors.time ? 'error' : ''}
+              />
             </label>
             {errors.time && (
               <div className="error-message">
@@ -113,16 +125,13 @@ function EveningProgramModal({
               <span className="label-text">
                 Activity Title <span className="required-indicator">*</span>
               </span>
-              <div className="input-with-icon">
-                <Type size={18} />
-                <input
-                  id="item-title"
-                  type="text"
-                  {...register('title')}
-                  placeholder="e.g. Welcome Cocktail"
-                  className={errors.title ? 'error' : ''}
-                />
-              </div>
+              <input
+                id="item-title"
+                type="text"
+                {...register('title')}
+                placeholder="e.g. Welcome Cocktail"
+                className={errors.title ? 'error' : ''}
+              />
             </label>
             {errors.title && (
               <div className="error-message">
@@ -135,15 +144,12 @@ function EveningProgramModal({
           <div className="form-group">
             <label htmlFor="item-description">
               <span className="label-text">Activity Details</span>
-              <div className="input-with-icon align-top">
-                <AlignLeft size={18} />
-                <textarea
-                  id="item-description"
-                  {...register('description')}
-                  placeholder="Describe this activity..."
-                  rows={3}
-                />
-              </div>
+              <textarea
+                id="item-description"
+                {...register('description')}
+                placeholder="Describe this activity..."
+                rows={3}
+              />
             </label>
           </div>
         </div>

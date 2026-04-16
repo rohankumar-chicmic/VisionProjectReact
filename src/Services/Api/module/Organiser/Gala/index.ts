@@ -88,10 +88,11 @@ export interface GalaItem {
   organiserWalletAddress: string | null;
   canEditTicketPricingInputs: boolean;
   appliedCount: number;
-  allWinnersDecided: boolean;
   winnerDecisionMessage: string;
   eveningItems: GalaEveningItem[];
   grants: GalaGrantDetail[];
+  createdById?: string;
+  createdByFullName?: string;
 }
 
 export interface GalaListData {

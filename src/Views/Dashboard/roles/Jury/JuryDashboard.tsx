@@ -44,18 +44,18 @@ function JuryDashboard() {
         <button
           type="button"
           className="header-btn btn-primary"
-          onClick={() => navigate('/jury')}
+          onClick={() => navigate('/jury/workspace')}
         >
           <Star size={18} />
           <span>Open Jury Workspace</span>
         </button>
       </HeaderActions>
 
-      <JurySummary data={data.data} />
+      <JurySummary data={data?.data} />
 
       <div className="dashboard-grid-two">
-        <AssignedGrantsList data={data.data.assignedPrograms} />
-        <EvaluationQueue data={data.data.evaluationQueue} />
+        <AssignedGrantsList data={data?.data?.assignedPrograms} />
+        <EvaluationQueue data={data?.data?.evaluationQueue} />
       </div>
     </div>
   );

@@ -24,6 +24,7 @@ import JuryWorkspace from '../Views/Jury/JuryWorkspace/JuryWorkspace';
 import JuryProfile from '../Views/Jury/JuryProfile/JuryProfile';
 import JuryReview from '../Views/Jury/JuryReview/JuryReview';
 import EventOrganiserList from '../Views/Admin/EventOrganisers/EventOrganiserList';
+import OrganiserProfile from '../Views/Settings/OrganiserProfile';
 
 // eslint-disable-next-line import/prefer-default-export
 export const PRIVATE_ROUTES: Array<CustomRouter> = [
@@ -158,6 +159,11 @@ export const PRIVATE_ROUTES: Array<CustomRouter> = [
     path: '/settings',
     element: <AdminSettings />,
     title: 'Admin Settings',
+  },
+  {
+    path: '/organiser/profile',
+    element: <OrganiserProfile />,
+    title: 'My Profile',
   },
   {
     path: '*',

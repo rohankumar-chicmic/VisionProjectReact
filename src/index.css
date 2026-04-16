@@ -2,7 +2,7 @@
 
 :root {
   --primary-color: #00ce86;
-  --primary-hover-color: #00ce86;
+  --primary-hover-color: #00b878;
   --secondary-color: #1e293b;
   --background-color: #f8fafc;
   --surface-color: #ffffff;
@@ -41,6 +41,14 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+*::-webkit-scrollbar {
+  display: none;
 }
 
 body {
@@ -109,4 +117,48 @@ img {
 
 .Toastify__close-button:hover {
   opacity: 1;
+}
+
+/* Publishing Loading Pulse Animation */
+.publishing-loader-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, rgba(0, 206, 134, 0.1), rgba(0, 206, 134, 0.05));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  color: var(--primary-color);
+  box-shadow: 0 0 0 0 rgba(0, 206, 134, 0.4);
+  animation: pulse-ring 2s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+
+.publishing-loader-wrapper svg {
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 206, 134, 0.4);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 20px rgba(0, 206, 134, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 206, 134, 0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

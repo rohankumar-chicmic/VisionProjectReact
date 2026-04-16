@@ -90,6 +90,7 @@ export interface JuryApplicationDetail {
   applicantSubscriptionPlan: number;
   applicantSubscriptionStatus: number;
   adminNotes: string | null;
+  organiserNote?: string;
   canCurrentUserSubmitJuryScores: boolean;
   hasCurrentUserSubmittedJuryScores: boolean;
   juryPanel: JuryPanelMember[];

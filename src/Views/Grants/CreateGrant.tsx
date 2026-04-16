@@ -1,26 +1,9 @@
 /* eslint-disable jsx-a11y/label-has-associated-control, react/no-array-index-key */
-import { useEffect, useState, useMemo, useRef } from 'react';
-import {
-  Plus,
-  Trash2,
-  Save,
-  Send,
-  Info,
-  ChevronDown,
-  Calendar,
-  Trophy,
-  CheckCircle2,
-  Settings2,
-  Loader2,
-  Link2,
-} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
+import { HeaderActions, useHeader } from '../../Shared/Context/HeaderContext';
 import RequirementsModal from './Components/RequirementsModal';
-import {
-  GrantQuestion,
-  GrantAdditionalRequirement,
-} from '../../Services/Api/module/Admin/Grant';
 import {
   useCreateOrganiserGrantMutation,
   useGetOrganiserGrantByIdQuery,
@@ -30,19 +13,37 @@ import { useGetOrganiserGalasQuery } from '../../Services/Api/module/Organiser/G
 import { useGetOrganiserJuriesQuery } from '../../Services/Api/module/Organiser/Jury';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import showToast from '../../Shared/Utils/toast';
+import GrantApplicationSettingsSection from './CreateGrant/components/GrantApplicationSettingsSection';
+import GrantBasicInfoSection from './CreateGrant/components/GrantBasicInfoSection';
+import GrantCriteriaSection from './CreateGrant/components/GrantCriteriaSection';
+import GrantEligibilitySection from './CreateGrant/components/GrantEligibilitySection';
+import GrantFooterActions from './CreateGrant/components/GrantFooterActions';
+import GrantHeaderActions from './CreateGrant/components/GrantHeaderActions';
+import GrantJuryPanelSection from './CreateGrant/components/GrantJuryPanelSection';
+import GrantPrizeSection from './CreateGrant/components/GrantPrizeSection';
+import GrantQuestionsSection from './CreateGrant/components/GrantQuestionsSection';
+import {
+  buildGrantPayload,
+  clearGrantSessionState,
+  loadGalaBuilderState,
+  loadGrantSessionState,
+  mapGalaDraftToFormState,
+  mapGrantDetailToFormState,
+  saveGrantSessionState,
+  saveLinkedGrantToGalaDraft,
+} from './CreateGrant/mappers';
+import type { GrantFormState, RequiredFieldsState } from './CreateGrant/types';
+import {
+  clampPrizeCount,
+  createInitialGrantFormState,
+  createQuestion,
+  getMissingRequiredFields,
+  getNextQuestionId,
+  normalizePrizeWinners,
+  suggestPrizeDistribution,
+  syncPrizeWinnerAmounts,
+} from './CreateGrant/utils';
 import './CreateGrant.scss';
-
-interface Question extends GrantQuestion {
-  id: number;
-}
-
-interface PrizeWinnerInput {
-  rank: number;
-  amount: string;
-}
-
-const CREATE_GALA_FORM_SESSION_KEY = 'create_gala_form_state';
-const CREATE_GRANT_FORM_SESSION_KEY = 'create_grant_form_state';
 
 function CreateGrant() {
   const { id } = useParams<{ id: string }>();
@@ -56,7 +57,6 @@ function CreateGrant() {
   const { role } = useCurrentUserRole();
   const isOrganiser = role === 'organiser';
 
-  // API Hooks
   const { data: galasResponse } = useGetOrganiserGalasQuery(
     { status: 1, pageSize: 100 },
     { skip: !isOrganiser }
@@ -74,353 +74,84 @@ function CreateGrant() {
     () => galasResponse?.data?.items || [],
     [galasResponse]
   );
-
-  // Form State
-  const [name, setName] = useState('');
-  const [galaEventId, setGalaEventId] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Technology');
-  const [prizeAmount, setPrizeAmount] = useState<string>('');
-  const [numberOfPrizes, setNumberOfPrizes] = useState<string>('');
-  const [applicationDeadline, setApplicationDeadline] = useState('');
-  const [status, setStatus] = useState(1); // Default to Draft
-  const [prizeWinners, setPrizeWinners] = useState<PrizeWinnerInput[]>([]);
-
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [isReqModalOpen, setIsReqModalOpen] = useState(false);
-  const [requirements, setRequirements] = useState<
-    GrantAdditionalRequirement[]
-  >([]);
-
-  const [requireInterview, setRequireInterview] = useState(false);
-  const [requiredFields, setRequiredFields] = useState({
-    companyName: true,
-    industrySelection: true,
-    motivationStatement: true,
-    businessPlan: false,
-  });
-
-  const normalizePrizeWinners = (
-    count: number,
-    baseAmount: string
-  ): PrizeWinnerInput[] => {
-    const next = prizeWinners.slice(0, Math.max(0, count));
-    const defaultAmount = baseAmount || '0';
-    while (next.length < count) {
-      next.push({ rank: next.length + 1, amount: defaultAmount });
-    }
-    return next.map((item, index) => ({
-      ...item,
-      rank: index + 1,
-    }));
-  };
-
-  const handlePrizeAmountChange = (value: string) => {
-    setPrizeAmount(value);
-    setPrizeWinners((prev) =>
-      prev.map((winner) => ({
-        ...winner,
-        amount: winner.amount === prizeAmount ? value : winner.amount,
-      }))
-    );
-  };
-
-  const handleNumberOfPrizesChange = (value: string) => {
-    setNumberOfPrizes(value);
-    const count = Number(value) || 0;
-    setPrizeWinners(normalizePrizeWinners(count, prizeAmount));
-  };
-
-  const handlePrizeWinnerAmountChange = (rank: number, amount: string) => {
-    setPrizeWinners((current) =>
-      current.map((winner) =>
-        winner.rank === rank ? { ...winner, amount } : winner
-      )
-    );
-  };
-
-  const [juryCriteria, setJuryCriteria] = useState<number[]>([1, 2, 5, 8]);
-  const [selectedJuryIds, setSelectedJuryIds] = useState<string[]>([]);
-  const [juryIdToAdd, setJuryIdToAdd] = useState('');
-
   const organiserJuries = useMemo(
     () => organiserJuriesResponse?.data ?? [],
     [organiserJuriesResponse?.data]
   );
+  const isSaving = isCreating || isUpdating;
 
-  // Track if we've already restored data to prevent overwriting
+  const [formState, setFormState] = useState<GrantFormState>(
+    createInitialGrantFormState
+  );
+  const [isReqModalOpen, setIsReqModalOpen] = useState(false);
+  const [juryIdToAdd, setJuryIdToAdd] = useState('');
   const hasRestored = useRef(false);
 
-  // Save form state immediately before leaving the page
+  const updateFormState = (
+    updater: (currentState: typeof formState) => typeof formState
+  ) => {
+    setFormState((currentState) => updater(currentState));
+  };
+
+  const setField = <K extends keyof typeof formState>(
+    field: K,
+    value: (typeof formState)[K]
+  ) => {
+    setFormState((currentState) => ({
+      ...currentState,
+      [field]: value,
+    }));
+  };
+
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (!isEditMode && !isGalaBuilderMode) {
-        const formState = {
-          name,
-          galaEventId,
-          description,
-          category,
-          prizeAmount,
-          numberOfPrizes,
-          applicationDeadline,
-          status,
-          questions,
-          requirements,
-          requireInterview,
-          requiredFields,
-          juryCriteria,
-          selectedJuryIds,
-          prizeWinners,
-        };
-        sessionStorage.setItem(
-          CREATE_GRANT_FORM_SESSION_KEY,
-          JSON.stringify(formState)
-        );
+      if (!isEditMode) {
+        saveGrantSessionState(formState);
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [
-    name,
-    galaEventId,
-    description,
-    category,
-    prizeAmount,
-    numberOfPrizes,
-    applicationDeadline,
-    status,
-    questions,
-    requirements,
-    requireInterview,
-    requiredFields,
-    juryCriteria,
-    selectedJuryIds,
-    prizeWinners,
-    isEditMode,
-    isGalaBuilderMode,
-  ]);
+  }, [formState, isEditMode]);
 
-  // Save form state to sessionStorage (only after initial restore is complete)
   useEffect(() => {
-    // Only save after we've restored data (or if there's no data to restore)
-    // This prevents overwriting saved data with empty initial state
-    if (!isEditMode && !isGalaBuilderMode && hasRestored.current) {
-      const formState = {
-        name,
-        galaEventId,
-        description,
-        category,
-        prizeAmount,
-        numberOfPrizes,
-        applicationDeadline,
-        status,
-        questions,
-        requirements,
-        requireInterview,
-        requiredFields,
-        juryCriteria,
-        selectedJuryIds,
-        prizeWinners,
-      };
-      sessionStorage.setItem(
-        CREATE_GRANT_FORM_SESSION_KEY,
-        JSON.stringify(formState)
-      );
+    if (!isEditMode && hasRestored.current) {
+      saveGrantSessionState(formState);
     }
-  }, [
-    name,
-    galaEventId,
-    description,
-    category,
-    prizeAmount,
-    numberOfPrizes,
-    applicationDeadline,
-    status,
-    questions,
-    requirements,
-    requireInterview,
-    requiredFields,
-    juryCriteria,
-    selectedJuryIds,
-    prizeWinners,
-    isEditMode,
-    isGalaBuilderMode,
-  ]);
+  }, [formState, isEditMode]);
 
-  // Restore form state from sessionStorage
   useEffect(() => {
-    if (!isEditMode && !isGalaBuilderMode && !hasRestored.current) {
-      const savedState = sessionStorage.getItem(CREATE_GRANT_FORM_SESSION_KEY);
-      if (savedState) {
-        try {
-          const state = JSON.parse(savedState);
-          // Only restore if we have actual saved data (not just empty defaults)
-          if (state.name || state.description || state.prizeAmount) {
-            setName(state.name || '');
-            setGalaEventId(state.galaEventId || '');
-            setDescription(state.description || '');
-            setCategory(state.category || 'Technology');
-            setPrizeAmount(state.prizeAmount || '');
-            setNumberOfPrizes(state.numberOfPrizes || '');
-            setApplicationDeadline(state.applicationDeadline || '');
-            setStatus(state.status || 1);
-            setQuestions(state.questions || []);
-            setRequirements(state.requirements || []);
-            setRequireInterview(state.requireInterview || false);
-            setRequiredFields(
-              state.requiredFields || {
-                companyName: true,
-                industrySelection: true,
-                motivationStatement: true,
-                businessPlan: false,
-              }
-            );
-            setJuryCriteria(state.juryCriteria || [1, 2, 5, 8]);
-            setSelectedJuryIds(state.selectedJuryIds || []);
-            setPrizeWinners(state.prizeWinners || []);
-          }
-        } catch {
-          // Silently handle restore error
-        }
+    if (!isEditMode && !hasRestored.current) {
+      const restoredState = loadGrantSessionState();
+
+      if (restoredState) {
+        setFormState(restoredState);
       }
-      // Mark as restored even if there was no data (fresh page load)
+
       hasRestored.current = true;
     }
-  }, [isEditMode, isGalaBuilderMode]);
+  }, [isEditMode]);
 
-  // Sync Data on Edit Mode
   useEffect(() => {
     if (isGalaBuilderMode) {
-      const savedState = sessionStorage.getItem(CREATE_GALA_FORM_SESSION_KEY);
+      const localState = loadGrantSessionState();
+      if (localState) return;
 
-      if (!savedState) return;
+      const savedGalaState = loadGalaBuilderState();
+      const existingGrant =
+        draftIndex === null
+          ? undefined
+          : savedGalaState?.grants?.[Number(draftIndex)];
 
-      try {
-        const state = JSON.parse(savedState) as {
-          grants?: Array<{
-            name: string;
-            description: string;
-            category: string;
-            prizeAmount: number;
-            numberOfPrizes: number;
-            applicationDeadline: string;
-            status: number;
-            questions: GrantQuestion[];
-            additionalRequirements: GrantAdditionalRequirement[];
-            requireInterview: boolean;
-            requireCompanyName: boolean;
-            requireIndustrySelection: boolean;
-            requireMotivationStatement: boolean;
-            requireBusinessPlanDocument: boolean;
-            juryCriteria: number[];
-            prizeWinners?: Array<{ rank: number; amount: number }>;
-            juryIds?: string[];
-          }>;
-        };
-
-        const existingGrant =
-          draftIndex === null ? undefined : state.grants?.[Number(draftIndex)];
-
-        if (!existingGrant) return;
-
-        setName(existingGrant.name);
-        setDescription(existingGrant.description);
-        setCategory(existingGrant.category);
-        setPrizeAmount(existingGrant.prizeAmount.toString());
-        setNumberOfPrizes(existingGrant.numberOfPrizes.toString());
-        setApplicationDeadline(
-          new Date(existingGrant.applicationDeadline)
-            .toISOString()
-            .split('T')[0]
-        );
-        setStatus(existingGrant.status);
-        setQuestions(
-          existingGrant.questions.map((question, index) => ({
-            ...question,
-            id: index + 1,
-          }))
-        );
-        setRequirements(existingGrant.additionalRequirements || []);
-        setRequireInterview(existingGrant.requireInterview);
-        setRequiredFields({
-          companyName: existingGrant.requireCompanyName,
-          industrySelection: existingGrant.requireIndustrySelection,
-          motivationStatement: existingGrant.requireMotivationStatement,
-          businessPlan: existingGrant.requireBusinessPlanDocument,
-        });
-        setSelectedJuryIds(existingGrant.juryIds || []);
-        setPrizeWinners(
-          existingGrant.prizeWinners?.map((winner) => ({
-            rank: winner.rank,
-            amount: winner.amount.toString(),
-          })) ||
-            Array.from(
-              { length: existingGrant.numberOfPrizes || 0 },
-              (_, index) => ({
-                rank: index + 1,
-                amount: existingGrant.prizeAmount.toString(),
-              })
-            )
-        );
-      } catch (error: unknown) {
-        // Silently handle draft restore error
+      if (existingGrant) {
+        setFormState(mapGalaDraftToFormState(existingGrant));
       }
 
       return;
     }
 
     if (isEditMode && grantResponse?.data) {
-      const grant = grantResponse.data;
-      setName(grant.name);
-      setGalaEventId(grant.galaEventId);
-      setDescription(grant.description);
-      setCategory(grant.category);
-      setPrizeAmount(grant.prizeAmount.toString());
-      setNumberOfPrizes(grant.numberOfPrizes.toString());
-      setApplicationDeadline(
-        new Date(grant.applicationDeadline).toISOString().split('T')[0]
-      );
-      setStatus(grant.status);
-      setQuestions(
-        grant.questions.map((q, idx) => ({
-          ...q,
-          id: idx + 1,
-          questionType: q.questionType as
-            | 'LongText'
-            | 'Number'
-            | 'File'
-            | 'ShortText',
-        })) || []
-      );
-      setRequirements(
-        (grant.requirements || []).map(
-          (r: { text: string; order: number }) => ({
-            text: r.text,
-            order: r.order,
-          })
-        )
-      );
-      setRequireInterview(grant.requireInterview);
-      setRequiredFields({
-        companyName: grant.requireCompanyName,
-        industrySelection: grant.requireIndustrySelection,
-        motivationStatement: grant.requireMotivationStatement,
-        businessPlan: grant.requireBusinessPlanDocument,
-      });
-      setSelectedJuryIds(grant.juries?.map((j: { id: string }) => j.id) || []);
-      setPrizeWinners(
-        grant.prizeWinners?.map(
-          (winner: { rank: number; amount: number | string }) => ({
-            rank: winner.rank,
-            amount: winner.amount.toString(),
-          })
-        ) ||
-          Array.from({ length: grant.numberOfPrizes || 0 }, (_, index) => ({
-            rank: index + 1,
-            amount: grant.prizeAmount.toString(),
-          }))
-      );
+      setFormState(mapGrantDetailToFormState(grantResponse.data));
     }
   }, [draftIndex, grantResponse, isEditMode, isGalaBuilderMode]);
 
@@ -428,37 +159,105 @@ function CreateGrant() {
     setTitle(isEditMode ? 'Edit Grant' : 'Create Grant');
     setSubtitle(
       isEditMode
-        ? `Editing ${name || 'Grant'}`
+        ? `Editing ${formState.name || 'Grant'}`
         : 'Set up Grant details and eligibility criteria'
     );
     setBackAction(true, () =>
       navigate(isGalaBuilderMode ? returnTo : '/grants')
     );
+
     return () => resetHeader();
   }, [
-    isGalaBuilderMode,
-    setTitle,
-    setSubtitle,
-    setBackAction,
-    resetHeader,
-    navigate,
+    formState.name,
     isEditMode,
-    name,
+    isGalaBuilderMode,
+    navigate,
+    resetHeader,
     returnTo,
+    setBackAction,
+    setSubtitle,
+    setTitle,
   ]);
 
-  const handleSave = async (isPublishingParam: boolean = false) => {
-    const isPublishing = isPublishingParam;
+  const availableJuries = useMemo(
+    () =>
+      organiserJuries.filter(
+        (jury) => !formState.selectedJuryIds.includes(jury.id)
+      ),
+    [organiserJuries, formState.selectedJuryIds]
+  );
 
-    // Enhanced manual validation with specific feedback
-    const missingFields = [];
-    if (!name) missingFields.push('Grant Name');
-    if (!isGalaBuilderMode && !galaEventId)
-      missingFields.push('Associated Gala');
-    if (!description) missingFields.push('Description');
-    if (!prizeAmount) missingFields.push('Prize Amount');
-    if (!numberOfPrizes) missingFields.push('Number of Prizes');
-    if (!applicationDeadline) missingFields.push('Application Deadline');
+  const selectedJuries = useMemo(
+    () =>
+      organiserJuries.filter((jury) =>
+        formState.selectedJuryIds.includes(jury.id)
+      ),
+    [organiserJuries, formState.selectedJuryIds]
+  );
+
+  const handlePrizeAmountChange = (value: string) => {
+    updateFormState((currentState) => ({
+      ...currentState,
+      prizeAmount: value,
+      prizeWinners: syncPrizeWinnerAmounts(
+        currentState.prizeWinners,
+        currentState.prizeAmount,
+        value
+      ),
+    }));
+  };
+
+  const handleNumberOfPrizesChange = (value: string) => {
+    const { count, wasClamped } = clampPrizeCount(value);
+
+    if (wasClamped) {
+      showToast.info('Maximum 5 prizes allowed per grant.');
+    }
+
+    updateFormState((currentState) => ({
+      ...currentState,
+      numberOfPrizes: count.toString(),
+      prizeWinners: normalizePrizeWinners(
+        currentState.prizeWinners,
+        count,
+        currentState.prizeAmount
+      ),
+    }));
+  };
+
+  const handlePrizeWinnerAmountChange = (rank: number, amount: string) => {
+    updateFormState((currentState) => ({
+      ...currentState,
+      prizeWinners: currentState.prizeWinners.map((winner) =>
+        winner.rank === rank ? { ...winner, amount } : winner
+      ),
+    }));
+  };
+
+  const handleSuggestDistribution = () => {
+    const result = suggestPrizeDistribution(
+      formState.prizeAmount,
+      formState.numberOfPrizes,
+      formState.prizeWinners
+    );
+
+    if (result.error) {
+      showToast.error(result.error);
+      return;
+    }
+
+    updateFormState((currentState) => ({
+      ...currentState,
+      prizeWinners: result.prizeWinners || currentState.prizeWinners,
+    }));
+    showToast.success('Distribution suggested based on your total pool.');
+  };
+
+  const handleSave = async (isPublishing = false) => {
+    const missingFields = getMissingRequiredFields(
+      formState,
+      isGalaBuilderMode
+    );
 
     if (missingFields.length > 0) {
       showToast.error(
@@ -467,90 +266,34 @@ function CreateGrant() {
       return;
     }
 
-    const payload = {
-      id,
-      name,
-      description,
-      category,
-      prizeAmount: Number(prizeAmount),
-      numberOfPrizes: Number(numberOfPrizes),
-      applicationDeadline: new Date(applicationDeadline).toISOString(),
-      status: isPublishing ? 1 : status,
-      questions: questions.map((q, idx) => ({
-        questionText: q.questionText,
-        questionType: q.questionType,
-        order: q.order ?? idx,
-      })),
-      requireInterview,
-      requireCompanyName: requiredFields.companyName,
-      requireIndustrySelection: requiredFields.industrySelection,
-      requireMotivationStatement: requiredFields.motivationStatement,
-      requireBusinessPlanDocument: requiredFields.businessPlan,
-      juryCriteria,
-      additionalRequirements: requirements.map((r, idx) => ({
-        ...r,
-        order: idx,
-      })),
-      galaEventId,
-      juryPanelSize: selectedJuryIds.length,
-      prizeWinners: prizeWinners.map((winner) => ({
-        rank: winner.rank,
-        amount: Number(winner.amount),
-      })),
-      juryIds: selectedJuryIds,
-    };
-
     if (isGalaBuilderMode) {
-      try {
-        const savedState = sessionStorage.getItem(CREATE_GALA_FORM_SESSION_KEY);
+      const result = saveLinkedGrantToGalaDraft(formState, draftIndex);
 
-        if (!savedState) {
-          showToast.error('No gala draft was found to link this grant.');
-          return;
-        }
-
-        const state = JSON.parse(savedState) as { grants?: unknown[] };
-        const nextGrants = [...(state.grants || [])];
-        const linkedGrant = {
-          ...payload,
-          galaEventId: '',
-        };
-
-        if (draftIndex === null) {
-          nextGrants.push(linkedGrant);
-        } else {
-          nextGrants[Number(draftIndex)] = linkedGrant;
-        }
-
-        sessionStorage.setItem(
-          CREATE_GALA_FORM_SESSION_KEY,
-          JSON.stringify({
-            ...state,
-            grants: nextGrants,
-          })
-        );
-        showToast.success('Grant linked to gala successfully.');
-        navigate(returnTo);
-        return;
-      } catch (error: unknown) {
-        showToast.error('Failed to link grant to the gala draft.');
+      if (result.error) {
+        showToast.error(result.error);
         return;
       }
+
+      showToast.success('Grant linked to gala successfully.');
+      navigate(returnTo);
+      return;
     }
 
+    const payload = buildGrantPayload(formState, { id, isPublishing });
+
     try {
-      if (isEditMode) {
+      if (isEditMode && id) {
         await updateGrant({
           ...payload,
-          id: id!,
+          id,
         }).unwrap();
         showToast.success('Grant updated successfully');
       } else {
         await createGrant(payload).unwrap();
         showToast.success('Grant created successfully');
-        // Clear sessionStorage after successful grant creation
-        sessionStorage.removeItem(CREATE_GRANT_FORM_SESSION_KEY);
+        clearGrantSessionState();
       }
+
       navigate('/grants');
     } catch (error: unknown) {
       const err = error as { data?: { message?: string }; message?: string };
@@ -560,51 +303,90 @@ function CreateGrant() {
     }
   };
 
-  const addQuestion = () => {
-    const newId =
-      questions.length > 0 ? Math.max(...questions.map((q) => q.id)) + 1 : 1;
-    setQuestions([
-      ...questions,
-      {
-        id: newId,
-        questionText: 'New Question',
-        questionType: 'ShortText',
-        order: questions.length,
+  const handleAddQuestion = () => {
+    updateFormState((currentState) => {
+      const nextId = getNextQuestionId(currentState.questions);
+      return {
+        ...currentState,
+        questions: [
+          ...currentState.questions,
+          createQuestion(nextId, currentState.questions.length),
+        ],
+      };
+    });
+  };
+
+  const handleRemoveQuestion = (questionId: number) => {
+    updateFormState((currentState) => ({
+      ...currentState,
+      questions: currentState.questions.filter(
+        (question) => question.id !== questionId
+      ),
+    }));
+  };
+
+  const handleQuestionTextChange = (questionId: number, value: string) => {
+    updateFormState((currentState) => ({
+      ...currentState,
+      questions: currentState.questions.map((question) =>
+        question.id === questionId
+          ? { ...question, questionText: value }
+          : question
+      ),
+    }));
+  };
+
+  const handleQuestionTypeChange = (
+    questionId: number,
+    value: 'LongText' | 'Number' | 'File' | 'ShortText'
+  ) => {
+    updateFormState((currentState) => ({
+      ...currentState,
+      questions: currentState.questions.map((question) =>
+        question.id === questionId
+          ? { ...question, questionType: value }
+          : question
+      ),
+    }));
+  };
+
+  const toggleField = (field: keyof RequiredFieldsState) => {
+    updateFormState((currentState) => ({
+      ...currentState,
+      requiredFields: {
+        ...currentState.requiredFields,
+        [field]: !currentState.requiredFields[field],
       },
-    ]);
+    }));
   };
-
-  const removeQuestion = (qId: number) => {
-    setQuestions(questions.filter((q) => q.id !== qId));
-  };
-
-  const toggleField = (field: keyof typeof requiredFields) => {
-    setRequiredFields((prev) => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  const availableJuries = useMemo(
-    () => organiserJuries.filter((jury) => !selectedJuryIds.includes(jury.id)),
-    [organiserJuries, selectedJuryIds]
-  );
-
-  const selectedJuries = useMemo(
-    () => organiserJuries.filter((jury) => selectedJuryIds.includes(jury.id)),
-    [organiserJuries, selectedJuryIds]
-  );
 
   const handleAddJury = () => {
     if (!juryIdToAdd) return;
 
-    setSelectedJuryIds((current) =>
-      current.includes(juryIdToAdd) ? current : [...current, juryIdToAdd]
-    );
+    updateFormState((currentState) => ({
+      ...currentState,
+      selectedJuryIds: currentState.selectedJuryIds.includes(juryIdToAdd)
+        ? currentState.selectedJuryIds
+        : [...currentState.selectedJuryIds, juryIdToAdd],
+    }));
     setJuryIdToAdd('');
   };
 
   const handleRemoveJury = (juryId: string) => {
-    setSelectedJuryIds((current) =>
-      current.filter((idValue) => idValue !== juryId)
-    );
+    updateFormState((currentState) => ({
+      ...currentState,
+      selectedJuryIds: currentState.selectedJuryIds.filter(
+        (currentJuryId) => currentJuryId !== juryId
+      ),
+    }));
+  };
+
+  const handleManageCriteria = () => {
+    if (!isEditMode && !isGalaBuilderMode) {
+      saveGrantSessionState(formState);
+    }
+
+    navigate('/grants/jury-criteria');
   };
 
   if (isFetchingGrant) {
@@ -619,633 +401,109 @@ function CreateGrant() {
   return (
     <div className="create-grant-page">
       <HeaderActions>
-        {isGalaBuilderMode ? (
-          <button
-            type="button"
-            className="header-btn btn-primary"
-            onClick={() => handleSave(false)}
-            disabled={isCreating || isUpdating}
-          >
-            <Link2 size={18} />
-            <span>Link to Gala</span>
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="header-btn btn-outline"
-              onClick={() => handleSave(false)}
-              disabled={isCreating || isUpdating}
-            >
-              <Save size={18} />
-              <span>{isEditMode ? 'Update' : 'Save Draft'}</span>
-            </button>
-            <button
-              type="button"
-              className="header-btn btn-primary"
-              onClick={() => handleSave(true)}
-              disabled={isCreating || isUpdating}
-            >
-              <Send size={18} />
-              <span>Publish</span>
-            </button>
-          </>
-        )}
+        <GrantHeaderActions
+          isGalaBuilderMode={isGalaBuilderMode}
+          isEditMode={isEditMode}
+          isSaving={isSaving}
+          onSaveDraft={() => handleSave(false)}
+          onPublish={() => handleSave(true)}
+        />
       </HeaderActions>
 
       <RequirementsModal
         isOpen={isReqModalOpen}
         onClose={() => setIsReqModalOpen(false)}
-        onSave={(newReqs) => {
-          setRequirements(
-            newReqs
-              .filter((r) => r.enabled)
-              .map((r) => ({ text: r.text, order: 0 }))
+        onSave={(newRequirements) => {
+          setField(
+            'requirements',
+            newRequirements
+              .filter((requirement) => requirement.enabled)
+              .map((requirement) => ({ text: requirement.text, order: 0 }))
           );
           setIsReqModalOpen(false);
         }}
-        initialRequirements={requirements.map((r, i) => ({
-          id: i.toString(),
-          text: r.text,
-          enabled: true,
-        }))}
+        initialRequirements={formState.requirements.map(
+          (requirement, index) => ({
+            id: index.toString(),
+            text: requirement.text,
+            enabled: true,
+          })
+        )}
       />
 
       <div className="grant-form-centered-wrapper">
         <div className="grant-form-container">
-          {/* Basic Information */}
-          <section className="form-card">
-            <div className="card-header">
-              <h3>Basic Information</h3>
-              <p>Grant name and description</p>
-            </div>
-            <div className="card-body">
-              <div className="form-group">
-                <label htmlFor="grant-name">
-                  Grant Name *
-                  <input
-                    id="grant-name"
-                    type="text"
-                    placeholder="e.g., Innovation Technology Grant"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </label>
-              </div>
+          <GrantBasicInfoSection
+            name={formState.name}
+            galaEventId={formState.galaEventId}
+            description={formState.description}
+            category={formState.category}
+            galas={galas}
+            onNameChange={(value) => setField('name', value)}
+            onGalaEventChange={(value) => setField('galaEventId', value)}
+            onDescriptionChange={(value) => setField('description', value)}
+            onCategoryChange={(value) => setField('category', value)}
+          />
 
-              <div className="form-group">
-                <label htmlFor="associated-gala">
-                  Associated Gala *
-                  <div className="select-with-info">
-                    <select
-                      id="associated-gala"
-                      value={galaEventId}
-                      onChange={(e) => setGalaEventId(e.target.value)}
-                    >
-                      <option value="">Select a Gala</option>
-                      {galas.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="select-arrow" size={18} />
-                    {galaEventId && (
-                      <span className="info-text">
-                        {galas.find((g) => g.id === galaEventId)?.city} •{' '}
-                        {new Date(
-                          galas.find((g) => g.id === galaEventId)?.eventDate ||
-                            ''
-                        ).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                </label>
-              </div>
+          <GrantQuestionsSection
+            questions={formState.questions}
+            onAddQuestion={handleAddQuestion}
+            onRemoveQuestion={handleRemoveQuestion}
+            onQuestionTextChange={handleQuestionTextChange}
+            onQuestionTypeChange={handleQuestionTypeChange}
+          />
 
-              <div className="form-group">
-                <label htmlFor="description">
-                  Description *
-                  <textarea
-                    id="description"
-                    placeholder="For businesses developing innovative technology solutions..."
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </label>
-              </div>
+          <GrantPrizeSection
+            prizeAmount={formState.prizeAmount}
+            numberOfPrizes={formState.numberOfPrizes}
+            applicationDeadline={formState.applicationDeadline}
+            prizeWinners={formState.prizeWinners}
+            onPrizeAmountChange={handlePrizeAmountChange}
+            onNumberOfPrizesChange={handleNumberOfPrizesChange}
+            onApplicationDeadlineChange={(value) =>
+              setField('applicationDeadline', value)
+            }
+            onPrizeWinnerAmountChange={handlePrizeWinnerAmountChange}
+            onSuggestDistribution={handleSuggestDistribution}
+          />
 
-              <div className="form-group">
-                <label htmlFor="category">
-                  Category/Industry *
-                  <div className="custom-select">
-                    <select
-                      id="category"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                    >
-                      <option value="Technology">Technology</option>
-                      <option value="Environment">Environment</option>
-                      <option value="Social Impact">Social Impact</option>
-                      <option value="Health">Health</option>
-                    </select>
-                    <ChevronDown className="select-arrow" size={18} />
-                  </div>
-                </label>
-              </div>
-            </div>
-          </section>
+          <GrantEligibilitySection
+            requirements={formState.requirements}
+            onManageRequirements={() => setIsReqModalOpen(true)}
+          />
 
-          {/* Application Questions */}
-          <section className="form-card">
-            <div className="card-header flex-header">
-              <div className="header-text">
-                <h3>Application Questions</h3>
-                <p>
-                  Custom questions shown to users when applying to this grant
-                </p>
-              </div>
-              <button
-                type="button"
-                className="btn-add-item btn-primary-lite"
-                onClick={addQuestion}
-              >
-                <Plus size={16} />
-                <span>Add Question</span>
-              </button>
-            </div>
-            <div className="card-body">
-              <div className="questions-list">
-                {questions.map((q) => (
-                  <div key={q.id} className="question-item">
-                    <div className="number-circle">{q.id}</div>
-                    <label
-                      htmlFor={`question-text-${q.id}`}
-                      className="sr-only"
-                    >
-                      Question Text
-                    </label>
-                    <input
-                      id={`question-text-${q.id}`}
-                      className="question-input"
-                      value={q.questionText}
-                      onChange={(e) => {
-                        const next = [...questions];
-                        const idx = next.findIndex((item) => item.id === q.id);
-                        next[idx].questionText = e.target.value;
-                        setQuestions(next);
-                      }}
-                    />
-                    <div className="question-actions">
-                      <label
-                        htmlFor={`question-type-${q.id}`}
-                        className="sr-only"
-                      >
-                        Question Type
-                      </label>
-                      <select
-                        id={`question-type-${q.id}`}
-                        className="type-select"
-                        value={q.questionType}
-                        onChange={(e) => {
-                          const next = [...questions];
-                          const idx = next.findIndex(
-                            (item) => item.id === q.id
-                          );
-                          next[idx].questionType = e.target.value as
-                            | 'LongText'
-                            | 'Number'
-                            | 'File'
-                            | 'ShortText';
-                          setQuestions(next);
-                        }}
-                      >
-                        <option value="ShortText">Short Text</option>
-                        <option value="LongText">Long Text</option>
-                        <option value="Number">Number</option>
-                        <option value="File">File Upload</option>
-                      </select>
-                      <button
-                        type="button"
-                        className="icon-btn delete"
-                        onClick={() => removeQuestion(q.id)}
-                        aria-label="Delete question"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Prize Details */}
-          <section className="form-card">
-            <div className="card-header">
-              <h3>Prize Details</h3>
-              <p>Award amount and deadlines</p>
-            </div>
-            <div className="card-body">
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="prize-amount">
-                    Prize Amount *
-                    <div className="input-with-icon">
-                      <span className="currency-symbol">$</span>
-                      <input
-                        id="prize-amount"
-                        type="number"
-                        placeholder="5,000"
-                        value={prizeAmount}
-                        onChange={(e) =>
-                          handlePrizeAmountChange(e.target.value)
-                        }
-                      />
-                    </div>
-                  </label>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="num-prizes">
-                    Number of Prizes *
-                    <div className="input-with-icon">
-                      <Trophy size={18} />
-                      <input
-                        id="num-prizes"
-                        type="number"
-                        min="1"
-                        placeholder="e.g., 3"
-                        value={numberOfPrizes}
-                        onChange={(e) =>
-                          handleNumberOfPrizesChange(e.target.value)
-                        }
-                      />
-                    </div>
-                  </label>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="deadline">
-                    Application Deadline *
-                    <div className="input-with-icon">
-                      <Calendar size={18} />
-                      <input
-                        id="deadline"
-                        type="date"
-                        value={applicationDeadline}
-                        onChange={(e) => setApplicationDeadline(e.target.value)}
-                      />
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div className="info-alert">
-                <Info size={18} />
-                <p>
-                  Example: 3 prizes means 3 winners will be selected from
-                  approved candidates
-                </p>
-              </div>
-
-              <div className="prize-winners-section">
-                <div className="section-heading">
-                  <h4>Prize Winners</h4>
-                  <p>Set amount for each winning rank</p>
-                </div>
-                <div className="prize-winners-grid">
-                  {prizeWinners.length > 0 ? (
-                    prizeWinners.map((winner) => (
-                      <div key={winner.rank} className="prize-winner-item">
-                        <label htmlFor={`prize-winner-${winner.rank}`}>
-                          Rank {winner.rank}
-                          <div className="input-with-icon">
-                            <span className="currency-symbol">$</span>
-                            <input
-                              id={`prize-winner-${winner.rank}`}
-                              type="number"
-                              min="0"
-                              value={winner.amount}
-                              onChange={(e) =>
-                                handlePrizeWinnerAmountChange(
-                                  winner.rank,
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="empty-prize-winners">
-                      Add a number of prizes to configure winner rankings.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Eligibility Criteria */}
-          <section className="form-card">
-            <div className="card-header flex-header">
-              <div className="header-text">
-                <h3>Eligibility Criteria</h3>
-                <p>Define requirements for applicants</p>
-              </div>
-            </div>
-            <div className="card-body">
-              <div className="criteria-sub-section">
-                <div className="sub-header">
-                  <div className="header-info">
-                    <h4>Additional Requirements</h4>
-                    <p>Managed separately — click to view and configure</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-manage"
-                    onClick={() => setIsReqModalOpen(true)}
-                  >
-                    <Settings2 size={16} />
-                    <span>Manage</span>
-                  </button>
-                </div>
-                <div className="requirements-summary">
-                  {requirements.map((req, idx) => (
-                    <div
-                      key={`req-${req.text}-${idx}`}
-                      className="req-summary-item"
-                    >
-                      <CheckCircle2 size={16} />
-                      <span>{req.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Application Settings */}
-          <section className="form-card">
-            <div className="card-header">
-              <h3>Application Settings</h3>
-              <p>Configure application process</p>
-            </div>
-            <div className="card-body">
-              <div className="setting-toggle-item">
-                <div className="setting-info">
-                  <h4>Require Interview</h4>
-                  <p>Applicants must schedule an interview</p>
-                </div>
-                <button
-                  type="button"
-                  className={`toggle-switch ${requireInterview ? 'active' : ''}`}
-                  onClick={() => setRequireInterview(!requireInterview)}
-                  role="switch"
-                  aria-checked={requireInterview}
-                  aria-label="Require Interview"
-                >
-                  <div className="switch-handle" />
-                </button>
-              </div>
-
-              <div className="required-fields-section">
-                <h4>Required Application Fields</h4>
-                <div className="checkbox-grid">
-                  <button
-                    type="button"
-                    className="checkbox-item"
-                    onClick={() => toggleField('companyName')}
-                    role="checkbox"
-                    aria-checked={requiredFields.companyName}
-                  >
-                    <div
-                      className={`checkbox ${requiredFields.companyName ? 'checked' : ''}`}
-                    >
-                      {requiredFields.companyName && (
-                        <Plus size={12} className="check-icon" />
-                      )}
-                    </div>
-                    <span>Company Name</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="checkbox-item"
-                    onClick={() => toggleField('industrySelection')}
-                    role="checkbox"
-                    aria-checked={requiredFields.industrySelection}
-                  >
-                    <div
-                      className={`checkbox ${requiredFields.industrySelection ? 'checked' : ''}`}
-                    >
-                      {requiredFields.industrySelection && (
-                        <Plus size={12} className="check-icon" />
-                      )}
-                    </div>
-                    <span>Industry Selection</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="checkbox-item"
-                    onClick={() => toggleField('motivationStatement')}
-                    role="checkbox"
-                    aria-checked={requiredFields.motivationStatement}
-                  >
-                    <div
-                      className={`checkbox ${requiredFields.motivationStatement ? 'checked' : ''}`}
-                    >
-                      {requiredFields.motivationStatement && (
-                        <Plus size={12} className="check-icon" />
-                      )}
-                    </div>
-                    <span>Motivation Statement</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="checkbox-item"
-                    onClick={() => toggleField('businessPlan')}
-                    role="checkbox"
-                    aria-checked={requiredFields.businessPlan}
-                  >
-                    <div
-                      className={`checkbox ${requiredFields.businessPlan ? 'checked' : ''}`}
-                    >
-                      {requiredFields.businessPlan && (
-                        <Plus size={12} className="check-icon" />
-                      )}
-                    </div>
-                    <span>Business Plan Document</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
+          <GrantApplicationSettingsSection
+            requireInterview={formState.requireInterview}
+            requiredFields={formState.requiredFields}
+            onToggleInterview={() =>
+              setField('requireInterview', !formState.requireInterview)
+            }
+            onToggleField={toggleField}
+          />
 
           {isOrganiser && (
-            <section className="form-card">
-              <div className="card-header">
-                <h3>Jury Panel</h3>
-                <p>Select organiser jury members who can review this grant</p>
-              </div>
-              <div className="card-body">
-                <div className="jury-panel-picker">
-                  <div className="jury-picker-row">
-                    <div className="custom-select">
-                      <label htmlFor="jury-select" className="sr-only">
-                        Select Jury Member
-                      </label>
-                      <select
-                        id="jury-select"
-                        value={juryIdToAdd}
-                        onChange={(e) => setJuryIdToAdd(e.target.value)}
-                        disabled={
-                          isLoadingJuries || availableJuries.length === 0
-                        }
-                      >
-                        <option value="">
-                          {isLoadingJuries
-                            ? 'Loading jury members...'
-                            : 'Select a jury member'}
-                        </option>
-                        {availableJuries.map((jury) => (
-                          <option key={jury.id} value={jury.id}>
-                            {jury.fullName} - {jury.domainOfExpertise}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="select-arrow" size={18} />
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-add-item btn-primary-lite"
-                      onClick={handleAddJury}
-                      disabled={!juryIdToAdd}
-                    >
-                      <Plus size={16} />
-                      <span>Add Jury</span>
-                    </button>
-                  </div>
-
-                  {selectedJuries.length > 0 ? (
-                    <div className="selected-jury-list">
-                      {selectedJuries.map((jury) => (
-                        <div key={jury.id} className="selected-jury-card">
-                          <div className="jury-copy">
-                            <strong>{jury.fullName}</strong>
-                            <span>
-                              {jury.domainOfExpertise} • {jury.email}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className="icon-btn delete"
-                            onClick={() => handleRemoveJury(jury.id)}
-                            aria-label={`Remove ${jury.fullName}`}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="jury-panel-empty">
-                      No jury members selected yet. Add one from the dropdown.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
+            <GrantJuryPanelSection
+              isLoadingJuries={isLoadingJuries}
+              availableJuries={availableJuries}
+              selectedJuries={selectedJuries}
+              juryIdToAdd={juryIdToAdd}
+              onJuryIdToAddChange={setJuryIdToAdd}
+              onAddJury={handleAddJury}
+              onRemoveJury={handleRemoveJury}
+            />
           )}
 
-          {/* Jury Criteria */}
-          <section className="form-card">
-            <div className="card-header flex-header">
-              <div className="header-text">
-                <h3>Jury Criteria</h3>
-                <p>
-                  Define evaluation criteria that jury members will use to score
-                  applicants
-                </p>
-              </div>
-              <button
-                type="button"
-                className="btn-manage"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Explicitly save form state before navigating
-                  if (!isEditMode && !isGalaBuilderMode) {
-                    const formState = {
-                      name,
-                      galaEventId,
-                      description,
-                      category,
-                      prizeAmount,
-                      numberOfPrizes,
-                      applicationDeadline,
-                      status,
-                      questions,
-                      requirements,
-                      requireInterview,
-                      requiredFields,
-                      juryCriteria,
-                      selectedJuryIds,
-                      prizeWinners,
-                    };
-                    sessionStorage.setItem(
-                      CREATE_GRANT_FORM_SESSION_KEY,
-                      JSON.stringify(formState)
-                    );
-                  }
-                  navigate('/grants/jury-criteria');
-                }}
-              >
-                <Settings2 size={16} />
-                <span>Manage Criteria</span>
-              </button>
-            </div>
-            <div className="card-body">
-              <div className="criteria-summary-box">
-                <div className="summary-header">
-                  <div className="count-badge">{juryCriteria.length}</div>
-                  <div className="header-text">
-                    <h4>Criteria selected</h4>
-                    <p>Will appear on jury scoring form</p>
-                  </div>
-                </div>
-                <div className="criteria-chips-list">
-                  {juryCriteria.map((critId) => (
-                    <span key={critId} className="crit-chip">
-                      Criterion #{critId}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
+          <GrantCriteriaSection
+            juryCriteria={formState.juryCriteria}
+            onManageCriteria={handleManageCriteria}
+          />
 
-          <footer className="form-navigation">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => navigate('/grants')}
-            >
-              Discard Changes
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => handleSave(false)}
-              disabled={isCreating || isUpdating}
-            >
-              {isCreating || isUpdating ? (
-                <Loader2 className="animate-spin" size={18} />
-              ) : (
-                <Save size={18} />
-              )}
-              <span>{isEditMode ? 'Update Grant' : 'Save Grant'}</span>
-            </button>
-          </footer>
+          <GrantFooterActions
+            isSaving={isSaving}
+            isEditMode={isEditMode}
+            onDiscard={() => navigate('/grants')}
+            onSave={() => handleSave(false)}
+          />
         </div>
       </div>
     </div>

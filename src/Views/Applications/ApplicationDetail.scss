@@ -535,6 +535,19 @@
     border-radius: 12px;
     padding: 14px 16px;
     background-color: #fff;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+
+    &.juror-card--compact {
+      padding: 12px 16px;
+      .juror-header {
+        margin-bottom: 0;
+      }
+
+      &:hover {
+        border-color: #00ce86;
+        transform: translateY(-1px);
+      }
+    }
   }
 
   .juror-header {
@@ -676,14 +689,20 @@
 
   .saved-note {
     background-color: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    border-radius: 10px;
-    padding: 14px;
+    border: 1px solid #dcfce7;
+    border-radius: 12px;
+    padding: 16px;
     font-size: 14px;
-    color: #15803d;
-    line-height: 1.55;
+    color: #166534;
+    line-height: 1.6;
     font-weight: 500;
     margin-bottom: 12px;
+    box-shadow: inset 0 2px 4px rgba(22, 101, 52, 0.02);
+
+    .no-note {
+      color: #9ca3af;
+      font-style: italic;
+    }
   }
 
   .btn-save-notes {

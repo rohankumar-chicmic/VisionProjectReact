@@ -1,8 +1,11 @@
-/* eslint-disable react/jsx-props-no-spreading, react/no-array-index-key */
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Check, Edit2, Send } from 'lucide-react';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
+import { useGetAdminApplicationByIdQuery } from '../../Services/Api/module/Admin/Application';
+import { useGetOrganiserApplicationByIdQuery } from '../../Services/Api/module/Organiser/Application';
+import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
+import Skeleton from '../../Components/Shared/Skeleton';
 import './JuryPanel.scss';
 
 // Reusable individual rating card
@@ -13,7 +16,7 @@ interface JuryRatingCardProps {
   overallScore: number;
   highlightColor: string;
   criteria: { label: string; score: number }[];
-  personalNote: string;
+  privateNotes: string;
   status: 'submitted' | 'editing' | 'pending';
 }
 
@@ -24,7 +27,7 @@ function JuryRatingCard({
   overallScore,
   highlightColor,
   criteria,
-  personalNote,
+  privateNotes,
   status,
 }: Readonly<JuryRatingCardProps>) {
   return (
@@ -53,8 +56,8 @@ function JuryRatingCard({
       <div className="criteria-section">
         <span className="section-label">CRITERIA RATINGS</span>
         <div className="criteria-items">
-          {criteria.map((c, i) => (
-            <div key={i} className="criteria-row">
+          {criteria.map((c) => (
+            <div key={c.label} className="criteria-row">
               <div className="label-row">
                 <span className="criteria-title">{c.label}</span>
                 <span
@@ -81,9 +84,9 @@ function JuryRatingCard({
       </div>
 
       <div className="personal-note-section">
-        <span className="section-label">PERSONAL NOTE</span>
+        <span className="section-label">PRIVATE NOTES</span>
         <div className="note-content">
-          <p>{personalNote}</p>
+          <p>{privateNotes || 'No notes provided'}</p>
         </div>
       </div>
 
@@ -118,65 +121,102 @@ function JuryRatingCard({
   );
 }
 
+const HIGHLIGHT_COLORS = [
+  '#3b82f6',
+  '#8b5cf6',
+  '#eab308',
+  '#ef4444',
+  '#10b981',
+];
+
 function JuryPanel() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
   const { id } = useParams();
+  const { role } = useCurrentUserRole();
+  const isAdmin = role === 'admin' || role === 'sub_admin';
+
+  const { data: adminResponse, isLoading: isAdminLoading } =
+    useGetAdminApplicationByIdQuery(id ?? '', { skip: !isAdmin });
+  const { data: organiserResponse, isLoading: isOrganiserLoading } =
+    useGetOrganiserApplicationByIdQuery(id ?? '', { skip: isAdmin });
+
+  const isLoading = isAdminLoading || isOrganiserLoading;
+  const application = isAdmin ? adminResponse?.data : organiserResponse?.data;
 
   useEffect(() => {
-    setTitle('Jury Panel — Innovation Technology Grant');
-    setSubtitle(`John Doe • ${id || 'APP-45230'} • 3 jurors evaluating`);
-    setBackAction(true, () => navigate(`/applications/${id || 'APP-45230'}`));
+    if (application) {
+      setTitle(`Jury Panel — ${application.grantName}`);
+      setSubtitle(
+        `${application.applicantName} • ${application.applicationId} • ${application.juryPanel?.length ?? 0} jurors evaluating`
+      );
+    } else {
+      setTitle('Jury Panel');
+      setSubtitle('Loading application consensus...');
+    }
+    setBackAction(true, () => navigate(`/applications/${id}`));
     return () => resetHeader();
-  }, [setTitle, setSubtitle, setBackAction, resetHeader, navigate, id]);
+  }, [
+    setTitle,
+    setSubtitle,
+    setBackAction,
+    resetHeader,
+    navigate,
+    id,
+    application,
+  ]);
 
-  const judgesData = [
-    {
-      initials: 'ML',
-      name: 'Marie Lefebvre',
-      role: 'Jury Member 1',
-      overallScore: 8.2,
-      highlightColor: '#3b82f6', // blue
-      status: 'editing' as const,
-      criteria: [
-        { label: 'Business Viability', score: 8 },
-        { label: 'Innovation Level', score: 9 },
-        { label: 'Team Experience', score: 7 },
-      ],
-      personalNote:
-        "Very strong pitch, team needs more industry experience. The innovation angle is compelling and I'd recommend Excellence class if team credentials are verified.",
-    },
-    {
-      initials: 'PD',
-      name: 'Paul Dubois',
-      role: 'Jury Member 2',
-      overallScore: 7.5,
-      highlightColor: '#8b5cf6', // purple
-      status: 'pending' as const,
-      criteria: [
-        { label: 'Business Viability', score: 7 },
-        { label: 'Innovation Level', score: 8 },
-        { label: 'Team Experience', score: 7 },
-      ],
-      personalNote:
-        'Solid concept but market validation could be stronger. The team presents well but lacks references from the sector. Worth monitoring for next cycle.',
-    },
-    {
-      initials: 'SC',
-      name: 'Sophie Caron',
-      role: 'Jury Member 3',
-      overallScore: 7.8,
-      highlightColor: '#eab308', // yellow
-      status: 'submitted' as const,
-      criteria: [
-        { label: 'Business Viability', score: 8 },
-        { label: 'Innovation Level', score: 7 },
-        { label: 'Team Experience', score: 9 },
-      ],
-      personalNote:
-        'Excellent team synergy. Would strongly recommend for Excellence class. The business model is scalable and the innovation approach is truly unique in the sector.',
-    },
-  ];
+  if (isLoading) {
+    return (
+      <div className="jury-panel-page">
+        <Skeleton height={200} />
+        <div style={{ marginTop: '24px' }}>
+          <Skeleton height={400} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!application) {
+    return (
+      <div className="jury-panel-page">
+        <div className="not-found-state">
+          <h2>Evaluation Not Found</h2>
+          <p>
+            We couldn&apos;t retrieve the jury panel details for this
+            application.
+          </p>
+          <button type="button" onClick={() => navigate(-1)}>
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const judgesData = (application.juryPanel ?? []).map((juror, index) => ({
+    initials:
+      juror.juryMemberName
+        ?.split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase() || 'JM',
+    name: juror.juryMemberName,
+    role: `Jury Member ${index + 1}`,
+    overallScore: juror.averageScore ?? 0,
+    highlightColor: HIGHLIGHT_COLORS[index % HIGHLIGHT_COLORS.length],
+    status: (juror.evaluatedAt ? 'submitted' : 'pending') as
+      | 'submitted'
+      | 'pending'
+      | 'editing',
+    criteria: (juror.criteriaScores ?? []).map((c) => ({
+      label: c.criteriaName,
+      score: c.score,
+    })),
+    privateNotes: juror.comment || '',
+  }));
+
+  const summary = application.juryPanelSummary;
 
   return (
     <div className="jury-panel-page">
@@ -184,7 +224,7 @@ function JuryPanel() {
         <button
           type="button"
           className="header-btn btn-outline"
-          onClick={() => navigate(`/applications/${id || 'APP-45230'}`)}
+          onClick={() => navigate(`/applications/${id}`)}
         >
           <span>Cancel</span>
         </button>
@@ -198,7 +238,7 @@ function JuryPanel() {
         <div className="score-block">
           <span className="kpi-label">OVERALL SCORE</span>
           <div className="big-value green">
-            7.8 <span>/ 10</span>
+            {(summary?.overallAverageScore ?? 0).toFixed(1)} <span>/ 10</span>
           </div>
         </div>
 
@@ -207,8 +247,8 @@ function JuryPanel() {
         <div className="averages-block">
           <span className="kpi-label">JURY AVERAGES</span>
           <div className="jury-dots">
-            {judgesData.map((j, i) => (
-              <div key={i} className="dot-item">
+            {judgesData.map((j) => (
+              <div key={j.name} className="dot-item">
                 <div
                   className="dot"
                   style={{ backgroundColor: j.highlightColor }}
@@ -227,18 +267,12 @@ function JuryPanel() {
         <div className="averages-block">
           <span className="kpi-label">CRITERIA AVERAGES</span>
           <div className="criteria-stats">
-            <div className="stat">
-              <span className="lbl">Business Viability</span>
-              <span className="val">7.7</span>
-            </div>
-            <div className="stat">
-              <span className="lbl">Innovation Level</span>
-              <span className="val">8.0</span>
-            </div>
-            <div className="stat">
-              <span className="lbl">Team Experience</span>
-              <span className="val">7.7</span>
-            </div>
+            {(summary?.criteriaAverages ?? []).map((ca) => (
+              <div key={ca.criteriaKey} className="stat">
+                <span className="lbl">{ca.criteriaName}</span>
+                <span className="val">{ca.averageScore.toFixed(1)}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -246,14 +280,24 @@ function JuryPanel() {
           <div className="icon">🏆</div>
           <div className="text">
             <span>Suggested Class</span>
-            <strong>B - Lauréat</strong>
+            <strong>{summary?.suggestedClass || 'Not Calculated'}</strong>
           </div>
         </div>
       </div>
 
       <div className="jury-cards-grid">
-        {judgesData.map((judge, index) => (
-          <JuryRatingCard key={index} {...judge} />
+        {judgesData.map((judge) => (
+          <JuryRatingCard
+            key={judge.name}
+            initials={judge.initials}
+            name={judge.name}
+            role={judge.role}
+            overallScore={judge.overallScore}
+            highlightColor={judge.highlightColor}
+            status={judge.status}
+            criteria={judge.criteria}
+            privateNotes={judge.privateNotes}
+          />
         ))}
       </div>
     </div>

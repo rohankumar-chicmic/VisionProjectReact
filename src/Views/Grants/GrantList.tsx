@@ -9,6 +9,8 @@ import {
   Plus,
   CheckCircle2,
   AlertTriangle,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import Modal from '../../Components/Atom/Modal/Modal';
@@ -20,8 +22,12 @@ import {
   useDeleteAdminGrantMutation,
 } from '../../Services/Api/module/Admin/Grant';
 import { KpiSkeleton } from '../Dashboard/Components/DashboardSkeletons';
-import { GrantGridSkeleton } from './Components/GrantSkeletons';
+import {
+  GrantGridSkeleton,
+  GrantListSkeleton,
+} from './Components/GrantSkeletons';
 import showToast from '../../Shared/Utils/toast';
+import { formatDateTimeShort } from '../../Shared/Utils/dateUtils';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import './GrantList.scss';
 import {
@@ -44,6 +50,14 @@ function GrantList() {
     undefined
   );
   const [page] = useState(1);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(
+    (localStorage.getItem('grantListViewMode') as 'grid' | 'list') || 'grid'
+  );
+
+  const handleViewModeChange = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    localStorage.setItem('grantListViewMode', mode);
+  };
 
   const queryParams = useMemo(
     () => ({
@@ -193,74 +207,123 @@ function GrantList() {
     ];
   }, [summaryResponse]);
 
-  const renderCardActions = (grant: (typeof grants)[0]) => {
-    if (isAdmin) return null;
-    if (grant.status === 4 || grant.status === 5) {
-      return (
-        <>
-          <button type="button" className="action-btn reopen">
-            <span>Reopen</span>
-          </button>
-          <button
-            type="button"
-            className="action-btn delete"
-            onClick={() => setDeletingId(grant.id)}
-            disabled={isDeletingGrant}
-          >
-            <span>Delete</span>
-          </button>
-        </>
-      );
-    }
+  const renderGridView = () => (
+    <div className="grants-grid">
+      {grants.map((grant) => (
+        <div key={grant.id} className="grant-card">
+          <Link to={`/grants/${grant.id}`} className="card-clickable-area">
+            <div className="card-header">
+              <h3 className="grant-title">{grant.name}</h3>
+              <span className={`status-badge ${getStatusClass(grant.status)}`}>
+                {getStatusLabel(grant.status)}
+              </span>
+            </div>
+            <p className="grant-description">{grant.description}</p>
 
-    if (grant.status === 1) {
-      return (
-        <>
-          <button
-            type="button"
-            className="action-btn edit"
-            onClick={() => navigate(`/grants/edit/${grant.id}`)}
-          >
-            <span>Edit</span>
-          </button>
-          <button
-            type="button"
-            className="action-btn delete"
-            onClick={() => setDeletingId(grant.id)}
-            disabled={isDeletingGrant}
-          >
-            <span>Delete</span>
-          </button>
-          <button type="button" className="action-btn publish-main">
-            <span>Publish</span>
-          </button>
-        </>
-      );
-    }
+            <div className="grant-meta">
+              <div className="meta-item">
+                <span className="label">Award Amount</span>
+                <span className="value">
+                  ${grant.prizeAmount.toLocaleString()}
+                </span>
+              </div>
+              <div className="meta-item">
+                <span className="label">Deadline</span>
+                <span className="value">
+                  {formatDateTimeShort(grant.applicationDeadline)}
+                </span>
+              </div>
+              <div className="meta-item">
+                <span className="label">Applicants</span>
+                <span className="value">{grant.applicantCount} applied</span>
+              </div>
+            </div>
 
-    return (
-      <>
+            <div className="eligibility-section">
+              <span className="section-title">Eligibility Criteria</span>
+              <div className="criteria-chips">
+                {grant.eligibilityCriteria.map((chip) => (
+                  <span key={chip} className="chip">
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </Link>
+        </div>
+      ))}
+
+      {!isAdmin && (
         <button
           type="button"
-          className="action-btn edit"
-          onClick={() => navigate(`/grants/edit/${grant.id}`)}
+          className="grant-card add-new-placeholder"
+          onClick={() => navigate('/grants/create')}
+          aria-label="Add new grant"
         >
-          <span>Edit</span>
+          <div className="plus-icon-box">
+            <Plus size={32} />
+          </div>
+          <h3>Add New Grant</h3>
+          <p>Create a new Grant program</p>
         </button>
-        <button type="button" className="action-btn unpublish">
-          <span>Unpublish</span>
-        </button>
-        <button
-          type="button"
-          className="action-btn delete"
-          onClick={() => setDeletingId(grant.id)}
-          disabled={isDeletingGrant}
-        >
-          <span>Delete</span>
-        </button>
-      </>
-    );
-  };
+      )}
+    </div>
+  );
+
+  const renderListView = () => (
+    <div className="grants-list">
+      <div className="list-header">
+        <div className="col-name">Grant Name</div>
+        <div className="col-status">Status</div>
+        <div className="col-amount">Amount</div>
+        <div className="col-deadline">Deadline</div>
+        <div className="col-applicants">Applicants</div>
+      </div>
+      <div className="list-body">
+        {grants.map((grant) => (
+          <div
+            key={grant.id}
+            className="grant-list-item"
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/grants/${grant.id}`)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                navigate(`/grants/${grant.id}`);
+              }
+            }}
+          >
+            <div className="col-name">
+              <h3 className="grant-title">{grant.name}</h3>
+              <p className="grant-desc">{grant.description}</p>
+            </div>
+            <div className="col-status">
+              <span className={`status-badge ${getStatusClass(grant.status)}`}>
+                {getStatusLabel(grant.status)}
+              </span>
+            </div>
+            <div className="col-amount">
+              ${grant.prizeAmount.toLocaleString()}
+            </div>
+            <div className="col-deadline">
+              {formatDateTimeShort(grant.applicationDeadline)}
+            </div>
+            <div className="col-applicants">{grant.applicantCount} applied</div>
+          </div>
+        ))}
+        {!isAdmin && (
+          <button
+            type="button"
+            className="add-inline-btn"
+            onClick={() => navigate('/grants/create')}
+          >
+            <Plus size={18} />
+            <span>Create New Grant</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   const renderMainContent = () => {
     if (isError) {
@@ -279,83 +342,14 @@ function GrantList() {
     }
 
     if (isGridLoading) {
-      return <GrantGridSkeleton />;
+      return viewMode === 'grid' ? (
+        <GrantGridSkeleton />
+      ) : (
+        <GrantListSkeleton />
+      );
     }
 
-    return (
-      <div className="grants-grid">
-        {grants.map((grant) => (
-          <div key={grant.id} className="grant-card">
-            <Link
-              to={`/grants/${grant.id}`}
-              className="card-clickable-area"
-              style={{
-                cursor: 'pointer',
-                textDecoration: 'none',
-                display: 'block',
-                color: 'inherit',
-              }}
-            >
-              <div className="card-header">
-                <h3 className="grant-title">{grant.name}</h3>
-                <span
-                  className={`status-badge ${getStatusClass(grant.status)}`}
-                >
-                  {getStatusLabel(grant.status)}
-                </span>
-              </div>
-              <p className="grant-description">{grant.description}</p>
-
-              <div className="grant-meta">
-                <div className="meta-item">
-                  <span className="label">Award Amount</span>
-                  <span className="value">
-                    ${grant.prizeAmount.toLocaleString()}
-                  </span>
-                </div>
-                <div className="meta-item">
-                  <span className="label">Deadline</span>
-                  <span className="value">
-                    {new Date(grant.applicationDeadline).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="meta-item">
-                  <span className="label">Applicants</span>
-                  <span className="value">{grant.applicantCount} applied</span>
-                </div>
-              </div>
-
-              <div className="eligibility-section">
-                <span className="section-title">Eligibility Criteria</span>
-                <div className="criteria-chips">
-                  {grant.eligibilityCriteria.map((chip) => (
-                    <span key={chip} className="chip">
-                      {chip}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </Link>
-            <div className="card-actions">{renderCardActions(grant)}</div>
-          </div>
-        ))}
-
-        {!isAdmin && (
-          <button
-            type="button"
-            className="grant-card add-new-placeholder"
-            onClick={() => navigate('/grants/create')}
-            aria-label="Add new grant"
-          >
-            <div className="plus-icon-box">
-              <Plus size={32} />
-            </div>
-            <h3>Add New Grant</h3>
-            <p>Create a new Grant program</p>
-          </button>
-        )}
-      </div>
-    );
+    return viewMode === 'grid' ? renderGridView() : renderListView();
   };
 
   return (
@@ -423,6 +417,24 @@ function GrantList() {
             <ArrowUpDown size={16} />
             <span>Sort</span>
           </button>
+          <div className="view-toggle">
+            <button
+              type="button"
+              className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => handleViewModeChange('grid')}
+              title="Grid View"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            <button
+              type="button"
+              className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => handleViewModeChange('list')}
+              title="List View"
+            >
+              <List size={18} />
+            </button>
+          </div>
         </div>
       </div>
 

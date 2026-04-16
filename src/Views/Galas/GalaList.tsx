@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Search, ArrowUpDown, ChevronDown, Plus } from 'lucide-react';
+import {
+  LayoutGrid,
+  List,
+  Search,
+  ArrowUpDown,
+  ChevronDown,
+  Plus,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './GalaList.scss';
 import { HeaderActions, useHeader } from '../../Shared/Context/HeaderContext';
@@ -13,12 +20,19 @@ import {
   useGetOrganiserGalasQuery,
   usePublishOrganiserGalaMutation,
 } from '../../Services/Api/module/Organiser/Gala';
+import { useGetOrganiserProfileQuery } from '../../Services/Api/module/Organiser/Profile';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
-import { GalaGridSkeleton } from './Components/GalaSkeletons';
+import { GalaGridSkeleton, GalaListSkeleton } from './Components/GalaSkeletons';
 import DEFAULT_GALA_IMAGE from '../../assets/general-img-landscape.png';
+import GalaActionOverlay from './Components/GalaActionOverlay';
 import showToast from '../../Shared/Utils/toast';
-import { createGrantPlatformTransaction } from '../../Services/WalletConnect';
+import {
+  createGrantPlatformTransaction,
+  deleteGalaOnChain,
+} from '../../Services/WalletConnect';
 import EmptyState from '../../Components/Shared/EmptyState';
+import { getAssetUrl } from '../../Shared/Utils/url';
+import { formatDateTime } from '../../Shared/Utils/dateUtils';
 
 type GalaSortOption = 'latest' | 'oldest' | 'name-asc' | 'name-desc';
 
@@ -33,6 +47,17 @@ function GalaList() {
   const [status, setStatus] = useState<number | undefined>(undefined);
   const [sortOption, setSortOption] = useState<GalaSortOption>('latest');
   const [pageNumber] = useState(1);
+  const [loadingAction, setLoadingAction] = useState<{
+    type: 'publish' | 'delete';
+    id: string;
+  } | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    return (localStorage.getItem('galaViewMode') as 'grid' | 'list') || 'grid';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('galaViewMode', viewMode);
+  }, [viewMode]);
 
   const { role } = useCurrentUserRole();
   const isAdmin = role === 'admin' || role === 'sub_admin';
@@ -78,6 +103,12 @@ function GalaList() {
   const { data: organiserResponse, isLoading: isOrganiserLoading } =
     useGetOrganiserGalasQuery(queryParams, { skip: !isOrganiser });
 
+  const { data: profileRes } = useGetOrganiserProfileQuery(undefined, {
+    skip: !isOrganiser,
+  });
+
+  const isVerified = profileRes?.data?.verificationStatus === 'Verified';
+
   const response = isAdmin ? adminResponse : organiserResponse;
   const isLoading = isAdmin ? isAdminLoading : isOrganiserLoading;
 
@@ -120,18 +151,6 @@ function GalaList() {
   const totalCount = response?.data?.totalCount ?? 0;
   const isEmpty = !isLoading && galas.length === 0;
 
-  const formatDate = (dateString: string) => {
-    try {
-      return new Intl.DateTimeFormat('en-US', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).format(new Date(dateString));
-    } catch {
-      return dateString;
-    }
-  };
-
   const getStatusDisplay = (statusCode: number) => {
     switch (statusCode) {
       case 1:
@@ -148,8 +167,7 @@ function GalaList() {
   };
 
   const getGalaImage = (url?: string) => {
-    if (url?.startsWith('http')) return url;
-    return DEFAULT_GALA_IMAGE;
+    return getAssetUrl(url) || DEFAULT_GALA_IMAGE;
   };
 
   const handleAction = async (id: string, action: 'publish' | 'delete') => {
@@ -159,6 +177,7 @@ function GalaList() {
     };
 
     try {
+      setLoadingAction({ type: action, id });
       if (action === 'publish') {
         if (isAdmin) {
           await publishAdminGala(id).unwrap();
@@ -167,13 +186,15 @@ function GalaList() {
             'Please confirm the wallet transaction for your grants.'
           );
           const galaToPublish = galas.find((g) => g.id === id);
+          // Use totalGalaValue from API (authoritative), fallback to sum of grant prizeAmounts.
+          // prizeAmount IS the total pool per grant — do NOT multiply by numberOfPrizes.
           const totalPrizePoolValue =
-            galaToPublish?.grants?.reduce((acc, grant) => {
-              return (
-                acc + (grant.prizeAmount || 0) * (grant.numberOfPrizes || 0)
-              );
-            }, 0) ||
-            (galaToPublish?.totalGalaValue ?? 0);
+            (galaToPublish?.totalGalaValue ?? 0) ||
+            galaToPublish?.grants?.reduce(
+              (acc, grant) => acc + (grant.prizeAmount || 0),
+              0
+            ) ||
+            0;
 
           const { transactionHash, walletAddress } =
             await createGrantPlatformTransaction(totalPrizePoolValue);
@@ -195,6 +216,11 @@ function GalaList() {
         if (isAdmin) {
           await deleteAdminGala(id).unwrap();
         } else {
+          // Organiser: call contract first, then backend
+          showToast.info(
+            'Please confirm the wallet transaction to delete this gala.'
+          );
+          await deleteGalaOnChain(id);
           await deleteOrganiserGala(id).unwrap();
         }
       }
@@ -202,12 +228,38 @@ function GalaList() {
       showToast.success(successMessages[action]);
     } catch {
       showToast.error(`Unable to ${action} this gala right now.`);
+    } finally {
+      setLoadingAction(null);
     }
   };
 
+  const getOverlayInfo = () => {
+    if (!loadingAction) return { isOpen: false, title: '', message: '' };
+
+    if (loadingAction.type === 'publish') {
+      return {
+        isOpen: true,
+        title: 'Publishing Gala',
+        message: isAdmin
+          ? 'Please wait while we verify and publish your gala securely.'
+          : 'Verifying prize pool on the blockchain. Please confirm the transaction if your wallet prompts you.',
+      };
+    }
+
+    return {
+      isOpen: true,
+      title: 'Deleting Gala',
+      message: isAdmin
+        ? 'Please wait while we process the deletion request.'
+        : 'Removing gala data from the blockchain and platform. Please confirm the transaction in your wallet.',
+    };
+  };
+
+  const overlayInfo = getOverlayInfo();
+
   const renderContent = () => {
     if (isLoading) {
-      return <GalaGridSkeleton />;
+      return viewMode === 'grid' ? <GalaGridSkeleton /> : <GalaListSkeleton />;
     }
 
     if (isEmpty) {
@@ -232,6 +284,101 @@ function GalaList() {
             ) : undefined
           }
         />
+      );
+    }
+
+    if (viewMode === 'list') {
+      return (
+        <div
+          className={`galas-list-view ${isAdmin ? 'view-admin' : 'view-organiser'}`}
+        >
+          <div className="list-header">
+            <div className="col-image" />
+            <div className="col-details">Gala Info</div>
+            <div className="col-status">Status</div>
+            <div className="col-date">Event Date</div>
+            <div className="col-applicants">Applied</div>
+            {!isAdmin && <div className="col-actions">Actions</div>}
+          </div>
+          <div className="list-body">
+            {galas.map((gala) => {
+              const statusDisplay = getStatusDisplay(gala.status);
+              return (
+                <div
+                  key={gala.id}
+                  className="gala-list-item"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/galas/${gala.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      navigate(`/galas/${gala.id}`);
+                    }
+                  }}
+                >
+                  <div className="col-image">
+                    <img
+                      src={getGalaImage(gala.coverImageUrl)}
+                      alt={gala.name}
+                    />
+                  </div>
+                  <div className="col-details">
+                    <div className="gala-name">{gala.name}</div>
+                    {isAdmin && gala.createdByFullName ? (
+                      <div
+                        className="gala-about"
+                        style={{ color: '#475569', fontWeight: 500 }}
+                      >
+                        Created by: {gala.createdByFullName}
+                      </div>
+                    ) : (
+                      <div className="gala-about">{gala.about}</div>
+                    )}
+                  </div>
+                  <div className="col-status">
+                    <span className={`status-pill ${statusDisplay.class}`}>
+                      {statusDisplay.label}
+                    </span>
+                  </div>
+                  <div className="col-date">
+                    <div className="date">{formatDateTime(gala.eventDate)}</div>
+                  </div>
+                  <div className="col-applicants">
+                    <span className="count">{gala.appliedCount}</span>
+                    <span className="label">Applications</span>
+                  </div>
+                  {!isAdmin && (
+                    <div
+                      className="col-actions"
+                      role="presentation"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {gala.status === 1 && (
+                        <button
+                          type="button"
+                          className="action-btn-small publish"
+                          onClick={() => {
+                            if (!isVerified) {
+                              showToast.error('Your account is not verified');
+                              return;
+                            }
+                            handleAction(gala.id, 'publish');
+                          }}
+                          disabled={isPublishing}
+                          title={
+                            !isVerified ? 'Verify your account to publish' : ''
+                          }
+                        >
+                          Publish
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       );
     }
 
@@ -279,7 +426,7 @@ function GalaList() {
 
                   <div className="gala-meta">
                     <div className="meta-item">
-                      <span>{formatDate(gala.eventDate)}</span>
+                      <span>{formatDateTime(gala.eventDate)}</span>
                     </div>
                     <div className="meta-item">
                       <span>{gala.eventTime}</span>
@@ -287,6 +434,13 @@ function GalaList() {
                     <div className="meta-item">
                       <span>{gala.appliedCount} Applied</span>
                     </div>
+                    {isAdmin && gala.createdByFullName && (
+                      <div className="meta-item">
+                        <span style={{ fontWeight: 600, color: '#3b82f6' }}>
+                          By {gala.createdByFullName}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -301,12 +455,20 @@ function GalaList() {
                         >
                           <span>Edit</span>
                         </button>
-
                         <button
                           type="button"
                           className="action-btn publish"
-                          onClick={() => handleAction(gala.id, 'publish')}
+                          onClick={() => {
+                            if (!isVerified) {
+                              showToast.error('Your account is not verified');
+                              return;
+                            }
+                            handleAction(gala.id, 'publish');
+                          }}
                           disabled={isPublishing}
+                          title={
+                            !isVerified ? 'Verify your account to publish' : ''
+                          }
                         >
                           <span>
                             {isPublishing ? 'Publishing...' : 'Publish'}
@@ -340,13 +502,26 @@ function GalaList() {
           <button
             type="button"
             className="header-btn btn-primary"
-            onClick={() => navigate('/galas/create')}
+            onClick={() => {
+              if (!isVerified) {
+                showToast.error('Your account is not verified');
+                return;
+              }
+              navigate('/galas/create');
+            }}
+            title={!isVerified ? 'Verify your account to create galas' : ''}
           >
             <Plus size={18} />
             <span>Create New Gala</span>
           </button>
         </HeaderActions>
       )}
+
+      <GalaActionOverlay
+        isOpen={overlayInfo.isOpen}
+        title={overlayInfo.title}
+        message={overlayInfo.message}
+      />
 
       <div className="view-header">
         <div className="header-actions">
@@ -394,6 +569,25 @@ function GalaList() {
                 <option value="name-asc">Name A-Z</option>
                 <option value="name-desc">Name Z-A</option>
               </select>
+            </div>
+
+            <div className="view-toggle">
+              <button
+                type="button"
+                className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setViewMode('list')}
+                title="List View"
+              >
+                <List size={20} />
+              </button>
+              <button
+                type="button"
+                className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Grid View"
+              >
+                <LayoutGrid size={20} />
+              </button>
             </div>
           </div>
         </div>

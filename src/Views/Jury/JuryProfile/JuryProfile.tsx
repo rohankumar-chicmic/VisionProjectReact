@@ -2,252 +2,306 @@ import { useEffect, useState } from 'react';
 import {
   Mail,
   Phone,
-  Briefcase,
   Building2,
   Edit2,
-  ShieldCheck,
-  CheckCircle2,
-  ExternalLink,
+  User,
+  Tags,
+  Loader2,
+  Save,
+  X,
+  Calendar,
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useHeader } from '../../../Shared/Context/HeaderContext';
+import {
+  useGetJuryProfileQuery,
+  useUpdateJuryProfileMutation,
+} from '../../../Services/Api/module/JuryApi';
 import './JuryProfile.scss';
 
 function JuryProfile() {
   const { setTitle, setSubtitle, resetHeader } = useHeader();
+  const { data: profileResponse, isLoading: isProfileLoading } =
+    useGetJuryProfileQuery();
+  const jury = profileResponse;
+  const [updateProfile, { isLoading: isUpdating }] =
+    useUpdateJuryProfileMutation();
   const [isEditing, setIsEditing] = useState(false);
 
-  // Mock data for Jury Profile
-  const [profileData, setProfileData] = useState({
-    fullName: 'Marie Lefebvre',
-    email: 'm.lefebvre@expert-corp.com',
-    phone: '+33 6 12 34 56 78',
-    company: 'Innovation Dynamics',
-    position: 'Senior Technology Consultant',
-    expertise: 'Artificial Intelligence, SaaS, Deep Tech',
-    bio: 'Over 15 years of experience in evaluating early-stage technology startups. Specialized in AI and machine learning applications across various industrial sectors.',
-    linkedin: 'https://linkedin.com/in/marielefebvre',
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phone: '',
+    company: '',
+    expertise: '',
   });
 
   useEffect(() => {
-    setTitle('My Jury Profile');
-    setSubtitle('Manage your expert information and visibility');
+    setTitle('Jury Profile');
+    setSubtitle('Manage your professional identity and expertise');
     return () => resetHeader();
   }, [setTitle, setSubtitle, resetHeader]);
 
-  const handleSave = () => {
+  useEffect(() => {
+    // We don't populate formData anymore to allow values to show as placeholders
+    // Only used to trigger re-renders if needed or handle initial state
+  }, [profileResponse]);
+
+  const handleSave = async () => {
+    try {
+      await updateProfile({
+        fullName: formData.fullName || jury?.fullName || '',
+        phoneNumber: formData.phone || jury?.phoneNumber || '',
+        companyName: formData.company || jury?.companyName || '',
+        domainOfExpertise: formData.expertise || jury?.domainOfExpertise || '',
+      }).unwrap();
+      toast.success('Profile updated successfully!');
+      setIsEditing(false);
+    } catch (error) {
+      toast.error('Failed to update profile. Please try again.');
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      fullName: '',
+      phone: '',
+      company: '',
+      expertise: '',
+    });
     setIsEditing(false);
-    // In a real app, this would call an API
+  };
+
+  if (isProfileLoading) {
+    return (
+      <div className="jury-profile-loading">
+        <Loader2 className="animate-spin" size={48} />
+        <p>Loading your profile...</p>
+      </div>
+    );
+  }
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   return (
     <div className="jury-profile-page">
       <div className="profile-layout">
-        <div className="profile-left-col">
-          <div className="profile-card hero-card">
-            <div className="avatar-section">
-              <div className="avatar-ring">
-                <div className="avatar-inner">ML</div>
+        <main className="profile-content-area">
+          <div className="glass-card content-card">
+            <div className="card-sections-header">
+              <div className="title-box">
+                <h3>Account information</h3>
+                <p>Maintain your professional records and contact details</p>
               </div>
-              <div className="hero-info">
-                <h2>{profileData.fullName}</h2>
-                <div className="role-tag">
-                  <ShieldCheck size={14} />
-                  <span>Expert Jury Member</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="expertise-tags">
-              {profileData.expertise.split(',').map((tag) => (
-                <span key={tag} className="tag">
-                  {tag.trim()}
-                </span>
-              ))}
-            </div>
-
-            <div className="profile-bio">
-              <p>{profileData.bio}</p>
-            </div>
-
-            <a
-              href={profileData.linkedin}
-              target="_blank"
-              rel="noreferrer"
-              className="linkedin-link"
-            >
-              <ExternalLink size={16} />
-              <span>View LinkedIn Profile</span>
-            </a>
-          </div>
-
-          <div className="profile-card stats-card">
-            <h3>Recognition & Activity</h3>
-            <div className="stats-grid">
-              <div className="stat-item">
-                <span className="val">24</span>
-                <span className="lbl">Reviews Completed</span>
-              </div>
-              <div className="stat-item">
-                <span className="val">4.8</span>
-                <span className="lbl">Avg. Response Time</span>
-              </div>
-              <div className="stat-item">
-                <span className="val">Gold</span>
-                <span className="lbl">Expert Level</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="profile-right-col">
-          <div className="profile-card information-card">
-            <div className="card-header">
-              <h3>Personal Information</h3>
-              <button
-                type="button"
-                className={`edit-btn ${isEditing ? 'active' : ''}`}
-                onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
-              >
+              <div className="action-box">
                 {isEditing ? (
-                  <>
-                    <CheckCircle2 size={16} /> Save Changes
-                  </>
+                  <div className="edit-actions">
+                    <button
+                      type="button"
+                      className="btn-cancel"
+                      onClick={handleCancel}
+                      disabled={isUpdating}
+                    >
+                      <X size={18} />
+                      <span>Cancel</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-save"
+                      onClick={handleSave}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="animate-spin" size={18} />
+                      ) : (
+                        <Save size={18} />
+                      )}
+                      <span>Save Changes</span>
+                    </button>
+                  </div>
                 ) : (
-                  <>
-                    <Edit2 size={16} /> Edit Profile
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="info-form">
-              <div className="form-group">
-                <label htmlFor="fullName">
-                  <Edit2 size={14} /> Full Name
-                  <input
-                    id="fullName"
-                    type="text"
-                    value={profileData.fullName}
-                    disabled={!isEditing}
-                    onChange={(e) =>
-                      setProfileData({
-                        ...profileData,
-                        fullName: e.target.value,
-                      })
-                    }
-                  />
-                </label>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="email">
-                    <Mail size={14} /> Email Address
-                    <input
-                      id="email"
-                      type="email"
-                      value={profileData.email}
-                      disabled={!isEditing}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          email: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="phone">
-                    <Phone size={14} /> Phone Number
-                    <input
-                      id="phone"
-                      type="text"
-                      value={profileData.phone}
-                      disabled={!isEditing}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          phone: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="company">
-                    <Building2 size={14} /> Company
-                    <input
-                      id="company"
-                      type="text"
-                      value={profileData.company}
-                      disabled={!isEditing}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          company: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="position">
-                    <Briefcase size={14} /> Position
-                    <input
-                      id="position"
-                      type="text"
-                      value={profileData.position}
-                      disabled={!isEditing}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          position: e.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="profile-card notifications-card">
-            <h3>Notification Preferences</h3>
-            <div className="pref-list">
-              <div className="pref-item">
-                <div className="info">
-                  <strong>New Assignment Emails</strong>
-                  <span>
-                    Get notified as soon as a new application is assigned.
-                  </span>
-                </div>
-                <div className="custom-toggle">
-                  <label htmlFor="email-notif" aria-label="Toggle notification">
-                    <input type="checkbox" id="email-notif" defaultChecked />
-                  </label>
-                </div>
-              </div>
-              <div className="pref-item">
-                <div className="info">
-                  <strong>Deadline Reminders</strong>
-                  <span>Receive reminders 48h before a review is due.</span>
-                </div>
-                <div className="custom-toggle">
-                  <label
-                    htmlFor="deadline-notif"
-                    aria-label="Toggle notification"
+                  <button
+                    type="button"
+                    className="btn-edit-profile"
+                    onClick={() => setIsEditing(true)}
                   >
-                    <input type="checkbox" id="deadline-notif" defaultChecked />
-                  </label>
+                    <Edit2 size={18} />
+                    <span>Edit profile</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="profile-header-strip">
+              <div className="avatar-box">
+                {getInitials(jury?.fullName || '')}
+              </div>
+              <div className="header-info">
+                <h2>{jury?.fullName || 'Your full legal name'}</h2>
+                <div className="meta-tags">
+                  <span className="user-type">Jury member</span>
+                  <span className="status-badge active">Active</span>
                 </div>
               </div>
             </div>
+
+            <form className="modern-form" onSubmit={(e) => e.preventDefault()}>
+              <div className="modern-form-grid">
+                <div className="field-wrapper">
+                  <label htmlFor="fullName">
+                    <span className="icon-bg">
+                      <User size={14} />
+                    </span>
+                    Full Name
+                    <div className="input-container">
+                      <input
+                        id="fullName"
+                        type="text"
+                        value={formData.fullName}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({ ...formData, fullName: e.target.value })
+                        }
+                        placeholder={jury?.fullName || 'Your full legal name'}
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                <div className="field-wrapper">
+                  <label htmlFor="email">
+                    <span className="icon-bg">
+                      <Mail size={14} />
+                    </span>
+                    Email Address
+                    <div className="input-container">
+                      <input
+                        id="email"
+                        type="email"
+                        value=""
+                        disabled
+                        placeholder={jury?.email || 'email@example.com'}
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                <div className="field-wrapper">
+                  <label htmlFor="phone">
+                    <span className="icon-bg">
+                      <Phone size={14} />
+                    </span>
+                    Phone Number
+                    <div className="input-container">
+                      <input
+                        id="phone"
+                        type="text"
+                        value={formData.phone}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        placeholder={jury?.phoneNumber || '+1 234 567 890'}
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                <div className="field-wrapper">
+                  <label htmlFor="company">
+                    <span className="icon-bg">
+                      <Building2 size={14} />
+                    </span>
+                    Organization
+                    <div className="input-container">
+                      <input
+                        id="company"
+                        type="text"
+                        value={formData.company}
+                        disabled={!isEditing}
+                        onChange={(e) =>
+                          setFormData({ ...formData, company: e.target.value })
+                        }
+                        placeholder={
+                          jury?.companyName || 'Current company or institution'
+                        }
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                <div className="field-wrapper">
+                  <label htmlFor="expertise">
+                    <span className="icon-bg">
+                      <Tags size={14} />
+                    </span>
+                    Specialisation
+                    <div className="input-container">
+                      {isEditing ? (
+                        <input
+                          id="expertise"
+                          type="text"
+                          value={formData.expertise}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              expertise: e.target.value,
+                            })
+                          }
+                          placeholder={
+                            jury?.domainOfExpertise || 'AI, Blockchain, Fintech'
+                          }
+                        />
+                      ) : (
+                        <div className="tag-display">
+                          {jury?.domainOfExpertise ? (
+                            jury.domainOfExpertise
+                              .split(',')
+                              .map((tag: string) => (
+                                <span key={tag.trim()} className="skill-tag">
+                                  {tag.trim()}
+                                </span>
+                              ))
+                          ) : (
+                            <span className="no-data">
+                              No specialisation set
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
+                <div className="field-wrapper">
+                  <label htmlFor="createdAt">
+                    <span className="icon-bg">
+                      <Calendar size={14} />
+                    </span>
+                    Member Since
+                    <div className="input-container">
+                      <input
+                        id="createdAt"
+                        type="text"
+                        value=""
+                        disabled
+                        placeholder={
+                          jury?.createdAt
+                            ? new Date(jury.createdAt).toLocaleDateString()
+                            : 'N/A'
+                        }
+                      />
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </form>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

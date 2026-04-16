@@ -17,12 +17,12 @@ import {
   Eye,
   Link2,
   Gift,
-  FileText,
 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Resolver, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import GalaActionOverlay from './Components/GalaActionOverlay';
 import { HeaderActions, useHeader } from '../../Shared/Context/HeaderContext';
 import {
   useCreateOrganiserGalaWithGrantsMutation,
@@ -30,21 +30,25 @@ import {
   usePublishOrganiserGalaMutation,
   useUpdateOrganiserGalaMutation,
 } from '../../Services/Api/module/Organiser/Gala';
+import { useGetOrganiserProfileQuery } from '../../Services/Api/module/Organiser/Profile';
 import { useUploadFileMutation } from '../../Services/Api/module/Common';
 import { createGrantPlatformTransaction } from '../../Services/WalletConnect';
 import EveningProgramModal from './Components/EveningProgramModal';
+import { getAssetUrl } from '../../Shared/Utils/url';
+import { formatDateTimeShort } from '../../Shared/Utils/dateUtils';
+import { toDateInputValue } from '../Grants/CreateGrant/utils';
 import showToast from '../../Shared/Utils/toast';
 import './CreateGala.scss';
 
 const questionSchema = z.object({
   questionText: z.string().min(1),
   questionType: z.string().min(1),
-  order: z.number().int().min(0),
+  order: z.number().int().min(0).optional(),
 });
 
 const requirementSchema = z.object({
   text: z.string().min(1),
-  order: z.number().int().min(0),
+  order: z.number().int().min(0).optional(),
 });
 
 const grantSchema = z.object({
@@ -57,11 +61,9 @@ const grantSchema = z.object({
   numberOfPrizes: z.coerce
     .number()
     .int()
-    .min(1, { message: 'At least one prize is required' }),
-  juryPanelSize: z.coerce
-    .number()
-    .int()
-    .min(1, { message: 'Jury panel size must be at least 1' }),
+    .min(1, { message: 'At least one prize is required' })
+    .max(5, { message: 'Maximum 5 prizes allowed' }),
+  juryPanelSize: z.coerce.number().int().min(1).optional(),
   applicationDeadline: z
     .string()
     .min(1, { message: 'Application deadline is required' }),
@@ -72,13 +74,12 @@ const grantSchema = z.object({
   requireMotivationStatement: z.boolean(),
   requireBusinessPlanDocument: z.boolean(),
   juryCriteria: z.array(z.number().int()),
-  questions: z.array(questionSchema),
-  additionalRequirements: z.array(requirementSchema),
+  questions: z.array(questionSchema).optional(),
+  additionalRequirements: z.array(requirementSchema).optional(),
   prizeWinners: z
     .array(z.object({ rank: z.number(), amount: z.number() }))
     .optional(),
   juryIds: z.array(z.string()).optional(),
-  id: z.string().optional(),
 });
 
 const galaSchema = z.object({
@@ -108,9 +109,14 @@ type GalaFormValues = z.infer<typeof galaSchema>;
 type SubmitIntent = 'draft' | 'publish';
 
 const CREATE_GALA_FORM_SESSION_KEY = 'create_gala_form_state';
+const CREATE_GRANT_FORM_SESSION_KEY = 'create_grant_form_state';
 
-const toIsoStartOfDay = (date: string) =>
-  date.includes('T') ? date : `${date}T00:00:00.000Z`;
+const toUtcIsoString = (localDateStr: string) => {
+  if (!localDateStr) return '';
+  const d = new Date(localDateStr);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toISOString();
+};
 
 function CreateGala() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
@@ -127,7 +133,10 @@ function CreateGala() {
     usePublishOrganiserGalaMutation();
   const { data: galaDetail, isLoading: isLoadingGala } =
     useGetOrganiserGalaByIdQuery(id!, { skip: !id });
+  const { data: profileRes } = useGetOrganiserProfileQuery();
   const [uploadFile, { isLoading: isUploading }] = useUploadFileMutation();
+
+  const isVerified = profileRes?.data?.verificationStatus === 'Verified';
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [tempImagePreview, setTempImagePreview] = useState<string | null>(null);
@@ -137,6 +146,21 @@ function CreateGala() {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isRestored, setIsRestored] = useState(false);
+  const [isLocalPublishing, setIsLocalPublishing] = useState(false);
+  const isAbortedRef = useRef(false);
+  const publishPromiseRef = useRef<{
+    abort: () => void;
+    unwrap: () => Promise<unknown>;
+  } | null>(null);
+
+  const handleCancelPublishing = () => {
+    isAbortedRef.current = true;
+    setIsLocalPublishing(false);
+    if (publishPromiseRef.current) {
+      publishPromiseRef.current.abort();
+    }
+    showToast.info('Publishing procedure cancelled.');
+  };
 
   const defaultValues: GalaFormValues = useMemo(
     () => ({
@@ -182,17 +206,13 @@ function CreateGala() {
   const grants = watch('grants');
   const coverImageUrl = watch('coverImageUrl');
   const formValues = watch();
-  const currentStatus = watch('status');
   const activeImagePreview = tempImagePreview || imagePreview;
   const isSubmitting = isCreating || isUpdatingGala || isPublishingGala;
 
   const totalPrizePool = useMemo(
     () =>
       grants.reduce(
-        (total, grant) =>
-          total +
-          (Number(grant.prizeAmount) || 0) *
-            (Number(grant.numberOfPrizes) || 0),
+        (total, grant) => total + (Number(grant.prizeAmount) || 0),
         0
       ),
     [grants]
@@ -220,7 +240,7 @@ function CreateGala() {
           reset({ ...defaultValues, ...parsedState });
           setImagePreview(parsedState.coverImageUrl || null);
         } catch (error: unknown) {
-          // Error is handled silenty as it's a non-critical draft restore
+          // Fail silently - user can start fresh if draft is corrupted
         }
       }
 
@@ -235,8 +255,16 @@ function CreateGala() {
         about: data.about,
         coverImageUrl: data.coverImageUrl,
         status: data.status,
-        eventDate: data.eventDate ? data.eventDate.split('T')[0] : '',
-        eventTime: data.eventTime,
+        eventDate: data.eventDate
+          ? new Date(data.eventDate).toLocaleDateString('en-CA')
+          : '',
+        eventTime: data.eventDate
+          ? new Date(data.eventDate).toLocaleTimeString('en-GB', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+            })
+          : data.eventTime,
         venue: data.venue,
         city: data.city || '',
         expectedAttendees: data.expectedAttendees,
@@ -255,7 +283,7 @@ function CreateGala() {
                 numberOfPrizes: grant.numberOfPrizes,
                 juryPanelSize: 3,
                 applicationDeadline: grant.applicationDeadline
-                  ? grant.applicationDeadline.split('T')[0]
+                  ? toDateInputValue(grant.applicationDeadline)
                   : '',
                 status: grant.status,
                 requireInterview: grant.requireInterview,
@@ -266,8 +294,8 @@ function CreateGala() {
                 juryCriteria: grant.juryCriteria.map(
                   (criteria) => criteria.type
                 ),
-                questions: grant.questions,
-                additionalRequirements: grant.additionalRequirements,
+                questions: grant.questions || [],
+                additionalRequirements: grant.additionalRequirements || [],
               }))
             : [],
       });
@@ -360,22 +388,12 @@ function CreateGala() {
     setIsProgramModalOpen(true);
   };
 
-  const formatGrantDeadline = (date: string) => {
-    try {
-      return new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: 'numeric',
-      }).format(new Date(date));
-    } catch {
-      return date;
-    }
-  };
-
   const handleLinkGrant = () => {
     sessionStorage.setItem(
       CREATE_GALA_FORM_SESSION_KEY,
       JSON.stringify(formValues)
     );
+    sessionStorage.removeItem(CREATE_GRANT_FORM_SESSION_KEY);
 
     navigate(
       `/grants/create?mode=gala-builder&returnTo=${encodeURIComponent(location.pathname)}`
@@ -387,6 +405,7 @@ function CreateGala() {
       CREATE_GALA_FORM_SESSION_KEY,
       JSON.stringify(formValues)
     );
+    sessionStorage.removeItem(CREATE_GRANT_FORM_SESSION_KEY);
 
     navigate(
       `/grants/create?mode=gala-builder&draftIndex=${index}&returnTo=${encodeURIComponent(location.pathname)}`
@@ -400,9 +419,15 @@ function CreateGala() {
   };
 
   const submitForm = async (data: GalaFormValues, intent: SubmitIntent) => {
+    isAbortedRef.current = false;
+
     if (!isEditMode && data.grants.length === 0 && intent === 'publish') {
       showToast.error('Add at least one grant before creating the gala.');
       return;
+    }
+
+    if (intent === 'publish') {
+      setIsLocalPublishing(true);
     }
 
     try {
@@ -415,7 +440,7 @@ function CreateGala() {
           about: data.about,
           coverImageUrl: data.coverImageUrl,
           status: data.status,
-          eventDate: toIsoStartOfDay(data.eventDate),
+          eventDate: toUtcIsoString(`${data.eventDate}T${data.eventTime}`),
           eventTime: data.eventTime,
           venue: data.venue,
           city: data.city,
@@ -436,7 +461,7 @@ function CreateGala() {
           about: data.about,
           coverImageUrl: data.coverImageUrl,
           status: data.status,
-          eventDate: toIsoStartOfDay(data.eventDate),
+          eventDate: toUtcIsoString(`${data.eventDate}T${data.eventTime}`),
           eventTime: data.eventTime,
           venue: data.venue,
           city: data.city,
@@ -452,46 +477,48 @@ function CreateGala() {
             category: grant.category,
             prizeAmount: Number(grant.prizeAmount),
             numberOfPrizes: Number(grant.numberOfPrizes),
-            juryPanelSize: Number(grant.juryPanelSize),
-            applicationDeadline: toIsoStartOfDay(grant.applicationDeadline),
+            juryPanelSize: Number(grant.juryPanelSize) || 3,
+            applicationDeadline: toUtcIsoString(grant.applicationDeadline),
             status: grant.status,
-            questions: grant.questions.map((question, questionIndex) => {
-              // Defensively map question types to backend-compliant strings
-              const mapType = (type: string) => {
-                const t = type.toLowerCase().replace(/\s+/g, '');
-                if (t === 'short' || t === 'shorttext' || t === 'text')
-                  return 'ShortText';
-                if (t === 'long' || t === 'longtext') return 'LongText';
-                if (t === 'number') return 'Number';
-                if (t === 'file' || t === 'fileupload') return 'File';
-                return 'ShortText'; // Default fallback
-              };
+            questions: (grant.questions || []).map(
+              (question, questionIndex) => {
+                // Defensively map question types to backend-compliant strings
+                const mapType = (type: string) => {
+                  const t = type.toLowerCase().replace(/\s+/g, '');
+                  if (t === 'short' || t === 'shorttext' || t === 'text')
+                    return 'ShortText';
+                  if (t === 'long' || t === 'longtext') return 'LongText';
+                  if (t === 'number') return 'Number';
+                  if (t === 'file' || t === 'fileupload') return 'File';
+                  return 'ShortText'; // Default fallback
+                };
 
-              return {
-                ...question,
-                questionType: mapType(question.questionType),
-                order: question.order ?? questionIndex,
-              };
-            }),
+                return {
+                  ...question,
+                  questionType: mapType(question.questionType),
+                  order: question.order ?? questionIndex,
+                };
+              }
+            ),
             requireInterview: grant.requireInterview,
             requireCompanyName: grant.requireCompanyName,
             requireIndustrySelection: grant.requireIndustrySelection,
             requireMotivationStatement: grant.requireMotivationStatement,
             requireBusinessPlanDocument: grant.requireBusinessPlanDocument,
             juryCriteria: grant.juryCriteria,
-            additionalRequirements: grant.additionalRequirements.map(
+            additionalRequirements: (grant.additionalRequirements || []).map(
               (requirement, requirementIndex) => ({
                 ...requirement,
                 order: requirement.order ?? requirementIndex,
               })
             ),
             prizeWinners:
-              grant.prizeWinners?.map(
-                (pw: { rank: number; amount: number }) => ({
+              grant.prizeWinners
+                ?.slice(0, 3)
+                .map((pw: { rank: number; amount: number }) => ({
                   rank: pw.rank,
                   amount: Number(pw.amount),
-                })
-              ) || [],
+                })) || [],
             juryIds: grant.juryIds || [],
           })),
           saveAsDraft: true,
@@ -510,35 +537,37 @@ function CreateGala() {
             'Unable to publish this gala because no gala ID was found.'
           );
         }
-
         showToast.info(
           'Please confirm the wallet transaction for your grants.'
         );
 
         const totalPoolAmount = data.grants.reduce((acc, grant) => {
-          return (
-            acc +
-            (Number(grant.prizeAmount) || 0) *
-              (Number(grant.numberOfPrizes) || 0)
-          );
+          return acc + (Number(grant.prizeAmount) || 0);
         }, 0);
 
         const { transactionHash, walletAddress } =
           await createGrantPlatformTransaction(totalPoolAmount);
 
-        await publishGala({
+        if (isAbortedRef.current) {
+          return;
+        }
+
+        publishPromiseRef.current = publishGala({
           id: galaIdToPublish,
           body: {
             blockchainTransactionHash: transactionHash,
             organiserWalletAddress: walletAddress,
           },
-        }).unwrap();
+        });
+        await publishPromiseRef.current.unwrap();
 
-        showToast.success(
-          isEditMode
-            ? 'Gala published successfully.'
-            : 'Gala created and published successfully.'
-        );
+        if (!isAbortedRef.current) {
+          showToast.success(
+            isEditMode
+              ? 'Gala published successfully.'
+              : 'Gala created and published successfully.'
+          );
+        }
       }
 
       sessionStorage.removeItem(CREATE_GALA_FORM_SESSION_KEY);
@@ -552,14 +581,28 @@ function CreateGala() {
         };
         errorMessage =
           rtkError.data.message || 'Validation failed. Please check the form.';
-      } else if (isEditMode) {
-        errorMessage = 'Failed to update gala. Please try again.';
+      } else if (error instanceof Error) {
+        if (
+          error.message.includes('User denied transaction') ||
+          error.message.includes('user rejected')
+        ) {
+          errorMessage = 'Wallet transaction cancelled by user.';
+        } else {
+          errorMessage = isEditMode
+            ? 'Failed to update gala. Please try again.'
+            : 'Failed to save gala. Please review the form and try again.';
+        }
       } else {
-        errorMessage =
-          'Failed to save gala. Please review the form and try again.';
+        errorMessage = isEditMode
+          ? 'Failed to update gala. Please try again.'
+          : 'Failed to save gala. Please review the form and try again.';
       }
 
       showToast.error(errorMessage);
+    } finally {
+      if (intent === 'publish') {
+        setIsLocalPublishing(false);
+      }
     }
   };
 
@@ -590,7 +633,7 @@ function CreateGala() {
     }
 
     if (isEditMode) {
-      return 'Update Gala';
+      return intent === 'draft' ? 'Save Changes' : 'Update & Publish';
     }
 
     return intent === 'draft' ? 'Save Draft' : 'Publish';
@@ -611,20 +654,26 @@ function CreateGala() {
           type="button"
           className="header-btn btn-outline"
           onClick={() => submitWithIntent('draft')}
-          disabled={isSubmitting || isLoadingGala}
+          disabled={isSubmitting || isLoadingGala || !isVerified}
+          title={!isVerified ? 'Verify your account to save drafts' : ''}
         >
           <Save size={18} />
           <span>{getSubmitButtonLabel('draft')}</span>
         </button>
-        <button
-          type="button"
-          className="header-btn btn-primary"
-          onClick={() => submitWithIntent('publish')}
-          disabled={isSubmitting || isLoadingGala}
-        >
-          <Send size={18} />
-          <span>{getSubmitButtonLabel('publish')}</span>
-        </button>
+        {(isEditMode || isVerified) && (
+          <button
+            type="button"
+            className="header-btn btn-primary"
+            onClick={() => submitWithIntent('publish')}
+            disabled={
+              isSubmitting || isLoadingGala || isLocalPublishing || !isVerified
+            }
+            title={!isVerified ? 'Verify your account to publish' : ''}
+          >
+            <Send size={18} />
+            <span>{getSubmitButtonLabel('publish')}</span>
+          </button>
+        )}
       </HeaderActions>
 
       <div className="gala-form-centered-wrapper">
@@ -708,7 +757,7 @@ function CreateGala() {
                         {activeImagePreview && (
                           <div className="image-preview-container">
                             <img
-                              src={activeImagePreview}
+                              src={getAssetUrl(activeImagePreview)}
                               alt="Gala cover preview"
                             />
                             <div className="image-overlay">
@@ -727,58 +776,6 @@ function CreateGala() {
                     {errors.coverImageUrl.message}
                   </span>
                 )}
-              </div>
-
-              <div className="form-group">
-                <span id="gala-status-label" className="label-fake">
-                  Event Status *
-                </span>
-                <div
-                  className="status-tabs"
-                  role="radiogroup"
-                  aria-labelledby="gala-status-label"
-                >
-                  <button
-                    type="button"
-                    className={`status-tab ${currentStatus === 1 ? 'active' : ''}`}
-                    onClick={() => setValue('status', 1)}
-                    role="radio"
-                    aria-checked={currentStatus === 1}
-                  >
-                    <FileText size={16} />
-                    <span>Draft</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`status-tab ${currentStatus === 2 ? 'active' : ''}`}
-                    onClick={() => setValue('status', 2)}
-                    role="radio"
-                    aria-checked={currentStatus === 2}
-                  >
-                    <Clock size={16} />
-                    <span>Upcoming</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`status-tab ${currentStatus === 3 ? 'active' : ''}`}
-                    onClick={() => setValue('status', 3)}
-                    role="radio"
-                    aria-checked={currentStatus === 3}
-                  >
-                    <RefreshCcw size={16} />
-                    <span>Active</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`status-tab ${currentStatus === 4 ? 'active' : ''}`}
-                    onClick={() => setValue('status', 4)}
-                    role="radio"
-                    aria-checked={currentStatus === 4}
-                  >
-                    <Trophy size={16} />
-                    <span>Completed</span>
-                  </button>
-                </div>
               </div>
             </div>
           </section>
@@ -1025,18 +1022,10 @@ function CreateGala() {
             <div className="card-body">
               <div className="grants-items-list">
                 {grants.map((grant, index) => {
-                  const grantTotal =
-                    (Number(grant.prizeAmount) || 0) *
-                    (Number(grant.numberOfPrizes) || 0);
+                  const grantTotal = Number(grant.prizeAmount) || 0;
 
                   return (
-                    <div
-                      key={
-                        grant.id ||
-                        `${grant.name}-${grant.applicationDeadline}-${index}`
-                      }
-                      className="grant-item-card-premium"
-                    >
+                    <div key={grant.name} className="grant-item-card-premium">
                       <div className="grant-icon-badge">
                         <Gift size={20} />
                       </div>
@@ -1049,7 +1038,7 @@ function CreateGala() {
                           </span>
                           <span className="dot">•</span>
                           <span className="date">
-                            {formatGrantDeadline(grant.applicationDeadline)}
+                            {formatDateTimeShort(grant.applicationDeadline)}
                           </span>
                         </div>
                       </div>
@@ -1100,6 +1089,14 @@ function CreateGala() {
             ? null
             : eveningItems[editingProgramIndex]
         }
+        minTime={formValues.eventTime}
+      />
+
+      <GalaActionOverlay
+        isOpen={isLocalPublishing}
+        title="Publishing Gala"
+        message="Verifying prize pool proof on the blockchain. Please confirm the transaction if your wallet prompts you."
+        onCancel={handleCancelPublishing}
       />
     </div>
   );

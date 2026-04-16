@@ -54,3 +54,45 @@ export function GrantGridSkeleton() {
     </div>
   );
 }
+
+export function GrantListSkeleton() {
+  return (
+    <div className="grants-list">
+      <div className="list-header">
+        <div className="col-name">Grant Name</div>
+        <div className="col-status">Status</div>
+        <div className="col-amount">Amount</div>
+        <div className="col-deadline">Deadline</div>
+        <div className="col-applicants">Applicants</div>
+      </div>
+      <div className="list-body">
+        {[1, 2, 3, 4, 5].map((id) => (
+          <div
+            key={`grant-list-skeleton-${id}`}
+            className="grant-list-item"
+            style={{ cursor: 'default' }}
+          >
+            <div className="col-name">
+              <Skeleton width="60%" height={20} />
+              <div style={{ marginTop: '4px' }}>
+                <Skeleton width="40%" height={12} />
+              </div>
+            </div>
+            <div className="col-status">
+              <Skeleton width={80} height={24} borderRadius={20} />
+            </div>
+            <div className="col-amount">
+              <Skeleton width={60} height={16} />
+            </div>
+            <div className="col-deadline">
+              <Skeleton width={100} height={16} />
+            </div>
+            <div className="col-applicants">
+              <Skeleton width={80} height={16} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

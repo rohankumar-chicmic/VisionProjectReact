@@ -7,6 +7,14 @@ export interface JuryMember {
   phoneNumber: string;
   companyName: string;
   domainOfExpertise: string;
+  createdAt: string;
+}
+
+export interface UpdateJuryProfilePayload {
+  fullName: string;
+  phoneNumber: string;
+  companyName: string;
+  domainOfExpertise: string;
 }
 
 export interface JurySummaryData {
@@ -19,18 +27,23 @@ export interface JurySummaryData {
 }
 
 export interface AssignedGrant {
-  name: string;
-  gala: string;
-  applicants: number;
-  status: string;
+  grantId: string;
+  grantName: string;
+  galaName: string;
+  applicantsCount: number;
+  applicationDeadline: string;
+  grantStatus: string;
+  status?: string;
 }
 
 export interface EvaluationQueueItem {
-  id: string;
-  applicant: string;
-  grant: string;
-  deadline: string;
-  priority: 'high' | 'medium' | 'low';
+  applicationId: string;
+  applicationCode: string;
+  applicantName: string;
+  grantName: string;
+  dueAt: string;
+  dueLabel: string;
+  juryReviewStatus: string;
 }
 
 export interface JuryDashboardResponse {
@@ -61,6 +74,82 @@ export interface CreateJuryPayload {
   companyName: string;
   domainOfExpertise: string;
   password?: string;
+}
+
+export interface CriteriaScore {
+  criteriaKey: string;
+  criteriaName: string;
+  criteriaCategory: string;
+  score: number;
+}
+
+export interface EvaluationPayload {
+  applicationId: string;
+  scores: CriteriaScore[];
+  overallScore: number;
+  qualitativeFeedback: string;
+  privateNotes: string;
+}
+
+export interface JuryReviewCriteria {
+  criteriaKey: string;
+  criteriaName: string;
+  criteriaCategory: string;
+  existingScore: number | null;
+}
+
+export interface AssignedApplication {
+  id: string;
+  applicationId: string;
+  grantId: string;
+  grantName: string;
+  galaName: string;
+  applicantId: string;
+  applicantName: string;
+  applicantEmail: string;
+  submittedAt: string;
+  interviewDate: string | null;
+  status: number;
+  totalJuryScore: number | null;
+  hasCurrentJuryEvaluated: boolean;
+  juryReviewStatus: number;
+  juryReviewStatusDescription: string;
+}
+
+export interface AssignedApplicationsResponse {
+  success: boolean;
+  message: string;
+  data: AssignedApplication[];
+}
+
+export interface ApplicationReviewData {
+  applicationId: string;
+  applicationCode: string;
+  grantId: string;
+  grantName: string;
+  galaName: string;
+  applicantId: string;
+  applicantName: string;
+  applicantEmail: string;
+  companyName: string | null;
+  industry: string | null;
+  motivationStatement: string | null;
+  videoUrl: string | null;
+  prizeAmount: number | null;
+  applicationDeadline: string | null;
+  submittedAt: string | null;
+  memberSince: string | null;
+  subscriptionPlan: string | null;
+  totalApplications: number;
+  totalApproved: number;
+  applicationStatus: number;
+  interviewDate: string | null;
+  interviewCompleted: boolean;
+  juryReviewStatus: number;
+  myOverallScore: number | null;
+  qualitativeFeedback: string | null;
+  privateNotes: string | null;
+  criteria: JuryReviewCriteria[];
 }
 
 export const JuryApi = api.injectEndpoints({
@@ -105,6 +194,91 @@ export const JuryApi = api.injectEndpoints({
       }),
       providesTags: ['JuryDashboard'],
     }),
+    getAssignedApplications: build.query<
+      AssignedApplicationsResponse,
+      {
+        searchTerm?: string;
+        status?: number;
+        pageNumber?: number;
+        pageSize?: number;
+      }
+    >({
+      query: (params) => ({
+        url: '/api/v1/jury/applications',
+        method: 'GET',
+        params,
+      }),
+      providesTags: ['JuryDashboard'],
+    }),
+    getApplicationReview: build.query<
+      { success: boolean; data: ApplicationReviewData },
+      string
+    >({
+      query: (id) => ({
+        url: `/api/v1/jury/applications/${id}`,
+        method: 'GET',
+      }),
+      providesTags: ['ApplicationReview'],
+    }),
+    markInterviewComplete: build.mutation<
+      unknown,
+      { id: string; markCompleted: boolean }
+    >({
+      query: ({ id, markCompleted }) => ({
+        url: `/api/v1/jury/applications/${id}/interview-completion`,
+        method: 'POST',
+        body: { markCompleted },
+      }),
+      invalidatesTags: ['ApplicationReview'],
+    }),
+    approveApplication: build.mutation<unknown, string>({
+      query: (id) => ({
+        url: `/api/v1/jury/applications/${id}/approve`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['JuryDashboard', 'ApplicationReview'],
+    }),
+    rejectApplication: build.mutation<
+      unknown,
+      { id: string; reason: string; feedback: string; allowReapply: boolean }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/api/v1/jury/applications/${id}/reject`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['JuryDashboard', 'ApplicationReview'],
+    }),
+    startApplicationReview: build.mutation<unknown, string>({
+      query: (id) => ({
+        url: `/api/v1/jury/applications/${id}/start-review`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['JuryDashboard'],
+    }),
+    submitEvaluation: build.mutation<unknown, EvaluationPayload>({
+      query: (body) => ({
+        url: `/api/v1/jury/applications/${body.applicationId}/evaluation`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['JuryDashboard', 'ApplicationReview'],
+    }),
+    getJuryProfile: build.query<JuryMember, void>({
+      query: () => ({
+        url: '/api/v1/jury/profile',
+        method: 'GET',
+      }),
+      providesTags: ['Jury'],
+    }),
+    updateJuryProfile: build.mutation<JuryMember, UpdateJuryProfilePayload>({
+      query: (body) => ({
+        url: '/api/v1/jury/profile',
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: ['Jury'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -115,4 +289,13 @@ export const {
   useUpdateJuryMutation,
   useDeleteJuryMutation,
   useJuryDashboardQuery,
+  useGetAssignedApplicationsQuery,
+  useGetApplicationReviewQuery,
+  useMarkInterviewCompleteMutation,
+  useApproveApplicationMutation,
+  useRejectApplicationMutation,
+  useStartApplicationReviewMutation,
+  useSubmitEvaluationMutation,
+  useGetJuryProfileQuery,
+  useUpdateJuryProfileMutation,
 } = JuryApi;

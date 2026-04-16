@@ -1,80 +1,36 @@
-.manage-jury-page {
-  padding: 24px;
-  background-color: #f8fafc;
-  min-height: calc(100vh - 80px);
+.jury-management-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   max-width: 1400px;
   margin: 0 auto;
+  animation: juryPageFadeIn 0.4s ease-out;
 
-  .jury-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 24px;
-    margin-bottom: 32px;
+  .view-header {
+    padding: 14px 18px;
+    background-color: var(--surface-color);
+    border: 1px solid #edf2f7;
+    border-radius: 18px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
 
-    .stat-card {
-      background-color: #fff;
-      border: 1px solid #eef2f6;
-      border-radius: 16px;
-      padding: 24px;
+    .header-actions {
       display: flex;
       align-items: center;
-      gap: 20px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
-
-      .stat-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        &.jury {
-          background-color: #f0fdf4;
-          color: #10b981;
-        }
-      }
-
-      .stat-content {
-        display: flex;
-        flex-direction: column;
-
-        .label {
-          font-size: 14px;
-          font-weight: 600;
-          color: #64748b;
-        }
-        .value {
-          font-size: 28px;
-          font-weight: 800;
-          color: #1e293b;
-          line-height: 1;
-          margin-top: 4px;
-        }
-      }
-    }
-  }
-
-  .table-card {
-    background-color: #fff;
-    border: 1px solid #eef2f6;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
-
-    .table-header {
-      margin-bottom: 24px;
+      justify-content: space-between;
+      gap: 16px;
 
       .search-box {
-        background-color: #f1f5f9;
-        border-radius: 10px;
-        padding: 0 16px;
+        flex: 1;
+        max-width: 520px;
+        min-width: 220px;
+        height: 46px;
+        background-color: #f8fafc;
+        border: 1px solid #f1f5f9;
+        border-radius: 12px;
         display: flex;
         align-items: center;
+        padding: 0 16px;
         gap: 12px;
-        width: 100%;
-        max-width: 400px;
-        height: 44px;
         color: #94a3b8;
 
         input {
@@ -83,189 +39,265 @@
           outline: none;
           width: 100%;
           font-size: 14px;
-          color: #1e293b;
+          color: var(--text-primary);
+
           &::placeholder {
-            color: #cbd5e1;
+            color: #94a3b8;
           }
         }
       }
-    }
 
-    .table-wrapper {
-      overflow-x: auto;
-    }
+      .stats-indicator {
+        background: #f1f5f9;
+        padding: 8px 16px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 700;
 
-    .jury-loading-state {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      min-height: 120px;
-      color: #64748b;
-
-      .spin {
-        animation: jury-spin 1s linear infinite;
+        svg {
+          color: var(--primary-color);
+        }
       }
     }
+  }
 
-    .jury-user-cell {
+  .juries-list-container {
+    .jury-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+  }
+
+  .jury-member-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background-color: var(--surface-color);
+    border: 1px solid #edf2f7;
+    border-radius: 18px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary-color);
+      box-shadow: 0 20px 48px rgba(0, 206, 134, 0.08);
+    }
+
+    .card-left {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 20px;
 
-      .avatar-circle {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background-color: var(--primary-color);
-        color: #fff;
+      .member-avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 700;
-        font-size: 14px;
+        font-size: 18px;
+        font-weight: 800;
+        text-transform: uppercase;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
       }
 
-      .user-details {
+      .member-info {
         display: flex;
         flex-direction: column;
-        .name {
-          font-weight: 700;
-          color: #1e293b;
-        }
-        .date {
-          font-size: 12px;
-          color: #94a3b8;
-          margin-top: 2px;
-        }
-      }
-    }
-
-    .contact-cell {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-
-      .contact-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        color: #475569;
-        svg {
-          color: #94a3b8;
-        }
-      }
-    }
-
-    .company-cell {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-
-      .company-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #1e293b;
-        svg {
-          color: #94a3b8;
-        }
-      }
-
-      .industry-badge {
-        display: inline-flex;
-        align-items: center;
         gap: 6px;
-        padding: 4px 10px;
-        background-color: #f3f4f6;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 700;
-        color: #4b5563;
-        width: fit-content;
-        svg {
-          color: #94a3b8;
+
+        .member-name {
+          font-size: 16px;
+          font-weight: 800;
+          color: var(--text-primary);
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+
+        .member-details {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+
+          .detail-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+
+            .dot {
+              color: #cbd5e1;
+              font-size: 10px;
+            }
+
+            &.secondary {
+              font-size: 12px;
+              color: #94a3b8;
+              font-weight: 500;
+              
+              svg {
+                color: #cbd5e1;
+                flex-shrink: 0;
+              }
+            }
+          }
         }
       }
     }
 
-    .table-actions {
+    .card-actions {
       display: flex;
       gap: 8px;
 
-      .action-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: none;
+      .icon-action-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
         transition: all 0.2s;
-        background-color: transparent;
-
-        &:disabled {
-          cursor: not-allowed;
-          opacity: 0.5;
-        }
+        background: #f8fafc;
+        border: 1px solid #f1f5f9;
 
         &.edit {
-          color: #3b82f6;
+          color: var(--primary-color);
           &:hover {
-            background-color: #eff6ff;
+            background: #e8f9ef;
+            color: var(--primary-hover-color);
+            border-color: #d1f5e2;
           }
         }
+
         &.delete {
           color: #ef4444;
           &:hover {
-            background-color: #fef2f2;
-          }
-        }
-        &.more {
-          color: #94a3b8;
-          &:hover {
-            background-color: #f1f5f9;
+            background: #fff1f2;
+            color: #dc2626;
+            border-color: #fee2e2;
           }
         }
       }
+    }
+  }
+
+  .loading-state, .empty-state {
+    padding: 80px 0;
+    text-align: center;
+    background: white;
+    border-radius: 20px;
+    border: 1px dashed #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: #64748b;
+
+    .icon-circle {
+      width: 80px;
+      height: 80px;
+      background: #f8fafc;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-color);
+      margin-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 18px;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    p {
+      max-width: 320px;
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .spin {
+      animation: juryIconSpin 1.5s linear infinite;
     }
   }
 }
 
-.delete-confirm-modal {
+.modal-actions-footer {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 10px;
+
+  button {
+    padding: 10px 22px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel {
+    background: #f1f5f9;
+    color: #64748b;
+    &:hover { background: #e2e8f0; }
+  }
+
+  .btn-confirm-delete {
+    background: #ef4444;
+    color: white;
+    &:hover { background: #dc2626; }
+  }
+}
+
+.delete-confirm-modal {
   text-align: center;
-  padding: 8px 0;
+  padding: 15px 0;
 
   .icon-box {
     width: 64px;
     height: 64px;
+    background: #fff1f2;
     border-radius: 50%;
-    background-color: #fef2f2;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #ef4444;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+    margin: 0 auto 20px;
+    animation: juryPulseRed 2s infinite;
   }
 
   p {
-    font-size: 16px;
+    font-size: 15px;
     color: #475569;
     line-height: 1.6;
     margin: 0;
-    max-width: 320px;
 
-    strong {
-      color: #1e293b;
-      font-weight: 700;
-    }
+    strong { color: var(--text-primary); }
   }
+}
+
+@keyframes juryPageFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes juryIconSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes juryPulseRed {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
 }

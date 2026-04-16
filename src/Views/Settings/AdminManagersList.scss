@@ -24,7 +24,7 @@
       cursor: pointer;
       transition: all 0.2s;
       
-      &:hover { opacity: 0.9; box-shadow: 0 4px 12px rgba(0, 206, 134, 0.2); }
+      &:hover { opacity: 0.9; box-shadow: 0 4px 12px rgba(0, 158, 102, 0.2); }
     }
   }
 
@@ -141,7 +141,7 @@
           &.active {
             background-color: var(--primary-color);
             color: #fff;
-            box-shadow: 0 4px 12px rgba(0, 206, 134, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 158, 102, 0.2);
           }
 
           &:hover:not(.active) { background-color: #e2e8f0; }

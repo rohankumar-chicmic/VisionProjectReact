@@ -14,6 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import showToast from '../../Shared/Utils/toast';
+import { getAssetUrl } from '../../Shared/Utils/url';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import KpiCard from '../../Components/Shared/KpiCard';
 import Table, { Column } from '../../Components/Atom/Table/Table';
@@ -45,7 +46,7 @@ function UserCell({ user }: Readonly<{ user: AdminUser }>) {
     <div className="user-info-cell">
       <div className="avatar-small">
         {user.avatarUrl ? (
-          <img src={user.avatarUrl} alt={user.fullName} />
+          <img src={getAssetUrl(user.avatarUrl)} alt={user.fullName} />
         ) : (
           user.fullName.charAt(0)
         )}

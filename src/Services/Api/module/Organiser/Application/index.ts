@@ -111,6 +111,7 @@ export interface OrganiserApplicationDetail {
   applicantSubscriptionPlan: number;
   applicantSubscriptionStatus: number;
   adminNotes: string | null;
+  organiserNote?: string;
   canCurrentUserSubmitJuryScores: boolean;
   hasCurrentUserSubmittedJuryScores: boolean;
   juryPanel: JuryPanelMember[];
@@ -157,6 +158,19 @@ export const organiserApplicationApi = api.injectEndpoints({
         responseHandler: (response) => response.blob(),
       }),
     }),
+    updateOrganiserNote: build.mutation<
+      unknown,
+      { id: string; organiserNote: string }
+    >({
+      query: ({ id, organiserNote }) => ({
+        url: `/api/v1/organiser/applications/${id}/organiser-note`,
+        method: 'PUT',
+        body: { organiserNote },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'OrganiserApplications', id },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -165,4 +179,5 @@ export const {
   useGetOrganiserApplicationsQuery,
   useGetOrganiserApplicationByIdQuery,
   useLazyDownloadOrganiserApplicationAvatarQuery,
+  useUpdateOrganiserNoteMutation,
 } = organiserApplicationApi;

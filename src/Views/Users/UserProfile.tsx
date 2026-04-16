@@ -19,6 +19,7 @@ import {
 } from '../../Services/Api/module/Admin/User';
 import Skeleton from '../../Components/Shared/Skeleton';
 import showToast from '../../Shared/Utils/toast';
+import { getAssetUrl } from '../../Shared/Utils/url';
 import BlockUserModal from './Components/BlockUserModal';
 import EditUserModal from './Components/EditUserModal';
 import './UserProfile.scss';
@@ -151,7 +152,7 @@ function UserProfile() {
             <div className="user-hero">
               <div className="hero-avatar">
                 {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.fullName} />
+                  <img src={getAssetUrl(user.avatarUrl)} alt={user.fullName} />
                 ) : (
                   user.fullName.charAt(0)
                 )}

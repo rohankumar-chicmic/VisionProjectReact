@@ -325,22 +325,53 @@
     margin-top: 24px;
 
     .section-heading {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
+
+      &.flex-between {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
       h4 {
         margin: 0;
         font-size: 15px;
-        font-weight: 600;
+        font-weight: 700;
         color: #1e293b;
       }
 
       p {
-        margin: 0;
+        margin: 4px 0 0 0;
         font-size: 13px;
         color: #64748b;
+      }
+    }
+
+    .btn-suggest {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background-color: #f0fdf4;
+      border: 1px solid #dcfce7;
+      border-radius: 8px;
+      color: #166534;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background-color: #dcfce7;
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+
+      svg {
+        color: #22c55e;
       }
     }
 

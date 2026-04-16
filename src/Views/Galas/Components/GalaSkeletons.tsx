@@ -40,3 +40,45 @@ export function GalaGridSkeleton() {
     </div>
   );
 }
+
+export function GalaListItemSkeleton() {
+  return (
+    <div className="gala-list-item skeleton-row">
+      <div className="col-image">
+        <Skeleton width={48} height={48} borderRadius="10px" />
+      </div>
+      <div className="col-details">
+        <Skeleton width="180px" height={16} />
+        <div style={{ marginTop: '4px' }}>
+          <Skeleton width="120px" height={12} />
+        </div>
+      </div>
+      <div className="col-status">
+        <Skeleton width="80px" height={24} borderRadius="12px" />
+      </div>
+      <div className="col-date">
+        <Skeleton width="100px" height={14} />
+      </div>
+      <div className="col-applicants">
+        <Skeleton width="60px" height={14} />
+      </div>
+    </div>
+  );
+}
+
+export function GalaListSkeleton() {
+  return (
+    <div className="galas-list-view">
+      <div className="list-header">
+        <div className="col-image" />
+        <div className="col-details">Gala Info</div>
+        <div className="col-status">Status</div>
+        <div className="col-date">Event Date</div>
+        <div className="col-applicants">Applied</div>
+      </div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <GalaListItemSkeleton key={i} />
+      ))}
+    </div>
+  );
+}

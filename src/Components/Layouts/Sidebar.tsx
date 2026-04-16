@@ -63,7 +63,7 @@ function Sidebar() {
           <div className="logo-icon">
             <img src={logo} alt="" />
           </div>
-          <span className="logo-text">Vision PME Admin</span>
+          <span className="logo-text">Vision PME {roleLabel}</span>
         </div>
 
         <nav className="sidebar-nav">

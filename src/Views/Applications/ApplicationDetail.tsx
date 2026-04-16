@@ -20,6 +20,7 @@ import {
   useGetOrganiserApplicationByIdQuery,
   OrganiserApplicationDetail,
   useLazyDownloadOrganiserApplicationAvatarQuery,
+  useUpdateOrganiserNoteMutation,
 } from '../../Services/Api/module/Organiser/Application';
 import {
   useGetJuryApplicationByIdQuery,
@@ -29,6 +30,9 @@ import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import Skeleton from '../../Components/Shared/Skeleton';
 import RejectApplicationModal from './Components/RejectApplicationModal';
 import RescheduleInterviewModal from './Components/RescheduleInterviewModal';
+import { getAssetUrl } from '../../Shared/Utils/url';
+import { formatDateTime } from '../../Shared/Utils/dateUtils';
+import showToast from '../../Shared/Utils/toast';
 import './ApplicationDetail.scss';
 
 // Avatar color palette — cycles through for each juror index
@@ -53,8 +57,6 @@ interface JurorCardProps {
   averageScore: number;
   initials: string;
   jurorRole: string;
-  criteriaScores: { criteriaName: string; score: number }[];
-  comment: string | null;
   colorIndex: number;
 }
 
@@ -63,13 +65,11 @@ function JurorCard({
   averageScore,
   initials,
   jurorRole,
-  criteriaScores,
-  comment,
   colorIndex,
 }: Readonly<JurorCardProps>) {
   const avatarColor = AVATAR_COLORS[colorIndex % AVATAR_COLORS.length];
   return (
-    <div className="juror-card">
+    <div className="juror-card juror-card--compact">
       <div className="juror-header">
         <div className="juror-info">
           <div
@@ -90,21 +90,6 @@ function JurorCard({
           {averageScore.toFixed(1)} / 10
         </div>
       </div>
-      <div className="criteria-list">
-        {criteriaScores?.map((c) => (
-          <div key={c.criteriaName} className="criteria-row">
-            <span className="criteria-label">{c.criteriaName}</span>
-            <span className={`criteria-score ${getScoreColor(c.score)}`}>
-              {c.score} / 10
-            </span>
-          </div>
-        ))}
-      </div>
-      {comment && (
-        <div className="juror-comment">
-          <p>{comment}</p>
-        </div>
-      )}
     </div>
   );
 }
@@ -153,6 +138,9 @@ function ApplicationDetail() {
   const [adminNote, setAdminNote] = useState('');
   const [isNoteSaved, setIsNoteSaved] = useState(false);
 
+  const [organiserNoteText, setOrganiserNoteText] = useState('');
+  const [isOrganiserNoteSaved, setIsOrganiserNoteSaved] = useState(false);
+
   const [triggerDownloadAdminAvatar] =
     useLazyDownloadAdminApplicationAvatarQuery();
   const [triggerDownloadOrganiserAvatar] =
@@ -162,6 +150,8 @@ function ApplicationDetail() {
     useGetAdminApplicationByIdQuery(id ?? '', { skip: !isAdmin });
   const { data: organiserResponse, isLoading: isOrganiserLoading } =
     useGetOrganiserApplicationByIdQuery(id ?? '', { skip: !isOrganiser });
+  const [updateOrganiserNote, { isLoading: isUpdatingOrganiserNote }] =
+    useUpdateOrganiserNoteMutation();
   const { data: juryResponse, isLoading: isJuryLoading } =
     useGetJuryApplicationByIdQuery(id ?? '', {
       skip: isAdmin || isOrganiser,
@@ -196,7 +186,25 @@ function ApplicationDetail() {
       setAdminNote(application.adminNotes);
       setIsNoteSaved(true);
     }
-  }, [application?.adminNotes]);
+    if (application?.organiserNote) {
+      setOrganiserNoteText(application.organiserNote);
+      setIsOrganiserNoteSaved(true);
+    }
+  }, [application?.adminNotes, application?.organiserNote]);
+
+  const handleSaveOrganiserNote = async () => {
+    if (!id) return;
+    try {
+      await updateOrganiserNote({
+        id,
+        organiserNote: organiserNoteText,
+      }).unwrap();
+      setIsOrganiserNoteSaved(true);
+      showToast.success('Organiser note saved securely');
+    } catch {
+      showToast.error('Failed to save organiser note');
+    }
+  };
 
   const handleApprove = () => {
     // API logic for approve
@@ -294,7 +302,7 @@ function ApplicationDetail() {
         onConfirm={handleRescheduleConfirm}
         currentDate={
           application.interviewDate
-            ? `${new Date(application.interviewDate).toLocaleDateString()} at ${application.interviewStartTime || ''}`
+            ? formatDateTime(application.interviewDate)
             : 'Not set'
         }
         applicantName={application.applicantName}
@@ -444,14 +452,7 @@ function ApplicationDetail() {
               <span className="submitted-label">
                 Submitted on{' '}
                 {application.appliedDate
-                  ? new Date(application.appliedDate).toLocaleDateString(
-                      'en-US',
-                      {
-                        month: 'numeric',
-                        day: 'numeric',
-                        year: 'numeric',
-                      }
-                    )
+                  ? formatDateTime(application.appliedDate)
                   : 'N/A'}
               </span>
             </div>
@@ -476,13 +477,7 @@ function ApplicationDetail() {
                   <td className="gt-label">Deadline</td>
                   <td className="gt-value">
                     {application.grantApplicationDeadline
-                      ? new Date(
-                          application.grantApplicationDeadline
-                        ).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })
+                      ? formatDateTime(application.grantApplicationDeadline)
                       : 'N/A'}
                   </td>
                 </tr>
@@ -520,13 +515,15 @@ function ApplicationDetail() {
               <div className="info-field">
                 <span className="info-field-label">Participation Video</span>
                 <a
-                  href={application.videoUrl}
+                  href={getAssetUrl(application.videoUrl)}
                   target="_blank"
                   rel="noreferrer"
                   className="video-link-row"
                 >
                   <PlayCircle size={18} className="video-play-icon" />
-                  <span className="video-link-url">{application.videoUrl}</span>
+                  <span className="video-link-url">
+                    {getAssetUrl(application.videoUrl)}
+                  </span>
                   <ExternalLink size={14} className="video-ext-icon" />
                 </a>
               </div>
@@ -555,10 +552,7 @@ function ApplicationDetail() {
                   <span className="slot-text-label">Interview Date</span>
                   <span className="slot-text-value">
                     {application.interviewDate
-                      ? new Date(application.interviewDate).toLocaleDateString(
-                          'en-US',
-                          { month: 'long', day: 'numeric', year: 'numeric' }
-                        )
+                      ? formatDateTime(application.interviewDate)
                       : 'Not Scheduled'}
                   </span>
                 </div>
@@ -666,8 +660,6 @@ function ApplicationDetail() {
                         : 'JM'
                     }
                     jurorRole={`Jury Member ${idx + 1}`}
-                    criteriaScores={juror.criteriaScores ?? []}
-                    comment={juror.comment}
                     colorIndex={idx}
                   />
                 ))
@@ -679,11 +671,16 @@ function ApplicationDetail() {
             </div>
           </div>
 
-          {/* Admin Notes */}
+          {/* Organiser Notes */}
           <div className="ar-card">
             <div className="ar-card-header">
-              <h3 className="ar-card-title">Admin Notes</h3>
-              {isNoteSaved && (
+              <div>
+                <h3 className="ar-card-title">Organiser Note</h3>
+                <span className="ar-card-sub">
+                  Visible to jury members and administrators
+                </span>
+              </div>
+              {isOrganiserNoteSaved && (
                 <span className="notes-saved-badge">
                   <Check size={13} />
                   Saved
@@ -691,36 +688,117 @@ function ApplicationDetail() {
               )}
             </div>
 
-            {isNoteSaved ? (
-              <>
-                <div className="saved-note">{adminNote}</div>
-                <button
-                  type="button"
-                  className="btn-edit-notes"
-                  onClick={() => setIsNoteSaved(false)}
-                >
-                  <Edit2 size={14} />
-                  Edit Notes
-                </button>
-              </>
-            ) : (
-              <>
-                <textarea
-                  className="notes-textarea"
-                  placeholder="Add private notes about this application..."
-                  value={adminNote}
-                  onChange={(e) => setAdminNote(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn-save-notes"
-                  onClick={() => setIsNoteSaved(true)}
-                >
-                  Save Notes
-                </button>
-              </>
-            )}
+            {(() => {
+              if (!isOrganiser) {
+                return (
+                  <div className="saved-note">
+                    {application.organiserNote ? (
+                      application.organiserNote
+                    ) : (
+                      <span className="no-note">
+                        No note provided by the organiser.
+                      </span>
+                    )}
+                  </div>
+                );
+              }
+
+              if (isOrganiserNoteSaved) {
+                return (
+                  <>
+                    <div className="saved-note">{organiserNoteText}</div>
+                    <button
+                      type="button"
+                      className="btn-edit-notes"
+                      onClick={() => setIsOrganiserNoteSaved(false)}
+                    >
+                      <Edit2 size={14} />
+                      Edit Note
+                    </button>
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  <textarea
+                    className="notes-textarea"
+                    placeholder="Add a note to be seen by the jury panel..."
+                    value={organiserNoteText}
+                    onChange={(e) => setOrganiserNoteText(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn-save-notes"
+                    onClick={handleSaveOrganiserNote}
+                    disabled={isUpdatingOrganiserNote}
+                  >
+                    {isUpdatingOrganiserNote ? 'Saving...' : 'Save Note'}
+                  </button>
+                </>
+              );
+            })()}
           </div>
+
+          {/* Admin Notes */}
+          {(isAdmin || isNoteSaved) && (
+            <div className="ar-card">
+              <div className="ar-card-header">
+                <div>
+                  <h3 className="ar-card-title">Admin Notes</h3>
+                  <span className="ar-card-sub">
+                    Private internal notes for administrators
+                  </span>
+                </div>
+                {isNoteSaved && (
+                  <span className="notes-saved-badge">
+                    <Check size={13} />
+                    Saved
+                  </span>
+                )}
+              </div>
+
+              {(() => {
+                if (!isAdmin) {
+                  return <div className="saved-note">{adminNote}</div>;
+                }
+
+                if (isNoteSaved) {
+                  return (
+                    <>
+                      <div className="saved-note">{adminNote}</div>
+                      <button
+                        type="button"
+                        className="btn-edit-notes"
+                        onClick={() => setIsNoteSaved(false)}
+                      >
+                        <Edit2 size={14} />
+                        Edit Notes
+                      </button>
+                    </>
+                  );
+                }
+
+                return (
+                  <>
+                    <textarea
+                      className="notes-textarea"
+                      placeholder="Add private notes about this application..."
+                      value={adminNote}
+                      onChange={(e) => setAdminNote(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn-save-notes"
+                      onClick={() => setIsNoteSaved(true)}
+                    >
+                      Save Notes
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          )}
         </div>
       </div>
 

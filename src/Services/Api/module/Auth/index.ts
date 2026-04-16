@@ -26,6 +26,7 @@ export interface AuthData {
   roleLabel?: string | null;
   userRole?: string | number | null;
   type?: string | number | null;
+  isOrganiserAccountVerified?: boolean;
 }
 
 export interface AuthResponse {

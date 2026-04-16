@@ -26,6 +26,7 @@ export const SIDEBAR_CONFIG: Record<AppRole, SidebarItem[]> = {
     { icon: FileText, label: 'Applications', path: '/applications' },
     // { icon: Megaphone, label: 'Announcements', path: '/announcements' },
     { icon: Users, label: 'Manage Jury', path: '/manage-jury' },
+    { icon: Users, label: 'My Profile', path: '/organiser/profile' },
   ],
   admin: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },

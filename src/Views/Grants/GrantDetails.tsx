@@ -1,4 +1,3 @@
-/* eslint-disable no-alert */
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -16,12 +15,17 @@ import {
   User,
   AlertTriangle,
   Trophy,
+  Zap,
+  ShieldCheck,
 } from 'lucide-react';
 import Modal from '../../Components/Atom/Modal/Modal';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
 import {
   useGetOrganiserGrantByIdQuery,
   useDeleteOrganiserGrantMutation,
+  useAutoAllocateGrantWinnersMutation,
+  useReleaseGrantWinnersMutation,
+  OrganiserGrantDetailData,
 } from '../../Services/Api/module/Organiser/Grant';
 import {
   useGetAdminGrantByIdQuery,
@@ -29,6 +33,7 @@ import {
 } from '../../Services/Api/module/Admin/Grant';
 import Skeleton from '../../Components/Shared/Skeleton';
 import showToast from '../../Shared/Utils/toast';
+import { formatDateTime } from '../../Shared/Utils/dateUtils';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
 import EmptyState from '../../Components/Shared/EmptyState';
 import './GrantDetails.scss';
@@ -43,6 +48,7 @@ function GrantDetails() {
   const {
     data: organiserGrantResponse,
     isLoading: isOrganiserLoading,
+    isFetching: isOrganiserFetching,
     isError: isOrganiserError,
   } = useGetOrganiserGrantByIdQuery(id ?? '', {
     skip: !id || isAdmin,
@@ -60,6 +66,11 @@ function GrantDetails() {
     useDeleteOrganiserGrantMutation();
   const [deleteAdminGrant, { isLoading: isDeletingAdmin }] =
     useDeleteAdminGrantMutation();
+
+  const [autoAllocateGrantWinners, { isLoading: isAllocating }] =
+    useAutoAllocateGrantWinnersMutation();
+  const [releaseGrantWinners, { isLoading: isReleasing }] =
+    useReleaseGrantWinnersMutation();
 
   const grantResponse = isAdmin ? adminGrantResponse : organiserGrantResponse;
   const isLoading = isAdmin ? isAdminLoading : isOrganiserLoading;
@@ -95,6 +106,28 @@ function GrantDetails() {
     }
   };
 
+  const handleAutoAllocate = async () => {
+    if (!id) return;
+    try {
+      await autoAllocateGrantWinners(id).unwrap();
+      showToast.success('Winners successfully allocated!');
+    } catch (err: unknown) {
+      const errorData = err as { data?: { message?: string } };
+      showToast.error(errorData?.data?.message || 'Failed to allocate winners');
+    }
+  };
+
+  const handleReleaseWinners = async () => {
+    if (!id) return;
+    try {
+      await releaseGrantWinners(id).unwrap();
+      showToast.success('Winners released on-chain successfully!');
+    } catch (err: unknown) {
+      const errorData = err as { data?: { message?: string } };
+      showToast.error(errorData?.data?.message || 'Failed to release winners');
+    }
+  };
+
   const getStatusLabel = (status: number) => {
     switch (status) {
       case 1:
@@ -116,18 +149,6 @@ function GrantDetails() {
     return getStatusLabel(status).toLowerCase().replace(' ', '-');
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return new Intl.DateTimeFormat('en-US', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).format(new Date(dateString));
-    } catch {
-      return dateString;
-    }
-  };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -137,7 +158,7 @@ function GrantDetails() {
     }).format(amount);
   };
 
-  if (isLoading) {
+  if (isLoading || isOrganiserFetching) {
     return (
       <div className="grant-details-page">
         <div className="skeleton-hero">
@@ -194,9 +215,11 @@ function GrantDetails() {
   const statusDisplay = getStatusLabel(grant.status);
   const statusClass = getStatusClass(grant.status);
 
+  const organiserGrant = grant as OrganiserGrantDetailData;
+
   return (
     <div className="grant-details-page">
-      {!isAdmin && (
+      {!isAdmin && grant.status === 1 && (
         <HeaderActions>
           <button
             type="button"
@@ -274,7 +297,7 @@ function GrantDetails() {
           <div className="stat-info">
             <span className="label">Application Deadline</span>
             <span className="value">
-              {formatDate(grant.applicationDeadline)}
+              {formatDateTime(grant.applicationDeadline)}
             </span>
           </div>
         </div>
@@ -291,6 +314,85 @@ function GrantDetails() {
 
       <div className="details-main-grid">
         <div className="content-column">
+          {/* Organiser Action Card */}
+          {!isAdmin && (
+            <div className="card allocation-action-card highlight">
+              <div className="card-header-horizontal">
+                <div className="header-info">
+                  <h3 className="card-title">
+                    <Zap size={22} className="icon-burn" />
+                    Auto-Allocation & Prize Distribution
+                  </h3>
+                  <p className="card-subtitle">
+                    {organiserGrant.winnerDecisionMessage}
+                  </p>
+                </div>
+                <div className="header-badge-status">
+                  {organiserGrant.isWinnersReleased ? (
+                    <span className="badge-released">
+                      <ShieldCheck size={14} /> Released
+                    </span>
+                  ) : (
+                    <span className="badge-pending">Pending Action</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="action-button-row">
+                {!organiserGrant.isWinnerDecided && (
+                  <div className="allocation-cta">
+                    <button
+                      type="button"
+                      className="btn-primary btn-sparkle"
+                      disabled={!organiserGrant.canAllocate || isAllocating}
+                      onClick={handleAutoAllocate}
+                    >
+                      <Zap size={18} />
+                      {isAllocating ? 'Allocating...' : 'Auto-Allocate Winners'}
+                    </button>
+                    {!organiserGrant.canAllocate &&
+                      organiserGrant.cannotAllocateReason && (
+                        <div className="disabled-msg">
+                          <Info size={14} />
+                          <span>{organiserGrant.cannotAllocateReason}</span>
+                        </div>
+                      )}
+                  </div>
+                )}
+
+                {organiserGrant.isWinnerDecided &&
+                  !organiserGrant.isWinnersReleased && (
+                    <div className="release-cta">
+                      <button
+                        type="button"
+                        className="btn-success-solid"
+                        disabled={isReleasing}
+                        onClick={handleReleaseWinners}
+                      >
+                        <ShieldCheck size={18} />
+                        {isReleasing
+                          ? 'Releasing...'
+                          : 'Release Winners (On-Chain)'}
+                      </button>
+                      <p className="release-hint">
+                        This will trigger the on-chain distribution of funds to
+                        decided winners.
+                      </p>
+                    </div>
+                  )}
+
+                {organiserGrant.isWinnersReleased && (
+                  <div className="success-banner">
+                    <CheckCircle2 size={20} />
+                    <span>
+                      Funds successfully distributed to winners wallets.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="card description-card">
             <h3 className="card-title">
               <Info size={22} />
@@ -406,12 +508,24 @@ function GrantDetails() {
                 .slice()
                 .sort((a, b) => a.rank - b.rank)
                 .map((prize) => (
-                  <div key={prize.id} className="prize-row">
-                    <div className="rank">
-                      <span className="rank-num">#{prize.rank}</span>
-                      <span className="rank-label">Rank</span>
+                  <div key={prize.id} className="prize-row prize-item-premium">
+                    <div className="prize-main-info">
+                      <div className="rank">
+                        <span className="rank-num">#{prize.rank}</span>
+                        <span className="rank-label">Rank</span>
+                      </div>
+                      <div className="amount">
+                        {formatCurrency(prize.amount)}
+                      </div>
                     </div>
-                    <div className="amount">{formatCurrency(prize.amount)}</div>
+                    {prize.winnerFullName && (
+                      <div className="winner-badge-reveal">
+                        <div className="winner-chip">
+                          <User size={12} />
+                          <span>{prize.winnerFullName}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
             </div>

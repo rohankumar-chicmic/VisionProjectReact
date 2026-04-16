@@ -95,6 +95,8 @@ export interface GalaItem {
   winnerDecisionMessage: string;
   eveningItems: GalaEveningItem[];
   grants: GalaGrantDetail[];
+  createdById?: string;
+  createdByFullName?: string;
 }
 
 export interface GalaData {

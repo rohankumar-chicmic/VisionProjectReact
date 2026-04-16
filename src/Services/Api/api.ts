@@ -32,13 +32,21 @@ const baseQueryWithInterceptor = async (
   let result = await baseQuery(args, api, extraOptions);
 
   if ((result as ResponseOptions).error?.status === 401) {
-    const { refreshToken } = (api.getState() as RootState).common;
+    const { refreshToken, role } = (api.getState() as RootState).common;
 
     if (refreshToken) {
+      // Pick the correct refresh endpoint based on the logged-in role
+      let refreshUrl = '/api/v1/admin/auth/refresh';
+      if (role === 'organiser') {
+        refreshUrl = '/api/v1/organiser/auth/refresh';
+      } else if (role === 'jury') {
+        refreshUrl = '/api/v1/jury/auth/refresh';
+      }
+
       // try to get a new token
       const refreshResult = (await baseQuery(
         {
-          url: '/api/v1/admin/auth/refresh',
+          url: refreshUrl,
           method: 'POST',
           body: { refreshToken },
         },
@@ -87,6 +95,8 @@ const api = createApi({
     'OrganiserJuries',
     'OrganiserApplications',
     'JuryApplications',
+    'ApplicationReview',
+    'OrganiserProfile',
   ],
 });
 

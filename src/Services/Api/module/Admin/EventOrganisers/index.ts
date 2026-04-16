@@ -7,7 +7,12 @@ export interface EventOrganiser {
   companyName: string;
   governmentIdUrl: string;
   isVerifiedByAdmin: boolean;
+  isRejected: boolean;
+  verificationStatus: 'Pending' | 'Verified' | 'Rejected';
+  adminRejectionReason?: string;
   createdAt: string;
+  isBlocked: boolean;
+  publishedGalas: { id: string; name: string }[];
 }
 
 export interface AdminEventOrganisersResponse {
@@ -42,6 +47,28 @@ export const adminEventOrganisersApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Admins'],
     }),
+    rejectEventOrganiser: build.mutation<
+      unknown,
+      { id: string; reason: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/api/v1/admin/event-organisers/${id}/reject`,
+        method: 'POST',
+        body: { id, reason },
+      }),
+      invalidatesTags: ['Admins'],
+    }),
+    blockEventOrganiser: build.mutation<
+      unknown,
+      { id: string; isBlocked: boolean }
+    >({
+      query: ({ id, isBlocked }) => ({
+        url: `/api/v1/admin/event-organisers/${id}/block`,
+        method: 'POST',
+        body: { isBlocked },
+      }),
+      invalidatesTags: ['Admins'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -49,4 +76,6 @@ export const adminEventOrganisersApi = api.injectEndpoints({
 export const {
   useGetAdminEventOrganisersQuery,
   useVerifyEventOrganiserMutation,
+  useRejectEventOrganiserMutation,
+  useBlockEventOrganiserMutation,
 } = adminEventOrganisersApi;

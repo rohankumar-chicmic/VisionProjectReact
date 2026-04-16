@@ -23,6 +23,7 @@ export interface OrganiserGrantCreateRequest {
   requireBusinessPlanDocument: boolean;
   juryCriteria: number[];
   additionalRequirements: { text: string; order: number }[];
+  juryPanelSize?: number;
   prizeWinners: PrizeWinner[];
   juryIds: string[];
 }
@@ -83,6 +84,9 @@ export interface OrganiserGrantDetailData {
   totalWinnerSlots: number;
   winnerDecisionMessage: string;
   applicantCount?: number;
+  canAllocate?: boolean;
+  cannotAllocateReason?: string;
+  isWinnersReleased?: boolean;
 }
 
 export interface OrganiserGrantDetailResponse {
@@ -106,6 +110,36 @@ export interface OrganiserGrantSummaryResponse {
   data: OrganiserGrantSummaryData;
   errors: unknown;
   notificationCount: number;
+}
+
+export interface AutoAllocateGrantWinnersResponse {
+  success: boolean;
+  message: string;
+  data: unknown;
+  errors: unknown;
+}
+
+export interface WinnerForRelease {
+  id: string;
+  rank: number;
+  amount: number;
+  winnerUserId: string;
+  winnerFullName: string;
+  walletAddress: string;
+}
+
+export interface GetGrantWinnersForReleaseResponse {
+  success: boolean;
+  message: string;
+  data: WinnerForRelease[];
+  errors: unknown;
+}
+
+export interface ReleaseGrantWinnersOnChainResponse {
+  success: boolean;
+  message: string;
+  data: unknown;
+  errors: unknown;
 }
 
 export const organiserGrantApi = api.injectEndpoints({
@@ -171,6 +205,39 @@ export const organiserGrantApi = api.injectEndpoints({
         { type: 'OrganiserGrants', id },
       ],
     }),
+
+    autoAllocateGrantWinners: build.mutation<
+      AutoAllocateGrantWinnersResponse,
+      string
+    >({
+      query: (id) => ({
+        url: `/api/v1/organiser/grants/${id}/winners/auto-allocate`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'OrganiserGrants', id },
+      ],
+    }),
+
+    getGrantWinners: build.query<GetGrantWinnersForReleaseResponse, string>({
+      query: (id) => ({
+        url: `/api/v1/organiser/grants/${id}/winners`,
+        method: 'GET',
+      }),
+    }),
+
+    releaseGrantWinners: build.mutation<
+      ReleaseGrantWinnersOnChainResponse,
+      string
+    >({
+      query: (id) => ({
+        url: `/api/v1/organiser/grants/${id}/winners/release`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'OrganiserGrants', id },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -182,4 +249,7 @@ export const {
   useCreateOrganiserGrantMutation,
   useDeleteOrganiserGrantMutation,
   useUpdateOrganiserGrantMutation,
+  useAutoAllocateGrantWinnersMutation,
+  useGetGrantWinnersQuery,
+  useReleaseGrantWinnersMutation,
 } = organiserGrantApi;

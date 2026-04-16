@@ -11,24 +11,20 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import {
+  CreateOrganiserJuryRequest,
+  OrganiserJuryMember,
+} from '../../../Services/Api/module/Organiser/Jury';
 import Modal from '../../../Components/Atom/Modal/Modal';
 import './CreateJuryModal.scss';
 
-export interface JuryFormData {
-  id?: string;
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  companyName: string;
-  domainOfExpertise: string;
-  password?: string;
-}
+export type JuryFormData = CreateOrganiserJuryRequest;
 
 interface CreateJuryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: JuryFormData) => void;
-  initialData?: JuryFormData | null;
+  onSubmit: (data: CreateOrganiserJuryRequest) => void | Promise<void>;
+  initialValues?: OrganiserJuryMember | null;
 }
 
 const INDUSTRY_OPTIONS = [
@@ -45,16 +41,15 @@ function CreateJuryModal({
   isOpen,
   onClose,
   onSubmit,
-  initialData = null,
-}: CreateJuryModalProps) {
+  initialValues = null,
+}: Readonly<CreateJuryModalProps>) {
   const [showPassword, setShowPassword] = useState(false);
-
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<JuryFormData>({
+  } = useForm<CreateOrganiserJuryRequest>({
     defaultValues: {
       fullName: '',
       email: '',
@@ -66,9 +61,11 @@ function CreateJuryModal({
   });
 
   useEffect(() => {
-    if (initialData) {
+    if (!isOpen) return;
+
+    if (initialValues) {
       reset({
-        ...initialData,
+        ...initialValues,
         password: '', // Don't pre-fill password when editing
       });
     } else {
@@ -82,16 +79,44 @@ function CreateJuryModal({
       });
     }
     setShowPassword(false);
-  }, [initialData, reset, isOpen]);
+  }, [initialValues, reset, isOpen]);
 
   const handleModalClose = () => {
     reset();
     onClose();
   };
 
-  const onFormSubmit = (data: JuryFormData) => {
-    onSubmit(data);
+  const onFormSubmit = async (data: CreateOrganiserJuryRequest) => {
+    await onSubmit(data);
+    reset();
   };
+
+  const fullNameReg = register('fullName', {
+    required: 'Full name is required',
+  });
+  const emailReg = register('email', {
+    required: 'Email is required',
+    pattern: {
+      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+      message: 'Invalid email address',
+    },
+  });
+  const phoneReg = register('phoneNumber', {
+    required: 'Phone number is required',
+  });
+  const companyReg = register('companyName', {
+    required: 'Company name is required',
+  });
+  const domainReg = register('domainOfExpertise', {
+    required: 'Please select an industry',
+  });
+  const passwordReg = register('password', {
+    required: !initialValues && 'Password is required',
+    minLength: {
+      value: 8,
+      message: 'Password must be at least 8 characters',
+    },
+  });
 
   const footer = (
     <div className="modal-actions-footer">
@@ -113,7 +138,7 @@ function CreateJuryModal({
           <Loader2 className="spinner" size={18} />
         ) : (
           <span>
-            {initialData ? 'Update Jury Member' : 'Invite Jury Member'}
+            {initialValues ? 'Update Jury Member' : 'Invite Jury Member'}
           </span>
         )}
       </button>
@@ -124,9 +149,9 @@ function CreateJuryModal({
     <Modal
       isOpen={isOpen}
       onClose={handleModalClose}
-      title={initialData ? 'Edit Jury Member' : 'Invite New Jury Member'}
+      title={initialValues ? 'Edit Jury Member' : 'Invite New Jury Member'}
       subtitle={
-        initialData
+        initialValues
           ? 'Update the details of this jury member'
           : 'Add a jury member to help review and score grant applications'
       }
@@ -147,13 +172,10 @@ function CreateJuryModal({
                 id="fullName"
                 type="text"
                 placeholder="Enter full name"
-                name={
-                  register('fullName', { required: 'Full name is required' })
-                    .name
-                }
-                onBlur={register('fullName').onBlur}
-                onChange={register('fullName').onChange}
-                ref={register('fullName').ref}
+                name={fullNameReg.name}
+                onChange={fullNameReg.onChange}
+                onBlur={fullNameReg.onBlur}
+                ref={fullNameReg.ref}
               />
             </div>
           </label>
@@ -172,18 +194,10 @@ function CreateJuryModal({
                   id="email"
                   type="email"
                   placeholder="jury@example.com"
-                  name={
-                    register('email', {
-                      required: 'Email is required',
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Invalid email address',
-                      },
-                    }).name
-                  }
-                  onBlur={register('email').onBlur}
-                  onChange={register('email').onChange}
-                  ref={register('email').ref}
+                  name={emailReg.name}
+                  onChange={emailReg.onChange}
+                  onBlur={emailReg.onBlur}
+                  ref={emailReg.ref}
                 />
               </div>
             </label>
@@ -200,14 +214,10 @@ function CreateJuryModal({
                   id="phoneNumber"
                   type="tel"
                   placeholder="+1 (555) 000-0000"
-                  name={
-                    register('phoneNumber', {
-                      required: 'Phone number is required',
-                    }).name
-                  }
-                  onBlur={register('phoneNumber').onBlur}
-                  onChange={register('phoneNumber').onChange}
-                  ref={register('phoneNumber').ref}
+                  name={phoneReg.name}
+                  onChange={phoneReg.onChange}
+                  onBlur={phoneReg.onBlur}
+                  ref={phoneReg.ref}
                 />
               </div>
             </label>
@@ -226,14 +236,10 @@ function CreateJuryModal({
                 id="companyName"
                 type="text"
                 placeholder="Enter company name"
-                name={
-                  register('companyName', {
-                    required: 'Company name is required',
-                  }).name
-                }
-                onBlur={register('companyName').onBlur}
-                onChange={register('companyName').onChange}
-                ref={register('companyName').ref}
+                name={companyReg.name}
+                onChange={companyReg.onChange}
+                onBlur={companyReg.onBlur}
+                ref={companyReg.ref}
               />
             </div>
           </label>
@@ -249,14 +255,10 @@ function CreateJuryModal({
               <Briefcase size={16} className="input-icon" />
               <select
                 id="domainOfExpertise"
-                name={
-                  register('domainOfExpertise', {
-                    required: 'Please select an industry',
-                  }).name
-                }
-                onBlur={register('domainOfExpertise').onBlur}
-                onChange={register('domainOfExpertise').onChange}
-                ref={register('domainOfExpertise').ref}
+                name={domainReg.name}
+                onChange={domainReg.onChange}
+                onBlur={domainReg.onBlur}
+                ref={domainReg.ref}
               >
                 <option value="">Select Industry</option>
                 {INDUSTRY_OPTIONS.map((option) => (
@@ -274,51 +276,45 @@ function CreateJuryModal({
           )}
         </div>
 
-        {!initialData && (
-          <div className="form-group">
-            <label htmlFor="password" className="label-text">
-              Password *
-              <div className="input-with-icon">
-                <Lock size={16} className="input-icon" />
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Set account password"
-                  name={
-                    register('password', {
-                      required: 'Password is required',
-                      minLength: {
-                        value: 6,
-                        message: 'Password must be at least 6 characters',
-                      },
-                    }).name
-                  }
-                  onBlur={register('password').onBlur}
-                  onChange={register('password').onChange}
-                  ref={register('password').ref}
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </label>
-            {errors.password && (
-              <span className="field-error">{errors.password.message}</span>
-            )}
-          </div>
-        )}
+        <div className="form-group">
+          <label htmlFor="password" className="label-text">
+            Password *
+            <div className="input-with-icon">
+              <Lock size={16} className="input-icon" />
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder={
+                  initialValues
+                    ? 'Leave blank to keep current password'
+                    : 'Set account password'
+                }
+                name={passwordReg.name}
+                onChange={passwordReg.onChange}
+                onBlur={passwordReg.onBlur}
+                ref={passwordReg.ref}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </label>
+          {errors.password && (
+            <span className="field-error">{errors.password.message}</span>
+          )}
+        </div>
       </form>
     </Modal>
   );
 }
 
 CreateJuryModal.defaultProps = {
-  initialData: null,
+  initialValues: null,
 };
 
 export default CreateJuryModal;

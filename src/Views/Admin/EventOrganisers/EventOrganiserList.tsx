@@ -5,6 +5,9 @@ import {
   ShieldCheck,
   ShieldAlert,
   UserCheck,
+  XCircle,
+  Ban,
+  Unlock,
 } from 'lucide-react';
 import { useHeader } from '../../../Shared/Context/HeaderContext';
 import Table, { Column } from '../../../Components/Atom/Table/Table';
@@ -13,7 +16,10 @@ import {
   useGetAdminEventOrganisersQuery,
   EventOrganiser,
   useVerifyEventOrganiserMutation,
+  useRejectEventOrganiserMutation,
+  useBlockEventOrganiserMutation,
 } from '../../../Services/Api/module/Admin/EventOrganisers';
+import { getAssetUrl } from '../../../Shared/Utils/url';
 import showToast from '../../../Shared/Utils/toast';
 import './EventOrganiserList.scss';
 
@@ -27,65 +33,114 @@ const renderOrganiserCell = (o: EventOrganiser) => (
   </div>
 );
 
-const renderStatusPill = (o: EventOrganiser) => (
-  <span
-    className={`status-pill ${o.isVerifiedByAdmin ? 'verified' : 'unverified'}`}
-  >
-    {o.isVerifiedByAdmin ? (
-      <>
-        <ShieldCheck size={14} />
-        <span>Verified</span>
-      </>
-    ) : (
-      <>
-        <ShieldAlert size={14} />
-        <span>Pending</span>
-      </>
-    )}
-  </span>
-);
+const renderStatusPill = (o: EventOrganiser) => {
+  let status = 'Pending';
+  if (o.isVerifiedByAdmin) {
+    status = 'Verified';
+  } else if (o.isRejected) {
+    status = 'Rejected';
+  }
+
+  return (
+    <span className={`status-pill ${status.toLowerCase()}`}>
+      {status === 'Verified' && <ShieldCheck size={14} />}
+      {status === 'Pending' && <ShieldAlert size={14} />}
+      {status === 'Rejected' && <XCircle size={14} />}
+      <span>{status}</span>
+    </span>
+  );
+};
 
 const renderActionsCell = (
   o: EventOrganiser,
-  onVerify: (organiser: EventOrganiser) => void
+  onVerify: (organiser: EventOrganiser) => void,
+  onReject: (organiser: EventOrganiser) => void,
+  onBlock: (organiser: EventOrganiser) => void
 ) => (
   <div className="table-actions">
-    {!o.isVerifiedByAdmin && (
+    <div className="action-group primary">
+      {!o.isVerifiedByAdmin && (
+        <>
+          <button
+            type="button"
+            className="action-btn verify"
+            title="Verify Organiser"
+            onClick={(e) => {
+              e.stopPropagation();
+              onVerify(o);
+            }}
+          >
+            <UserCheck size={16} />
+            <span>Verify</span>
+          </button>
+          <button
+            type="button"
+            className="action-btn reject"
+            title={o.isRejected ? 'Update Rejection' : 'Reject Organiser'}
+            onClick={(e) => {
+              e.stopPropagation();
+              onReject(o);
+            }}
+          >
+            <XCircle size={16} />
+            <span>{o.isRejected ? 'Re-Reject' : 'Reject'}</span>
+          </button>
+        </>
+      )}
+    </div>
+    <div className="action-group secondary">
       <button
         type="button"
-        className="action-btn verify"
-        title="Verify Organiser"
+        className={`action-btn ${o.isBlocked ? 'unblock' : 'block'}`}
+        title={o.isBlocked ? 'Unblock Organiser' : 'Block Organiser'}
         onClick={(e) => {
           e.stopPropagation();
-          onVerify(o);
+          onBlock(o);
         }}
       >
-        <UserCheck size={18} />
-        <span>Verify</span>
+        {o.isBlocked ? <Unlock size={16} /> : <Ban size={16} />}
+        <span>{o.isBlocked ? 'Unblock' : 'Block'}</span>
       </button>
-    )}
-    <a
-      href={o.governmentIdUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="action-btn link"
-      title="View Government ID"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <ExternalLink size={18} />
-      <span>View ID</span>
-    </a>
+      <a
+        href={getAssetUrl(o.governmentIdUrl)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="action-btn link"
+        title="View Government ID"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ExternalLink size={16} />
+        <span>View ID</span>
+      </a>
+    </div>
   </div>
 );
 
 const getColumns = (
-  onVerify: (o: EventOrganiser) => void
+  onVerify: (o: EventOrganiser) => void,
+  onReject: (o: EventOrganiser) => void,
+  onBlock: (o: EventOrganiser) => void
 ): Column<EventOrganiser>[] => [
   {
     header: 'Organiser',
     accessor: renderOrganiserCell,
   },
   { header: 'Company', accessor: 'companyName' },
+  {
+    header: 'Published Galas',
+    accessor: (o) => (
+      <div
+        className="published-galas-cell"
+        title={
+          o.publishedGalas?.length
+            ? o.publishedGalas.map((g) => g.name).join(', ')
+            : 'No published galas'
+        }
+      >
+        <span>{o.publishedGalas?.length || 0}</span>
+      </div>
+    ),
+  },
   {
     header: 'Registered On',
     accessor: (o) =>
@@ -101,7 +156,7 @@ const getColumns = (
   },
   {
     header: 'Actions',
-    accessor: (o) => renderActionsCell(o, onVerify),
+    accessor: (o) => renderActionsCell(o, onVerify, onReject, onBlock),
   },
 ];
 
@@ -114,6 +169,8 @@ function EventOrganiserList() {
   const [selectedOrganiser, setSelectedOrganiser] =
     useState<EventOrganiser | null>(null);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const { data: response, isLoading } = useGetAdminEventOrganisersQuery({
     verifiedOnly: verifiedFilter === true ? true : undefined,
@@ -121,6 +178,31 @@ function EventOrganiserList() {
 
   const [verifyOrganiser, { isLoading: isVerifying }] =
     useVerifyEventOrganiserMutation();
+  const [rejectOrganiser, { isLoading: isRejecting }] =
+    useRejectEventOrganiserMutation();
+  const [blockOrganiser] = useBlockEventOrganiserMutation();
+
+  const handleBlock = async (o: EventOrganiser) => {
+    try {
+      await blockOrganiser({ id: o.id, isBlocked: !o.isBlocked }).unwrap();
+      showToast.success(
+        `Organiser ${o.fullName} has been ${
+          o.isBlocked ? 'unblocked' : 'blocked'
+        }.`
+      );
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'data' in error) {
+        const rtkError = error as { data: { message?: string } };
+        if (rtkError.data.message) {
+          showToast.error(rtkError.data.message);
+        }
+      } else if (error instanceof Error) {
+        showToast.error(error.message);
+      } else {
+        showToast.error('Failed to change block status for this organiser.');
+      }
+    }
+  };
 
   const handleVerify = async () => {
     if (!selectedOrganiser) return;
@@ -132,16 +214,57 @@ function EventOrganiserList() {
       );
       setIsVerifyModalOpen(false);
       setSelectedOrganiser(null);
-    } catch (error) {
-      showToast.error(
-        error instanceof Error ? error.message : 'Failed to verify organiser'
-      );
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'data' in error) {
+        const rtkError = error as { data: { message?: string } };
+        if (rtkError.data.message) {
+          showToast.error(rtkError.data.message);
+        }
+      } else if (error instanceof Error) {
+        showToast.error(error.message);
+      } else {
+        showToast.error('Failed to verify organiser');
+      }
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedOrganiser || !rejectionReason.trim()) {
+      showToast.error('Please provide a reason for rejection');
+      return;
+    }
+
+    try {
+      await rejectOrganiser({
+        id: selectedOrganiser.id,
+        reason: rejectionReason,
+      }).unwrap();
+      showToast.success(`Organiser ${selectedOrganiser.fullName} rejected`);
+      setIsRejectModalOpen(false);
+      setSelectedOrganiser(null);
+      setRejectionReason('');
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'data' in error) {
+        const rtkError = error as { data: { message?: string } };
+        if (rtkError.data.message) {
+          showToast.error(rtkError.data.message);
+        }
+      } else if (error instanceof Error) {
+        showToast.error(error.message);
+      } else {
+        showToast.error('Failed to reject organiser');
+      }
     }
   };
 
   const handleOpenVerifyModal = (o: EventOrganiser) => {
     setSelectedOrganiser(o);
     setIsVerifyModalOpen(true);
+  };
+
+  const handleOpenRejectModal = (o: EventOrganiser) => {
+    setSelectedOrganiser(o);
+    setIsRejectModalOpen(true);
   };
 
   useEffect(() => {
@@ -174,7 +297,8 @@ function EventOrganiserList() {
   }, [response?.data, searchTerm, verifiedFilter]);
 
   const columns: Column<EventOrganiser>[] = useMemo(
-    () => getColumns(handleOpenVerifyModal),
+    () => getColumns(handleOpenVerifyModal, handleOpenRejectModal, handleBlock),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -276,6 +400,95 @@ function EventOrganiserList() {
             <strong>{selectedOrganiser?.companyName}</strong>. This will allow
             them to create and manage events on the platform.
           </p>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        title="Reject Organiser"
+        subtitle="Please provide a reason for rejecting this organiser"
+        width="500px"
+        footer={
+          <div className="modal-actions-footer">
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={() => setIsRejectModalOpen(false)}
+              disabled={isRejecting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn-confirm-reject"
+              style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+              onClick={handleReject}
+              disabled={isRejecting}
+            >
+              {isRejecting ? 'Rejecting...' : 'Confirm Rejection'}
+            </button>
+          </div>
+        }
+      >
+        <div className="rejection-modal-body" style={{ padding: '16px 0' }}>
+          <div
+            className="selected-organiser-info"
+            style={{
+              marginBottom: '20px',
+              padding: '12px',
+              background: '#fef2f2',
+              borderRadius: '12px',
+              border: '1px solid #fee2e2',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '14px', color: '#991b1b' }}>
+              Rejecting: <strong>{selectedOrganiser?.fullName}</strong> (
+              {selectedOrganiser?.companyName})
+            </p>
+          </div>
+          <div className="form-group">
+            <label
+              htmlFor="rejection-reason"
+              style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontWeight: 600,
+                color: '#374151',
+                fontSize: '14px',
+              }}
+            >
+              Rejection Reason
+              <textarea
+                id="rejection-reason"
+                placeholder="Explain why this organiser is being rejected..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                style={{
+                  width: '100%',
+                  minHeight: '120px',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: '1px solid #d1d5db',
+                  marginTop: '8px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                }}
+              />
+            </label>
+            <p style={{ marginTop: '8px', fontSize: '12px', color: '#6b7280' }}>
+              This reason will be shown to the organiser on their dashboard.
+            </p>
+          </div>
         </div>
       </Modal>
     </div>

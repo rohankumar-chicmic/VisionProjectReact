@@ -1,5 +1,5 @@
 /* eslint-disable no-alert */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Calendar,
@@ -30,11 +30,18 @@ import {
   usePublishOrganiserGalaMutation,
 } from '../../Services/Api/module/Organiser/Gala';
 import Skeleton from '../../Components/Shared/Skeleton';
+import GalaActionOverlay from './Components/GalaActionOverlay';
 import showToast from '../../Shared/Utils/toast';
 import useCurrentUserRole from '../../Shared/Auth/useCurrentUserRole';
-import { createGrantPlatformTransaction } from '../../Services/WalletConnect';
+import {
+  createGrantPlatformTransaction,
+  deleteGalaOnChain,
+} from '../../Services/WalletConnect';
 import './GalaDetails.scss';
 import DEFAULT_GALA_IMAGE from '../../assets/general-img-landscape.png';
+
+import { getAssetUrl } from '../../Shared/Utils/url';
+import { formatDateTime } from '../../Shared/Utils/dateUtils';
 
 function GalaDetails() {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +49,21 @@ function GalaDetails() {
   const { setTitle, setSubtitle, setBackAction } = useHeader();
   const { role } = useCurrentUserRole();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isLocalPublishing, setIsLocalPublishing] = useState(false);
+  const isAbortedRef = useRef(false);
+  const publishPromiseRef = useRef<{
+    abort: () => void;
+    unwrap: () => Promise<unknown>;
+  } | null>(null);
+
+  const handleCancelPublishing = () => {
+    isAbortedRef.current = true;
+    setIsLocalPublishing(false);
+    if (publishPromiseRef.current) {
+      publishPromiseRef.current.abort();
+    }
+    showToast.info('Publishing procedure cancelled.');
+  };
   const isAdmin = role === 'admin' || role === 'sub_admin';
   const isOrganiser = role === 'organiser';
 
@@ -78,18 +100,6 @@ function GalaDetails() {
     setBackAction(true, () => navigate('/galas'));
   }, [setTitle, setSubtitle, setBackAction, navigate]);
 
-  const formatDate = (dateString: string) => {
-    try {
-      return new Intl.DateTimeFormat('en-US', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).format(new Date(dateString));
-    } catch {
-      return dateString;
-    }
-  };
-
   const formatTime = (timeString: string) => {
     return timeString;
   };
@@ -119,37 +129,69 @@ function GalaDetails() {
   };
 
   const handlePublish = async () => {
+    isAbortedRef.current = false;
     const activeGala = gala;
     if (!id || !activeGala) return;
+
+    setIsLocalPublishing(true);
     try {
       if (isAdmin) {
-        await publishAdminGala(id).unwrap();
+        publishPromiseRef.current = publishAdminGala(id);
+        await publishPromiseRef.current.unwrap();
       } else {
         showToast.info(
           'Please confirm the wallet transaction for your grants.'
         );
 
+        // Use totalGalaValue from API (authoritative), fallback to sum of grant prizeAmounts.
+        // prizeAmount IS the total pool per grant — do NOT multiply by numberOfPrizes.
         const totalPrizePoolValue =
-          activeGala.grants?.reduce((acc, grant) => {
-            return acc + (grant.prizeAmount || 0) * (grant.numberOfPrizes || 0);
-          }, 0) || totalPrizePool;
+          totalPrizePool ||
+          activeGala.grants?.reduce(
+            (acc, grant) => acc + (grant.prizeAmount || 0),
+            0
+          ) ||
+          0;
 
+        // Initiating Gala Publish
         const { transactionHash, walletAddress } =
           await createGrantPlatformTransaction(totalPrizePoolValue);
 
-        await publishOrganiserGala({
+        if (isAbortedRef.current) return;
+
+        publishPromiseRef.current = publishOrganiserGala({
           id,
           body: {
             blockchainTransactionHash: transactionHash,
             organiserWalletAddress: walletAddress,
           },
-        }).unwrap();
+        });
+        await publishPromiseRef.current.unwrap();
       }
-      showToast.success('Gala published successfully!');
-    } catch (error) {
-      showToast.error(
-        error instanceof Error ? error.message : 'Failed to publish gala'
-      );
+
+      if (!isAbortedRef.current) {
+        showToast.success('Gala published successfully!');
+      }
+    } catch (error: unknown) {
+      let errorMessage = 'Failed to publish gala';
+      if (typeof error === 'object' && error !== null && 'data' in error) {
+        const rtkError = error as { data?: { message?: string } };
+        if (rtkError.data?.message) {
+          errorMessage = rtkError.data.message;
+        }
+      } else if (error instanceof Error) {
+        if (
+          error.message.includes('User denied transaction') ||
+          error.message.includes('user rejected')
+        ) {
+          errorMessage = 'Wallet transaction cancelled by user.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      showToast.error(errorMessage);
+    } finally {
+      setIsLocalPublishing(false);
     }
   };
 
@@ -159,6 +201,11 @@ function GalaDetails() {
       if (isAdmin) {
         await deleteAdminGala(id).unwrap();
       } else {
+        // Organiser: call contract first, then backend
+        showToast.info(
+          'Please confirm the wallet transaction to delete this gala.'
+        );
+        await deleteGalaOnChain(id);
         await deleteOrganiserGala(id).unwrap();
       }
       showToast.success('Gala deleted successfully!');
@@ -231,7 +278,7 @@ function GalaDetails() {
                   type="button"
                   className="header-btn btn-primary"
                   onClick={handlePublish}
-                  disabled={isPublishing}
+                  disabled={isPublishing || isLocalPublishing}
                 >
                   <CheckCircle size={18} />
                   Publish Gala
@@ -251,7 +298,10 @@ function GalaDetails() {
       )}
 
       <div className="gala-hero-banner">
-        <img src={gala.coverImageUrl || DEFAULT_GALA_IMAGE} alt={gala.name} />
+        <img
+          src={getAssetUrl(gala.coverImageUrl) || DEFAULT_GALA_IMAGE}
+          alt={gala.name}
+        />
         <div className="hero-overlay">
           <div className={`status-pill ${status.class}`}>
             <span className="dot" />
@@ -267,7 +317,7 @@ function GalaDetails() {
           <div className="hero-meta">
             <div className="meta-item">
               <Calendar size={20} />
-              {formatDate(gala.eventDate)}
+              {formatDateTime(gala.eventDate)}
             </div>
             <div className="meta-item">
               <Clock size={20} />
@@ -393,7 +443,7 @@ function GalaDetails() {
                     <div className="meta-box deadline">
                       <span className="m-label">Deadline</span>
                       <span className="m-value">
-                        {formatDate(grant.applicationDeadline)}
+                        {formatDateTime(grant.applicationDeadline)}
                       </span>
                     </div>
                   </div>
@@ -489,6 +539,17 @@ function GalaDetails() {
           </div>
         </div>
       </div>
+      <GalaActionOverlay
+        isOpen={isLocalPublishing}
+        title="Publishing Gala"
+        message={
+          isAdmin
+            ? 'Please wait while we verify and publish your gala securely.'
+            : 'Verifying prize pool proof on the blockchain. Please confirm the transaction if your wallet prompts you.'
+        }
+        onCancel={handleCancelPublishing}
+      />
+
       <Modal
         isOpen={Boolean(deletingId)}
         onClose={() => setDeletingId(null)}

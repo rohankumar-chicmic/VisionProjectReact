@@ -1,14 +1,41 @@
 import { Settings2 } from 'lucide-react';
+import { STANDARD_CRITERIA } from '../criteria_data';
+import type { Criterion } from '../types';
 
 interface GrantCriteriaSectionProps {
-  juryCriteria: number[];
+  juryCriteria: (string | number)[];
+  customCriteriaDefinitions: Criterion[];
   onManageCriteria: () => void;
 }
 
 function GrantCriteriaSection({
   juryCriteria,
+  customCriteriaDefinitions,
   onManageCriteria,
 }: GrantCriteriaSectionProps) {
+  const getCriterionName = (id: string | number) => {
+    // Check standard criteria
+    const numericId = typeof id === 'number' ? id : parseInt(id, 10);
+    if (!isNaN(numericId)) {
+      const standard = STANDARD_CRITERIA.find((c) => c.id === numericId);
+      if (standard) return standard.name;
+    }
+
+    // Check custom criteria (could be UUID or 'c101' format)
+    const custom = customCriteriaDefinitions.find((c) => {
+      if (!c.id) return false;
+      if (c.id === id) return true;
+
+      // Fallback for legacy 'c' prefixed IDs
+      const cNumericId = parseInt(c.id.toString().replace('c', ''), 10);
+      return !isNaN(cNumericId) && cNumericId.toString() === id.toString();
+    });
+
+    if (custom) return custom.name;
+
+    return `Criterion #${id}`;
+  };
+
   return (
     <section className="form-card">
       <div className="card-header flex-header">
@@ -36,7 +63,7 @@ function GrantCriteriaSection({
           <div className="criteria-chips-list">
             {juryCriteria.map((criterionId) => (
               <span key={criterionId} className="crit-chip">
-                Criterion #{criterionId}
+                {getCriterionName(criterionId)}
               </span>
             ))}
           </div>

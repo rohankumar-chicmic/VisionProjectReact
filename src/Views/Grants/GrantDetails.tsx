@@ -253,6 +253,12 @@ function GrantDetails() {
               <Award size={14} />
               {grant.category}
             </div>
+            {grant.isWinnerDecided && (
+              <div className="status-pill awarded">
+                <Trophy size={14} />
+                <span>Winners Decided</span>
+              </div>
+            )}
           </div>
           <h1>{grant.name}</h1>
           <div className="hero-meta">
@@ -518,11 +524,13 @@ function GrantDetails() {
                         {formatCurrency(prize.amount)}
                       </div>
                     </div>
-                    {prize.winnerFullName && (
+                    {(prize.winnerFullName || prize.winnerUserName) && (
                       <div className="winner-badge-reveal">
                         <div className="winner-chip">
                           <User size={12} />
-                          <span>{prize.winnerFullName}</span>
+                          <span>
+                            {prize.winnerFullName || prize.winnerUserName}
+                          </span>
                         </div>
                       </div>
                     )}

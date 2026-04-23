@@ -1,0 +1,16 @@
+export const STANDARD_CRITERIA = [
+  { id: 1, name: 'Business Viability' },
+  { id: 2, name: 'Financial Potential' },
+  { id: 3, name: 'Market Size' },
+  { id: 4, name: 'Revenue Track Record' },
+  { id: 5, name: 'Team Experience' },
+  { id: 6, name: 'Leadership Quality' },
+  { id: 7, name: 'Team Diversity' },
+  { id: 8, name: 'Innovation Level' },
+  { id: 9, name: 'Technical Feasibility' },
+  { id: 10, name: 'Scalability' },
+  { id: 11, name: 'Competitive Advantage' },
+  { id: 12, name: 'Social Impact' },
+  { id: 13, name: 'Environmental Responsibility' },
+  { id: 14, name: 'Community Engagement' },
+];

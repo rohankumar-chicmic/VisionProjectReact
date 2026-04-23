@@ -1,24 +1,160 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/label-has-associated-control, jsx-a11y/no-static-element-interactions */
 import { useEffect, useState } from 'react';
-import { ChevronDown, MoreVertical, PlusCircle, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { MoreVertical, PlusCircle, Eye, Edit } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
+import {
+  useCreateOrganiserJuryCriteriaMutation,
+  useGetOrganiserJuryCriteriaByIdQuery,
+  useUpdateOrganiserJuryCriteriaMutation,
+} from '../../Services/Api/module/Organiser/JuryCriteria';
+import showToast from '../../Shared/Utils/toast';
 import './AddCustomCriteria.scss';
 
 function AddCustomCriteria() {
   const { setTitle, setSubtitle, setBackAction, resetHeader } = useHeader();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('id');
 
   const [criteriaName, setCriteriaName] = useState('');
   const [description, setDescription] = useState('');
   const [scale, setScale] = useState('0-10');
+  const [isEnabled, setIsEnabled] = useState(true);
+
+  const [createCriteria] = useCreateOrganiserJuryCriteriaMutation();
+  const [updateCriteria] = useUpdateOrganiserJuryCriteriaMutation();
+  const { data: detailRes } = useGetOrganiserJuryCriteriaByIdQuery(editId!, {
+    skip: !editId || !editId.includes('-'),
+  });
 
   useEffect(() => {
-    setTitle('Add Custom Criteria');
-    setSubtitle('Innovation Technology > Grant Jury Criteria > Add Custom');
+    setTitle(editId ? 'Edit Custom Criteria' : 'Add Custom Criteria');
+    setSubtitle(
+      `Innovation Technology > Grant Jury Criteria > ${editId ? 'Edit' : 'Add'} Custom`
+    );
     setBackAction(true, () => navigate('/grants/jury-criteria'));
     return () => resetHeader();
-  }, [setTitle, setSubtitle, setBackAction, resetHeader, navigate]);
+  }, [setTitle, setSubtitle, setBackAction, resetHeader, navigate, editId]);
+
+  useEffect(() => {
+    if (editId) {
+      if (editId.includes('-')) {
+        // Backend UUID
+        if (detailRes?.data) {
+          setCriteriaName(detailRes.data.name);
+          setDescription(detailRes.data.description);
+          // Scale is currently fixed to 0-10 based on earlier request
+        }
+      } else {
+        // Session-only or hardcoded ID (e.g. c101)
+        const savedState = sessionStorage.getItem('create_grant_form_state');
+        if (savedState) {
+          try {
+            const state = JSON.parse(savedState);
+            const criterion = (state.customCriteriaDefinitions || []).find(
+              (c: any) => c.id === editId
+            );
+            if (criterion) {
+              setCriteriaName(criterion.name);
+              setDescription(criterion.description);
+              setScale(criterion.scoreRange);
+              setIsEnabled(criterion.selected ?? true);
+            }
+          } catch {
+            // ignore error
+          }
+        }
+      }
+    }
+  }, [editId, detailRes]);
+
+  const handleCreateCriteria = async () => {
+    if (!criteriaName.trim() || !description.trim()) {
+      return;
+    }
+
+    try {
+      let finalId = editId;
+
+      if (editId && editId.includes('-')) {
+        // Update backend
+        await updateCriteria({
+          id: editId,
+          name: criteriaName,
+          description,
+          category: 'Custom',
+        }).unwrap();
+      } else {
+        // Create new or update session-only
+        const result = await createCriteria({
+          name: criteriaName,
+          description,
+          category: 'Custom',
+        }).unwrap();
+        finalId = result.data.id;
+      }
+
+      const savedState = sessionStorage.getItem('create_grant_form_state');
+      const existingState = savedState ? JSON.parse(savedState) : {};
+
+      const updatedDefinitions = [
+        ...(existingState.customCriteriaDefinitions || []),
+      ];
+      const updatedJuryCriteria = [...(existingState.juryCriteria || [])];
+
+      if (editId) {
+        const index = updatedDefinitions.findIndex((d: any) => d.id === editId);
+        if (index !== -1) {
+          updatedDefinitions[index] = {
+            ...updatedDefinitions[index],
+            id: finalId!,
+            name: criteriaName,
+            description,
+            selected: isEnabled,
+            scoreRange: scale,
+          };
+
+          const oldCritId = parseInt(editId.replace('c', ''), 10) || editId;
+          const criteriaIndex = updatedJuryCriteria.indexOf(oldCritId);
+          if (isEnabled && criteriaIndex === -1) {
+            updatedJuryCriteria.push(finalId!);
+          } else if (!isEnabled && criteriaIndex !== -1) {
+            updatedJuryCriteria.splice(criteriaIndex, 1);
+          } else if (isEnabled && criteriaIndex !== -1) {
+            updatedJuryCriteria[criteriaIndex] = finalId!;
+          }
+        }
+      } else {
+        updatedDefinitions.push({
+          id: finalId!,
+          name: criteriaName,
+          description,
+          selected: isEnabled,
+          scoreRange: scale,
+          custom: true,
+        });
+
+        if (isEnabled) {
+          updatedJuryCriteria.push(finalId!);
+        }
+      }
+
+      const updatedState = {
+        ...existingState,
+        customCriteriaDefinitions: updatedDefinitions,
+        juryCriteria: updatedJuryCriteria,
+      };
+
+      sessionStorage.setItem(
+        'create_grant_form_state',
+        JSON.stringify(updatedState)
+      );
+      navigate('/grants/jury-criteria');
+    } catch {
+      showToast.error('Failed to save criteria');
+    }
+  };
 
   return (
     <div className="add-custom-criteria-page">
@@ -33,10 +169,10 @@ function AddCustomCriteria() {
         <button
           type="button"
           className="header-btn btn-primary"
-          onClick={() => navigate('/grants/jury-criteria')}
+          onClick={handleCreateCriteria}
         >
-          <PlusCircle size={18} />
-          <span>Create Criteria</span>
+          {editId ? <Edit size={18} /> : <PlusCircle size={18} />}
+          <span>{editId ? 'Update Criteria' : 'Create Criteria'}</span>
         </button>
       </HeaderActions>
 
@@ -45,10 +181,10 @@ function AddCustomCriteria() {
           <section className="form-card main-form">
             <div className="card-header-icon">
               <div className="icon-box">
-                <PlusCircle size={32} />
+                {editId ? <Edit size={32} /> : <PlusCircle size={32} />}
               </div>
               <div className="header-text">
-                <h3>Create New Evaluation Criteria</h3>
+                <h3>{editId ? 'Edit' : 'Create New'} Evaluation Criteria</h3>
                 <p>
                   This criteria will appear as a scoring field on the jury
                   evaluation form
@@ -88,6 +224,7 @@ function AddCustomCriteria() {
                 />
               </div>
 
+              {/* 
               <div className="form-group">
                 <label>Scoring Scale *</label>
                 <div className="scale-selector">
@@ -99,26 +236,6 @@ function AddCustomCriteria() {
                     <div className="option-text">
                       <span className="scale-val">0 - 10</span>
                       <span className="desc">Standard (recommended)</span>
-                    </div>
-                  </div>
-                  <div
-                    className={`scale-option ${scale === '0-5' ? 'active' : ''}`}
-                    onClick={() => setScale('0-5')}
-                  >
-                    <div className="radio" />
-                    <div className="option-text">
-                      <span className="scale-val">0 - 5</span>
-                      <span className="desc">Simplified scale</span>
-                    </div>
-                  </div>
-                  <div
-                    className={`scale-option ${scale === '1-100' ? 'active' : ''}`}
-                    onClick={() => setScale('1-100')}
-                  >
-                    <div className="radio" />
-                    <div className="option-text">
-                      <span className="scale-val">1 - 100</span>
-                      <span className="desc">Percentage scale</span>
                     </div>
                   </div>
                 </div>
@@ -133,13 +250,17 @@ function AddCustomCriteria() {
                   <ChevronDown className="select-arrow" size={18} />
                 </div>
               </div>
+*/}
 
               <div className="toggle-group">
                 <div className="toggle-text">
                   <h4>Enable for this grant immediately</h4>
                   <p>Criteria will be pre-selected in Manage Criteria</p>
                 </div>
-                <div className="toggle-switch active">
+                <div
+                  className={`toggle-switch ${isEnabled ? 'active' : ''}`}
+                  onClick={() => setIsEnabled(!isEnabled)}
+                >
                   <div className="switch-handle" />
                 </div>
               </div>

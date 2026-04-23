@@ -21,7 +21,7 @@ export interface OrganiserGrantCreateRequest {
   requireIndustrySelection: boolean;
   requireMotivationStatement: boolean;
   requireBusinessPlanDocument: boolean;
-  juryCriteria: number[];
+  juryCriteria: (string | number)[];
   additionalRequirements: { text: string; order: number }[];
   juryPanelSize?: number;
   prizeWinners: PrizeWinner[];
@@ -78,6 +78,7 @@ export interface OrganiserGrantDetailData {
     amount: number;
     winnerUserId: string | null;
     winnerFullName: string | null;
+    winnerUserName: string | null;
   }[];
   isWinnerDecided: boolean;
   decidedWinnersCount: number;

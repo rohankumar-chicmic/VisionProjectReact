@@ -97,6 +97,9 @@ const api = createApi({
     'JuryApplications',
     'ApplicationReview',
     'OrganiserProfile',
+    'AdminProfile',
+    'AdminSettings',
+    'OrganiserJuryCriteria',
   ],
 });
 

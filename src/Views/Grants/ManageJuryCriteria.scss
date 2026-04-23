@@ -136,5 +136,46 @@
     }
 
     .item-menu { color: #94a3b8; cursor: pointer; &:hover { color: #64748b; } }
+
+    .menu-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .action-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        z-index: 50;
+        margin-top: 8px;
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 8px;
+        min-width: 140px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+        .menu-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #475569;
+          transition: all 0.2s;
+          background: transparent;
+
+          &:hover { background-color: #f1f5f9; color: var(--primary-color); }
+
+          &.delete {
+            color: #ef4444;
+            &:hover { background-color: #fef2f2; color: #dc2626; }
+          }
+        }
+      }
+    }
   }
 }

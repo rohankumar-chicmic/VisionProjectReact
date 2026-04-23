@@ -44,6 +44,7 @@ export interface GrantItem {
   createdAt: string;
   applicantCount: number;
   eligibilityCriteria: string[];
+  isWinnerDecided?: boolean;
 }
 
 export interface GrantResponse {
@@ -97,6 +98,7 @@ export interface AdminGrantDetailData {
     amount: number;
     winnerUserId: string | null;
     winnerFullName: string | null;
+    winnerUserName: string | null;
   }[];
   isWinnerDecided: boolean;
   decidedWinnersCount: number;

@@ -1,8 +1,12 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, react/button-has-type, react/function-component-definition */
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { Check, Info, Plus, X, MoreVertical } from 'lucide-react';
+import { Check, Info, Plus, X, MoreVertical, Trash2, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useHeader, HeaderActions } from '../../Shared/Context/HeaderContext';
+import {
+  useGetOrganiserJuryCriteriaQuery,
+  useDeleteOrganiserJuryCriteriaMutation,
+} from '../../Services/Api/module/Organiser/JuryCriteria';
 import showToast from '../../Shared/Utils/toast';
 import './ManageJuryCriteria.scss';
 
@@ -155,7 +159,7 @@ const ManageJuryCriteria: React.FC = () => {
   const initialCustomCriteriaData: Criterion[] = useMemo(
     () => [
       {
-        id: 'c1',
+        id: 'c101',
         name: 'Pitch Quality',
         description: 'Clarity and impact of the presentation',
         selected: true,
@@ -163,7 +167,7 @@ const ManageJuryCriteria: React.FC = () => {
         custom: true,
       },
       {
-        id: 'c2',
+        id: 'c102',
         name: 'Market Readiness',
         description: 'Is the market ready to adopt this solution?',
         selected: true,
@@ -171,7 +175,7 @@ const ManageJuryCriteria: React.FC = () => {
         custom: true,
       },
       {
-        id: 'c3',
+        id: 'c103',
         name: 'Community Impact Score',
         description: 'Local community engagement level',
         selected: false,
@@ -188,6 +192,10 @@ const ManageJuryCriteria: React.FC = () => {
   const [customCriteria, setCustomCriteria] = useState<Criterion[]>(
     initialCustomCriteriaData
   );
+
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const { data: apiCriteriaRes } = useGetOrganiserJuryCriteriaQuery();
+  const [deleteCriteria] = useDeleteOrganiserJuryCriteriaMutation();
 
   // Track if we've already restored criteria to prevent overwriting
   const hasRestoredCriteria = useRef(false);
@@ -213,14 +221,47 @@ const ManageJuryCriteria: React.FC = () => {
           );
           setCategories(updatedCategories);
 
-          // Update custom criteria using initial values
-          const updatedCustomCriteria = initialCustomCriteriaData.map(
-            (crit: Criterion) => ({
-              ...crit,
-              selected: savedCriteria.includes(
-                parseInt(crit.id.replace('c', ''), 10)
-              ),
-            })
+          // Update custom criteria using initial values plus any saved definitions and API data
+          const sessionDefinitions = state.customCriteriaDefinitions || [];
+          const sessionIds = sessionDefinitions.map((d: Criterion) => d.id);
+
+          const apiDefinitions = (apiCriteriaRes?.data || []).map((c) => ({
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            selected: false, // will be set below
+            scoreRange: '0 - 10',
+            custom: true,
+          }));
+          const apiIds = apiDefinitions.map((d) => d.id);
+
+          const allCustomDefinitions = [
+            // Only include hardcoded ones if they haven't been "overridden" in session
+            ...initialCustomCriteriaData.filter(
+              (d) => !sessionIds.includes(d.id) && !apiIds.includes(d.id)
+            ),
+            ...apiDefinitions.filter((d) => !sessionIds.includes(d.id)),
+            ...sessionDefinitions,
+          ];
+
+          // Use a Map to deduplicate by ID if necessary (just in case)
+          const uniqueCustomDefinitions = Array.from(
+            new Map(allCustomDefinitions.map((c) => [c.id, c])).values()
+          );
+
+          const updatedCustomCriteria = uniqueCustomDefinitions.map(
+            (crit: Criterion) => {
+              return {
+                ...crit,
+                selected: savedCriteria.some((savedId: any) => {
+                  const critIdMatch = crit.id?.toString().match(/^c?(\d+)$/);
+                  const critId = critIdMatch
+                    ? parseInt(critIdMatch[1], 10)
+                    : crit.id;
+                  return savedId.toString() === critId?.toString();
+                }),
+              };
+            }
           );
           setCustomCriteria(updatedCustomCriteria);
         } catch {
@@ -229,7 +270,7 @@ const ManageJuryCriteria: React.FC = () => {
       }
       hasRestoredCriteria.current = true;
     }
-  }, [initialCategoriesData, initialCustomCriteriaData]); // Include constants as dependencies
+  }, [initialCategoriesData, initialCustomCriteriaData, apiCriteriaRes]); // Include constants as dependencies
 
   useEffect(() => {
     setTitle('Manage Jury Criteria');
@@ -254,11 +295,12 @@ const ManageJuryCriteria: React.FC = () => {
     const selectedCriteria = allCriteria
       .filter((crit) => crit.selected)
       .map((crit) => {
-        // Handle both regular IDs (1, 2, 3) and custom IDs (c1, c2, c3)
-        if (crit.custom) {
-          return parseInt(crit.id.replace('c', ''), 10);
+        // Handle both regular IDs (1, 2, 3) and custom IDs (c1, c2, c3 or UUID)
+        const numericMatch = crit.id.match(/^c?(\d+)$/);
+        if (numericMatch) {
+          return parseInt(numericMatch[1], 10);
         }
-        return parseInt(crit.id, 10);
+        return crit.id; // Keep UUIDs as strings if they dont match numeric format
       });
 
     try {
@@ -268,6 +310,7 @@ const ManageJuryCriteria: React.FC = () => {
       const updatedState = {
         ...existingState,
         juryCriteria: selectedCriteria,
+        customCriteriaDefinitions: customCriteria.filter((c) => c.custom),
       };
 
       sessionStorage.setItem(
@@ -284,6 +327,53 @@ const ManageJuryCriteria: React.FC = () => {
   const handleSaveAndReturn = () => {
     saveCriteriaToSessionStorage();
     navigate('/grants/create');
+  };
+
+  const handleDeleteCriteria = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+
+    // If it's a UUID (contains hyphens), it's from the backend
+    const isBackend = id.includes('-');
+
+    try {
+      if (isBackend) {
+        await deleteCriteria(id).unwrap();
+      }
+
+      setCustomCriteria((prev) => prev.filter((c) => c.id !== id));
+
+      const savedState = sessionStorage.getItem(CREATE_GRANT_FORM_SESSION_KEY);
+      if (savedState) {
+        const state = JSON.parse(savedState);
+        const numericMatch = id.match(/^c?(\d+)$/);
+        const critId = numericMatch ? parseInt(numericMatch[1], 10) : id;
+
+        const updatedState = {
+          ...state,
+          customCriteriaDefinitions: (
+            state.customCriteriaDefinitions || []
+          ).filter((d: any) => d.id !== id),
+          juryCriteria: (state.juryCriteria || []).filter(
+            (cid: any) => cid !== critId
+          ),
+        };
+
+        sessionStorage.setItem(
+          CREATE_GRANT_FORM_SESSION_KEY,
+          JSON.stringify(updatedState)
+        );
+        showToast.success('Criterion deleted');
+      }
+    } catch {
+      showToast.error('Failed to delete criterion');
+    }
+
+    setActiveMenuId(null);
+  };
+
+  const handleEditCriteria = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    navigate(`/grants/add-custom-criteria?id=${id}`);
   };
 
   return (
@@ -394,16 +484,14 @@ const ManageJuryCriteria: React.FC = () => {
                 <div
                   key={crit.id}
                   className={`criterion-item ${crit.selected ? 'selected' : ''}`}
+                  onClick={() => {
+                    const next = [...customCriteria];
+                    const idx = next.findIndex((c) => c.id === crit.id);
+                    next[idx].selected = !next[idx].selected;
+                    setCustomCriteria(next);
+                  }}
                 >
-                  <div
-                    className="checkbox"
-                    onClick={() => {
-                      const next = [...customCriteria];
-                      const idx = next.findIndex((c) => c.id === crit.id);
-                      next[idx].selected = !next[idx].selected;
-                      setCustomCriteria(next);
-                    }}
-                  >
+                  <div className="checkbox">
                     {crit.selected && <Check size={12} />}
                   </div>
                   <div className="crit-info">
@@ -414,7 +502,36 @@ const ManageJuryCriteria: React.FC = () => {
                     <p>{crit.description}</p>
                   </div>
                   <div className="score-indicator">{crit.scoreRange}</div>
-                  <MoreVertical size={16} className="item-menu" />
+                  <div className="menu-container">
+                    <MoreVertical
+                      size={16}
+                      className="item-menu"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(
+                          activeMenuId === crit.id ? null : crit.id
+                        );
+                      }}
+                    />
+                    {activeMenuId === crit.id && (
+                      <div className="action-dropdown shadow-lg">
+                        <button
+                          className="menu-item"
+                          onClick={(e) => handleEditCriteria(e, crit.id)}
+                        >
+                          <Edit size={14} />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          className="menu-item delete"
+                          onClick={(e) => handleDeleteCriteria(e, crit.id)}
+                        >
+                          <Trash2 size={14} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

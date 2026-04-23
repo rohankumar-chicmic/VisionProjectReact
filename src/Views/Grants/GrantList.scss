@@ -262,13 +262,22 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
+      gap: 12px;
 
       .grant-title {
         font-size: 18px;
         font-weight: 700;
         color: #1e293b;
         margin: 0;
+        flex: 1;
+      }
+
+      .status-group {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
       }
     }
 
@@ -416,17 +425,19 @@
   border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
-  &.active {
-    background-color: #dcfce7;
-    color: #15803d;
-  }
-  &.closing-soon {
-    background-color: #fef9c3;
-    color: #a16207;
-  }
-  &.closed {
-    background-color: #fee2e2;
-    color: #b91c1c;
+  &.active { background-color: #ecfdf5; color: #10b981; }
+  &.completed { background-color: #f1f5f9; color: #64748b; }
+  &.closed { background-color: #fef2f2; color: #ef4444; }
+
+  &.awarded {
+    background-color: #ecfdf5;
+    color: #10b981;
+    border: 1px solid #00ce86;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    svg { color: #00ce86; }
   }
   &.draft {
     background-color: #f1f5f9;

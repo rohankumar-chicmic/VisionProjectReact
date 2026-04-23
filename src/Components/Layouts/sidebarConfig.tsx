@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Star,
   Users,
+  Settings,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { AppRole } from '../../Shared/Auth/roles';
@@ -41,7 +42,7 @@ export const SIDEBAR_CONFIG: Record<AppRole, SidebarItem[]> = {
     // { icon: FileText, label: 'Applications', path: '/applications' },
     { icon: Megaphone, label: 'Announcements', path: '/announcements' },
     { icon: ShieldCheck, label: 'Admin Managers', path: '/admins' },
-    // { icon: Bell, label: 'Notifications', path: '/notifications' },
+    { icon: Settings, label: 'Settings & Profile', path: '/settings' },
   ],
   sub_admin: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -56,6 +57,7 @@ export const SIDEBAR_CONFIG: Record<AppRole, SidebarItem[]> = {
     { icon: FileText, label: 'Applications', path: '/applications' },
     { icon: Megaphone, label: 'Announcements', path: '/announcements' },
     { icon: Bell, label: 'Notifications', path: '/notifications' },
+    { icon: Settings, label: 'Settings & Profile', path: '/settings' },
   ],
   jury: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/jury/dashboard' },

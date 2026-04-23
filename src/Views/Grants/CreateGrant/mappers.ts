@@ -25,12 +25,14 @@ export const buildGrantSessionState = (
   formState: GrantFormState
 ): GrantSessionState => ({
   ...formState,
+  id: formState.id,
   requiredFields: { ...formState.requiredFields },
   juryCriteria: [...formState.juryCriteria],
   questions: [...formState.questions],
   requirements: [...formState.requirements],
   selectedJuryIds: [...formState.selectedJuryIds],
   prizeWinners: [...formState.prizeWinners],
+  customCriteriaDefinitions: [...formState.customCriteriaDefinitions],
 });
 
 export const saveGrantSessionState = (formState: GrantFormState) => {
@@ -78,6 +80,7 @@ export const mapGrantDetailToFormState = (
   grant: GrantDetail
 ): GrantFormState => ({
   ...createInitialGrantFormState(),
+  id: grant.id,
   name: grant.name,
   galaEventId: grant.galaEventId,
   description: grant.description,
@@ -112,6 +115,7 @@ export const mapGalaDraftToFormState = (
   grantDraft: GalaBuilderGrantDraft
 ): GrantFormState => ({
   ...createInitialGrantFormState(),
+  id: grantDraft.id,
   name: grantDraft.name,
   description: grantDraft.description,
   category: grantDraft.category,
@@ -151,7 +155,7 @@ export const buildGrantPayload = (
   formState: GrantFormState,
   options: GrantPayloadOptions
 ): OrganiserGrantCreateRequest & { id?: string } => ({
-  id: options.id,
+  id: options.id || formState.id,
   name: formState.name,
   description: formState.description,
   category: formState.category,
@@ -194,8 +198,9 @@ export const saveLinkedGrantToGalaDraft = (
   }
 
   const payload = buildGrantPayload(formState, { isPublishing: false });
-  const linkedGrant = {
+  const linkedGrant: GalaBuilderGrantDraft = {
     ...payload,
+    id: formState.id,
     galaEventId: '',
   };
   const nextGrants = [...(savedState.grants || [])];

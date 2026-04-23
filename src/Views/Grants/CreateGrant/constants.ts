@@ -11,6 +11,10 @@ export const GRANT_CATEGORY_OPTIONS = [
   'Environment',
   'Social Impact',
   'Health',
+  'Education',
+  'Arts & Culture',
+  'Finance',
+  'Media',
 ] as const;
 
 export const DEFAULT_REQUIRED_FIELDS: RequiredFieldsState = {
@@ -38,4 +42,5 @@ export const INITIAL_GRANT_FORM_STATE: GrantFormState = {
   juryCriteria: DEFAULT_JURY_CRITERIA,
   selectedJuryIds: [],
   prizeWinners: [],
+  customCriteriaDefinitions: [],
 };

@@ -146,15 +146,30 @@
     }
 
     .toggle-switch {
-      width: 44px;
+      width: 48px;
       height: 24px;
       background-color: #e2e8f0;
       border-radius: 20px;
-      padding: 2px;
+      position: relative;
       cursor: pointer;
       transition: all 0.3s;
-      &.active { background-color: var(--primary-color); .switch-handle { transform: translateX(20px); } }
-      .switch-handle { width: 20px; height: 20px; background-color: white; border-radius: 50%; transition: all 0.3s; }
+      &.active {
+        background-color: var(--primary-color);
+        .switch-handle {
+          left: calc(100% - 22px);
+        }
+      }
+      .switch-handle {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        background-color: white;
+        border-radius: 50%;
+        transition: all 0.3s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
     }
   }
 

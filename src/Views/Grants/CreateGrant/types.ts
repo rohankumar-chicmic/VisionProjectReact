@@ -11,6 +11,15 @@ export interface Question extends GrantQuestion {
   id: number;
 }
 
+export interface Criterion {
+  id: string;
+  name: string;
+  description: string;
+  selected: boolean;
+  scoreRange: string;
+  custom?: boolean;
+}
+
 export interface PrizeWinnerInput {
   rank: number;
   amount: string;
@@ -24,6 +33,7 @@ export interface RequiredFieldsState {
 }
 
 export interface GrantFormState {
+  id?: string;
   name: string;
   galaEventId: string;
   description: string;
@@ -36,14 +46,17 @@ export interface GrantFormState {
   requirements: GrantAdditionalRequirement[];
   requireInterview: boolean;
   requiredFields: RequiredFieldsState;
-  juryCriteria: number[];
+  juryCriteria: (string | number)[];
   selectedJuryIds: string[];
   prizeWinners: PrizeWinnerInput[];
+  customCriteriaDefinitions: Criterion[];
 }
 
 export type QuestionInput = OrganiserGrantCreateRequest['questions'][number];
 
 export interface GalaBuilderGrantDraft {
+  id?: string;
+  galaEventId?: string;
   name: string;
   description: string;
   category: string;
@@ -58,12 +71,14 @@ export interface GalaBuilderGrantDraft {
   requireIndustrySelection: boolean;
   requireMotivationStatement: boolean;
   requireBusinessPlanDocument: boolean;
-  juryCriteria: number[];
+  juryCriteria: (string | number)[];
   prizeWinners?: Array<{ rank: number; amount: number }>;
   juryIds?: string[];
 }
 
 export interface GalaBuilderState {
+  id?: string;
+  name?: string;
   grants?: GalaBuilderGrantDraft[];
 }
 

@@ -52,6 +52,7 @@ const requirementSchema = z.object({
 });
 
 const grantSchema = z.object({
+  id: z.string().uuid().optional(),
   name: z.string().min(1, { message: 'Grant name is required' }),
   description: z.string().min(1, { message: 'Grant description is required' }),
   category: z.string().min(1, { message: 'Grant category is required' }),
@@ -276,6 +277,7 @@ function CreateGala() {
         grants:
           data.grants.length > 0
             ? data.grants.map((grant) => ({
+                id: grant.id,
                 name: grant.name,
                 description: grant.description,
                 category: grant.category,
@@ -391,24 +393,24 @@ function CreateGala() {
   const handleLinkGrant = () => {
     sessionStorage.setItem(
       CREATE_GALA_FORM_SESSION_KEY,
-      JSON.stringify(formValues)
+      JSON.stringify({ ...formValues, id })
     );
     sessionStorage.removeItem(CREATE_GRANT_FORM_SESSION_KEY);
 
     navigate(
-      `/grants/create?mode=gala-builder&returnTo=${encodeURIComponent(location.pathname)}`
+      `/grants/create?mode=gala-builder&galaId=${id || ''}&galaName=${encodeURIComponent(formValues.name)}&returnTo=${encodeURIComponent(location.pathname)}`
     );
   };
 
   const handleEditLinkedGrant = (index: number) => {
     sessionStorage.setItem(
       CREATE_GALA_FORM_SESSION_KEY,
-      JSON.stringify(formValues)
+      JSON.stringify({ ...formValues, id })
     );
     sessionStorage.removeItem(CREATE_GRANT_FORM_SESSION_KEY);
 
     navigate(
-      `/grants/create?mode=gala-builder&draftIndex=${index}&returnTo=${encodeURIComponent(location.pathname)}`
+      `/grants/create?mode=gala-builder&draftIndex=${index}&galaId=${id || ''}&galaName=${encodeURIComponent(formValues.name)}&returnTo=${encodeURIComponent(location.pathname)}`
     );
   };
 

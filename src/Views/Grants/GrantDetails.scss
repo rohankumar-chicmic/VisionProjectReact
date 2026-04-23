@@ -74,6 +74,13 @@
           color: #6d28d9;
           border: 1px solid rgba(139, 92, 246, 0.4);
         }
+        &.awarded {
+          background: rgba(0, 206, 134, 0.1);
+          color: #00ce86;
+          border: 1px solid rgba(0, 206, 134, 0.3);
+          backdrop-filter: blur(20px);
+          svg { color: #00ce86; }
+        }
 
         .dot {
           width: 8px;
@@ -586,6 +593,30 @@
         font-size: 1.25rem;
         font-weight: 950;
         color: #10b981;
+      }
+
+      &.prize-item-premium {
+        border-right: 6px solid #00ce86;
+        background: linear-gradient(to right, #ffffff, #f0fdf4);
+        
+        .winner-badge-reveal {
+          margin-top: 10px;
+          display: flex;
+          width: 100%;
+          
+          .winner-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: #00ce86;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(0, 206, 134, 0.15);
+          }
+        }
       }
     }
   }

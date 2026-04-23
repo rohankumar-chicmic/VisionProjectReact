@@ -57,6 +57,9 @@ function CreateGrant() {
   const { role } = useCurrentUserRole();
   const isOrganiser = role === 'organiser';
 
+  const galaIdFromUrl = searchParams.get('galaId');
+  const galaNameFromUrl = searchParams.get('galaName');
+
   const { data: galasResponse } = useGetOrganiserGalasQuery(
     { status: 1, pageSize: 100 },
     { skip: !isOrganiser }
@@ -135,16 +138,34 @@ function CreateGrant() {
   useEffect(() => {
     if (isGalaBuilderMode) {
       const localState = loadGrantSessionState();
-      if (localState) return;
-
       const savedGalaState = loadGalaBuilderState();
+      const targetGalaId = galaIdFromUrl || savedGalaState?.id || '';
+
+      if (localState) {
+        if (targetGalaId && !localState.galaEventId) {
+          setFormState({ ...localState, galaEventId: targetGalaId });
+        } else {
+          setFormState(localState);
+        }
+        return;
+      }
+
       const existingGrant =
         draftIndex === null
           ? undefined
           : savedGalaState?.grants?.[Number(draftIndex)];
 
       if (existingGrant) {
-        setFormState(mapGalaDraftToFormState(existingGrant));
+        const mapped = mapGalaDraftToFormState(existingGrant);
+        setFormState({
+          ...mapped,
+          galaEventId: targetGalaId,
+        });
+      } else {
+        setFormState((prev) => ({
+          ...prev,
+          galaEventId: targetGalaId,
+        }));
       }
 
       return;
@@ -153,7 +174,14 @@ function CreateGrant() {
     if (isEditMode && grantResponse?.data) {
       setFormState(mapGrantDetailToFormState(grantResponse.data));
     }
-  }, [draftIndex, grantResponse, isEditMode, isGalaBuilderMode]);
+  }, [
+    draftIndex,
+    grantResponse,
+    isEditMode,
+    isGalaBuilderMode,
+    galaIdFromUrl,
+    id,
+  ]);
 
   useEffect(() => {
     setTitle(isEditMode ? 'Edit Grant' : 'Create Grant');
@@ -279,13 +307,17 @@ function CreateGrant() {
       return;
     }
 
-    const payload = buildGrantPayload(formState, { id, isPublishing });
+    const payload = buildGrantPayload(formState, {
+      id: id || formState.id,
+      isPublishing,
+    });
+    const effectiveId = id || formState.id;
 
     try {
-      if (isEditMode && id) {
+      if (effectiveId) {
         await updateGrant({
           ...payload,
-          id,
+          id: effectiveId,
         }).unwrap();
         showToast.success('Grant updated successfully');
       } else {
@@ -382,10 +414,7 @@ function CreateGrant() {
   };
 
   const handleManageCriteria = () => {
-    if (!isEditMode && !isGalaBuilderMode) {
-      saveGrantSessionState(formState);
-    }
-
+    saveGrantSessionState(formState);
     navigate('/grants/jury-criteria');
   };
 
@@ -443,6 +472,8 @@ function CreateGrant() {
             onGalaEventChange={(value) => setField('galaEventId', value)}
             onDescriptionChange={(value) => setField('description', value)}
             onCategoryChange={(value) => setField('category', value)}
+            isGalaBuilderMode={isGalaBuilderMode}
+            draftGalaName={galaNameFromUrl || loadGalaBuilderState()?.name}
           />
 
           <GrantQuestionsSection
@@ -495,6 +526,7 @@ function CreateGrant() {
 
           <GrantCriteriaSection
             juryCriteria={formState.juryCriteria}
+            customCriteriaDefinitions={formState.customCriteriaDefinitions}
             onManageCriteria={handleManageCriteria}
           />
 

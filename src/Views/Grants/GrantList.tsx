@@ -214,9 +214,18 @@ function GrantList() {
           <Link to={`/grants/${grant.id}`} className="card-clickable-area">
             <div className="card-header">
               <h3 className="grant-title">{grant.name}</h3>
-              <span className={`status-badge ${getStatusClass(grant.status)}`}>
-                {getStatusLabel(grant.status)}
-              </span>
+              <div className="status-group">
+                <span
+                  className={`status-badge ${getStatusClass(grant.status)}`}
+                >
+                  {getStatusLabel(grant.status)}
+                </span>
+                {grant.isWinnerDecided && (
+                  <span className="status-badge awarded">
+                    <Award size={12} /> Awarded
+                  </span>
+                )}
+              </div>
             </div>
             <p className="grant-description">{grant.description}</p>
 
@@ -301,6 +310,9 @@ function GrantList() {
               <span className={`status-badge ${getStatusClass(grant.status)}`}>
                 {getStatusLabel(grant.status)}
               </span>
+              {grant.isWinnerDecided && (
+                <span className="status-badge awarded">Awarded</span>
+              )}
             </div>
             <div className="col-amount">
               ${grant.prizeAmount.toLocaleString()}

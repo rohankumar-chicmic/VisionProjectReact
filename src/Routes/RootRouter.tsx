@@ -4,6 +4,7 @@ import { useRoutes } from 'react-router-dom';
 import DocumentTitle from './DocumentTitle';
 import { authenticatedRoutes, guestRoutes } from './config';
 import AppLayout from '../Components/Layouts/AppLayout';
+import ScrollToTop from '../Components/Shared/ScrollToTop';
 import type { RootState } from '../Store';
 
 function RootRouter() {
@@ -16,6 +17,7 @@ function RootRouter() {
 
   return (
     <>
+      <ScrollToTop />
       <DocumentTitle isAuthenticated={isAuthenticated} />
       <AppLayout isAuthenticated={isAuthenticated}>
         {token ? authenticated : guest}

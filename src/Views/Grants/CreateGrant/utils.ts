@@ -23,6 +23,7 @@ export const createInitialGrantFormState = (): GrantFormState => ({
   requirements: [],
   selectedJuryIds: [],
   prizeWinners: [],
+  customCriteriaDefinitions: [],
 });
 
 export const hasPersistedGrantContent = (
@@ -240,4 +241,5 @@ export const sanitizeSessionState = (
   requirements: state.requirements || [],
   selectedJuryIds: state.selectedJuryIds || [],
   prizeWinners: state.prizeWinners || [],
+  customCriteriaDefinitions: state.customCriteriaDefinitions || [],
 });

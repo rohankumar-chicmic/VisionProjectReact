@@ -18,6 +18,8 @@ interface GrantBasicInfoSectionProps {
   onGalaEventChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
+  draftGalaName?: string;
+  isGalaBuilderMode?: boolean;
 }
 
 function GrantBasicInfoSection({
@@ -30,8 +32,13 @@ function GrantBasicInfoSection({
   onGalaEventChange,
   onDescriptionChange,
   onCategoryChange,
+  draftGalaName,
+  isGalaBuilderMode,
 }: GrantBasicInfoSectionProps) {
   const selectedGala = galas.find((gala) => gala.id === galaEventId);
+
+  // If in builder mode and we have a draft gala name, but no gala is selected yet (or it's a new gala)
+  const displayGalaName = selectedGala?.name || draftGalaName || '';
 
   return (
     <section className="form-card">
@@ -61,8 +68,12 @@ function GrantBasicInfoSection({
                 id="associated-gala"
                 value={galaEventId}
                 onChange={(event) => onGalaEventChange(event.target.value)}
+                disabled={isGalaBuilderMode}
               >
-                <option value="">Select a Gala</option>
+                {!isGalaBuilderMode && <option value="">Select a Gala</option>}
+                {isGalaBuilderMode && !selectedGala && displayGalaName && (
+                  <option value={galaEventId}>{displayGalaName}</option>
+                )}
                 {galas.map((gala) => (
                   <option key={gala.id} value={gala.id}>
                     {gala.name}
@@ -70,10 +81,12 @@ function GrantBasicInfoSection({
                 ))}
               </select>
               <ChevronDown className="select-arrow" size={18} />
-              {selectedGala && (
+              {(selectedGala || (isGalaBuilderMode && displayGalaName)) && (
                 <span className="info-text">
-                  {selectedGala.city} •{' '}
-                  {new Date(selectedGala.eventDate || '').toLocaleDateString()}
+                  {selectedGala?.city || 'Draft Gala'} •{' '}
+                  {selectedGala?.eventDate
+                    ? new Date(selectedGala.eventDate).toLocaleDateString()
+                    : 'Not scheduled'}
                 </span>
               )}
             </div>

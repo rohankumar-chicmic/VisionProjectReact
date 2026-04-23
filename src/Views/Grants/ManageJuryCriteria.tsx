@@ -7,6 +7,7 @@ import {
   useGetOrganiserJuryCriteriaQuery,
   useDeleteOrganiserJuryCriteriaMutation,
 } from '../../Services/Api/module/Organiser/JuryCriteria';
+import type { GrantSessionState } from './CreateGrant/types';
 import showToast from '../../Shared/Utils/toast';
 import './ManageJuryCriteria.scss';
 
@@ -206,7 +207,7 @@ const ManageJuryCriteria: React.FC = () => {
       const savedState = sessionStorage.getItem(CREATE_GRANT_FORM_SESSION_KEY);
       if (savedState) {
         try {
-          const state = JSON.parse(savedState);
+          const state = JSON.parse(savedState) as Partial<GrantSessionState>;
           const savedCriteria = state.juryCriteria || [1, 2, 5, 8];
 
           // Update categories to reflect saved criteria using initial values
@@ -253,7 +254,7 @@ const ManageJuryCriteria: React.FC = () => {
             (crit: Criterion) => {
               return {
                 ...crit,
-                selected: savedCriteria.some((savedId: any) => {
+                selected: savedCriteria.some((savedId) => {
                   const critIdMatch = crit.id?.toString().match(/^c?(\d+)$/);
                   const critId = critIdMatch
                     ? parseInt(critIdMatch[1], 10)
@@ -344,7 +345,7 @@ const ManageJuryCriteria: React.FC = () => {
 
       const savedState = sessionStorage.getItem(CREATE_GRANT_FORM_SESSION_KEY);
       if (savedState) {
-        const state = JSON.parse(savedState);
+        const state = JSON.parse(savedState) as Partial<GrantSessionState>;
         const numericMatch = id.match(/^c?(\d+)$/);
         const critId = numericMatch ? parseInt(numericMatch[1], 10) : id;
 
@@ -352,9 +353,9 @@ const ManageJuryCriteria: React.FC = () => {
           ...state,
           customCriteriaDefinitions: (
             state.customCriteriaDefinitions || []
-          ).filter((d: any) => d.id !== id),
+          ).filter((d) => d.id !== id),
           juryCriteria: (state.juryCriteria || []).filter(
-            (cid: any) => cid !== critId
+            (cid) => cid !== critId
           ),
         };
 

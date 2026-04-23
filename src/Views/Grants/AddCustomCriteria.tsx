@@ -8,6 +8,7 @@ import {
   useGetOrganiserJuryCriteriaByIdQuery,
   useUpdateOrganiserJuryCriteriaMutation,
 } from '../../Services/Api/module/Organiser/JuryCriteria';
+import type { Criterion, GrantSessionState } from './CreateGrant/types';
 import showToast from '../../Shared/Utils/toast';
 import './AddCustomCriteria.scss';
 
@@ -51,9 +52,9 @@ function AddCustomCriteria() {
         const savedState = sessionStorage.getItem('create_grant_form_state');
         if (savedState) {
           try {
-            const state = JSON.parse(savedState);
+            const state = JSON.parse(savedState) as Partial<GrantSessionState>;
             const criterion = (state.customCriteriaDefinitions || []).find(
-              (c: any) => c.id === editId
+              (c: Criterion) => c.id === editId
             );
             if (criterion) {
               setCriteriaName(criterion.name);
@@ -96,7 +97,9 @@ function AddCustomCriteria() {
       }
 
       const savedState = sessionStorage.getItem('create_grant_form_state');
-      const existingState = savedState ? JSON.parse(savedState) : {};
+      const existingState = savedState
+        ? (JSON.parse(savedState) as Partial<GrantSessionState>)
+        : {};
 
       const updatedDefinitions = [
         ...(existingState.customCriteriaDefinitions || []),
@@ -104,7 +107,7 @@ function AddCustomCriteria() {
       const updatedJuryCriteria = [...(existingState.juryCriteria || [])];
 
       if (editId) {
-        const index = updatedDefinitions.findIndex((d: any) => d.id === editId);
+        const index = updatedDefinitions.findIndex((d) => d.id === editId);
         if (index !== -1) {
           updatedDefinitions[index] = {
             ...updatedDefinitions[index],

@@ -47,7 +47,10 @@ function AdminSettings() {
     }
   }, [settingsRes]);
 
-  const handleInputChange = (field: keyof IAdminSettings, value: any) => {
+  const handleInputChange = <K extends keyof IAdminSettings>(
+    field: K,
+    value: IAdminSettings[K]
+  ) => {
     if (!formData) return;
     setFormData({ ...formData, [field]: value });
   };
@@ -78,6 +81,7 @@ function AdminSettings() {
     <div className="admin-settings-page">
       <HeaderActions>
         <button
+          type="button"
           className="header-btn btn-primary"
           onClick={handleSave}
           disabled={isUpdating}
@@ -412,7 +416,7 @@ function AdminSettings() {
                   <span className="title">Clear System Cache</span>
                   <p className="desc">Purge all cached API responses</p>
                 </div>
-                <button className="btn-outline-danger">
+                <button type="button" className="btn-outline-danger">
                   <Trash2 size={16} />
                   <span>Clear</span>
                 </button>
@@ -422,7 +426,7 @@ function AdminSettings() {
                   <span className="title">Factory Reset</span>
                   <p className="desc">Revert all configurations to default</p>
                 </div>
-                <button className="btn-outline-danger">
+                <button type="button" className="btn-outline-danger">
                   <RefreshCcw size={16} />
                   <span>Reset</span>
                 </button>

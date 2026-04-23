@@ -1,4 +1,4 @@
-export const STANDARD_CRITERIA = [
+const STANDARD_CRITERIA = [
   { id: 1, name: 'Business Viability' },
   { id: 2, name: 'Financial Potential' },
   { id: 3, name: 'Market Size' },
@@ -14,3 +14,5 @@ export const STANDARD_CRITERIA = [
   { id: 13, name: 'Environmental Responsibility' },
   { id: 14, name: 'Community Engagement' },
 ];
+
+export default STANDARD_CRITERIA;

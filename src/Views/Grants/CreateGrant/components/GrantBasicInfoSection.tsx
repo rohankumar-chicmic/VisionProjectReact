@@ -32,8 +32,8 @@ function GrantBasicInfoSection({
   onGalaEventChange,
   onDescriptionChange,
   onCategoryChange,
-  draftGalaName,
-  isGalaBuilderMode,
+  draftGalaName = '',
+  isGalaBuilderMode = false,
 }: GrantBasicInfoSectionProps) {
   const selectedGala = galas.find((gala) => gala.id === galaEventId);
 
@@ -129,5 +129,10 @@ function GrantBasicInfoSection({
     </section>
   );
 }
+
+GrantBasicInfoSection.defaultProps = {
+  draftGalaName: '',
+  isGalaBuilderMode: false,
+};
 
 export default GrantBasicInfoSection;

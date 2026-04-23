@@ -1,5 +1,5 @@
 import { Settings2 } from 'lucide-react';
-import { STANDARD_CRITERIA } from '../criteria_data';
+import STANDARD_CRITERIA from '../criteria_data';
 import type { Criterion } from '../types';
 
 interface GrantCriteriaSectionProps {
@@ -16,7 +16,7 @@ function GrantCriteriaSection({
   const getCriterionName = (id: string | number) => {
     // Check standard criteria
     const numericId = typeof id === 'number' ? id : parseInt(id, 10);
-    if (!isNaN(numericId)) {
+    if (!Number.isNaN(numericId)) {
       const standard = STANDARD_CRITERIA.find((c) => c.id === numericId);
       if (standard) return standard.name;
     }
@@ -28,7 +28,9 @@ function GrantCriteriaSection({
 
       // Fallback for legacy 'c' prefixed IDs
       const cNumericId = parseInt(c.id.toString().replace('c', ''), 10);
-      return !isNaN(cNumericId) && cNumericId.toString() === id.toString();
+      return (
+        !Number.isNaN(cNumericId) && cNumericId.toString() === id.toString()
+      );
     });
 
     if (custom) return custom.name;
